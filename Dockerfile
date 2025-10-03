@@ -117,7 +117,7 @@ stderr_logfile=/dev/stderr\n\
 stderr_logfile_maxbytes=0\n\
 \n\
 [program:nodejs]\n\
-command=/usr/bin/node /var/www/html/synflow/src/js/server.js\n\
+command=/usr/bin/node /var/www/html/synflow/src/server.js\n\
 directory=/var/www/html/synflow/src/js\n\
 autostart=true\n\
 autorestart=true\n\
