@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "serveur": "env GALAXY_API_KEY='4692c14f5672dfdecf89d3a462aa9e20' nodemon --watch serveur.js serveur.js"
+    "serveur": "node src/server.js"
 
   },
   "repository": {
