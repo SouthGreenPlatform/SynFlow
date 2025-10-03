@@ -2,7 +2,7 @@
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
-const https = require('https');c
+const https = require('https');
 const path = require('path');
 const express = require('express');
 const { Server } = require('socket.io');
