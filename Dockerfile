@@ -87,13 +87,14 @@ RUN echo 'server {\n\
         return 503 "{\\"error\\": \\"API service unavailable\\"}";\n\
         add_header Content-Type application/json;\n\
     }\n\
-\n\
-    # Allow access to comparison files\n\
-    location /data/comparisons {\n\
-        alias /data/comparisons;\n\
+\n\ 
+# Allow access to comparison files\n\
+    location /data/comparisons/ {\n\
+        alias /data/comparisons/;\n\
         autoindex on;\n\
         autoindex_format json;\n\
         add_header Access-Control-Allow-Origin *;\n\
+        add_header Access-Control-Allow-Methods "GET, OPTIONS";\n\
     }\n\
 \n\
     # File uploads\n\
