@@ -29,7 +29,7 @@ RUN git clone https://github.com/SouthGreenPlatform/SynFlow.git /var/www/html/sy
 WORKDIR /var/www/html/synflow
 RUN npm install && npm cache clean --force
 # Clone Snakemake workflow repository
-RUN git clone https://gitlab.cirad.fr/agap/cluster/snakemake/synflow.git /app/workflow
+RUN git clone --depth 1 --branch docker --single-branch  https://gitlab.cirad.fr/agap/cluster/snakemake/synflow.git /app/workflow
 
 # Create conda environment from YAML
 WORKDIR /app/workflow
