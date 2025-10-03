@@ -91,14 +91,21 @@ export function loadSocketIOScript() {
     });
 }
 
+//si url = http://localhost:8080, on utilise localhost:3031
+//sinon on utilise https://wsp1453.southgreen.fr
+
+const isLocalhost = window.location.hostname === 'localhost';
+const socketURL = isLocalhost ? 'http://localhost:3031' : 'https://wsp1453.southgreen.fr';
+
+
 /**
  * Fonction pour initialiser la connexion Socket.IO après le chargement du script
  * @return {void} N'a pas de valeur de retour
  */
 export function initSocketConnection() {
     // Créer la connexion Socket.IO
-    socket = io('https://wsp1453.southgreen.fr', { transports: ['websocket'] });
-    
+    socket = io(socketURL, { transports: ['websocket'] });
+
     // Envoyer les infos du client au serveur
     socket.emit('clientInfo', { url: window.location.href });
 
@@ -479,7 +486,7 @@ function submitForm() {
     });
 
     // Envoyer les fichiers et paramètres via fetch
-    fetch('https://wsp1453.southgreen.fr/upload', {
+    fetch(socketURL+'/upload', {
         method: 'POST',
         body: formData
     }).then(response => response.json())

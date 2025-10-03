@@ -9,6 +9,26 @@ const app = express();
 const publicDir = path.resolve(__dirname, '..', 'public');
 app.use(express.static(publicDir));
 
+// Add headers
+app.use(function (req, res, next) {
+
+    // Website you wish to allow to connect
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    // Request methods you wish to allow
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+
+    // Request headers you wish to allow
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
+
+    // Set to true if you need the website to include cookies in the requests sent
+    // to the API (e.g. in case you use sessions)
+    res.setHeader('Access-Control-Allow-Credentials', true);
+
+    // Pass to next layer of middleware
+    next();
+});
+
 const keyPath = process.env.SYNFLOW_SSL_KEY;
 const certPath = process.env.SYNFLOW_SSL_CERT;
 const caPath = process.env.SYNFLOW_SSL_CA;
@@ -63,25 +83,385 @@ if (configUrlsEnv) {
         console.warn("CONFIG_URLS is define but URL is not valid. Keep existing config file.");
     }
 }
-io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
 
-    socket.on('clientInfo', (data) => {
-        if (data && data.url) {
-        console.log(`Client connected from: ${data.url}`);
-        }
-    });
 
-    socket.on('sendData', (data) => {
-        io.emit('receiveData', data);
-    });
+/////////////////////////// fonctions
 
-    socket.on('disconnect', () => {
-        console.log('User disconnected:', socket.id);
+// Fonction pour obtenir l'heure et la date actuelles au format lisible
+function getCurrentTimestamp() {
+    const now = new Date();
+    return now.toLocaleString(); // Format: "jj/mm/aaaa, hh:mm:ss"
+}
+
+// Middleware qui génère un identifiant unique par lot
+function assignUploadId(req, res, next) {
+    if (!req.uploadId) {
+        req.uploadId = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    }
+    next();
+}
+
+// .______        ______    __    __  .___________. _______     _______.
+// |   _  \      /  __  \  |  |  |  | |           ||   ____|   /       |
+// |  |_)  |    |  |  |  | |  |  |  | `---|  |----`|  |__     |   (----`
+// |      /     |  |  |  | |  |  |  |     |  |     |   __|     \   \    
+// |  |\  \----.|  `--'  | |  `--'  |     |  |     |  |____.----)   |   
+// | _| `._____| \______/   \______/      |__|     |_______|_______/    
+                                                                     
+// Configuration de multer pour gérer les fichiers
+const multer = require('multer'); //upload des fichiers
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, '/var/www/html/synflow/data/comparisons/');
+    },
+    filename: function (req, file, cb) {
+        const prefix = req.uploadId || Date.now();
+        // garde le nom original pour retrouver facilement
+        cb(null, prefix + "_" + file.originalname);
+    }
+});
+const upload = multer({ storage: storage });
+
+
+// Route POST pour gérer l'upload de fichiers et les paramètres texte
+app.post('/upload', assignUploadId, upload.any(), (req, res) => {
+    console.log('Upload ID:', req.uploadId);
+    const uploadedFiles = req.files.map(file => ({
+        fieldname: file.fieldname,
+        originalname: file.originalname, // nom original utile pour mapping
+        filename: file.filename,         // nom stocké avec prefix
+        path: file.path
+    }));
+
+    const params = req.body;
+
+    console.log('Fichiers uploadés:', uploadedFiles);
+    console.log('Paramètres texte:', params);
+
+    res.json({
+        message: 'Fichiers et paramètres envoyés avec succès',
+        files: uploadedFiles,
+        params: params
     });
 });
 
-const port = Number(process.env.PORT) || 3000;
+
+
+io.on('connection', socket => {
+	console.log( `\n\nNouveau visiteur : *** ${socket.id}` );
+
+    //infos de connection
+    socket.on('clientInfo', data => {
+        const clientIp = socket.handshake.address;
+        const userAgent = socket.handshake.headers['user-agent'];
+        const cookies = socket.handshake.headers['cookie'];
+        console.log(`Le client s'est connecté depuis l'URL : ${data.url}, IP : ${clientIp}, User-Agent : ${userAgent}, Cookies : ${cookies}`);
+    });
+
+
+// .___________.  ______     ______    __       __  ___  __  .___________.
+// |           | /  __  \   /  __  \  |  |     |  |/  / |  | |           |
+// `---|  |----`|  |  |  | |  |  |  | |  |     |  '  /  |  | `---|  |----`
+//     |  |     |  |  |  | |  |  |  | |  |     |    <   |  |     |  |     
+//     |  |     |  `--'  | |  `--'  | |  `----.|  .  \  |  |     |  |     
+//     |__|      \______/   \______/  |_______||__|\__\ |__|     |__|     
+                                                                       
+    //repertoire de travail pour toolkit
+    const toolkitWorkingPath = '/var/www/html/synflow/data/comparisons/';
+    const toolkitAnalysisDir = toolkitWorkingPath + 'toolkit_' + socket.id +'/';
+    fs.mkdirSync(toolkitAnalysisDir);
+
+    const { exec } = require('child_process');
+    const { spawn } = require('child_process');
+    const path = require('path');  // Utilisé pour extraire le nom de fichier
+
+    
+
+
+    
+    
+    // Récupérer les fichiers de sortie dans le repertoire d'analyse
+    // paramètre : toolkitID (ex: toolkit_123456789)
+    socket.on('getToolkitFiles', (toolkitID) => {
+        console.log('Getting toolkit files for ID:', toolkitID);
+        const dir = toolkitWorkingPath +'/'+ toolkitID + '/';
+        //recupère la liste des fichiers dans le repertoire d'analyse
+        fs.readdir(dir, (err, files) => {
+            if (err) {
+                console.error(`Erreur lors de la lecture du répertoire : ${err}`);
+                socket.emit('consoleMessage', `Erreur lors de la lecture du répertoire : ${err}`);
+                return;
+            }
+            console.log(`Fichiers dans le répertoire d'analyse : ${files}`);
+            // Filtrer les fichiers pour ne garder que ceux qui ont l'extension .out
+            // Liste des extensions d'intérêt
+            const validExtensions = ['.out', '.bed', '.anchors'];
+
+            const outputFiles = files.filter(file =>
+                validExtensions.some(ext => file.endsWith(ext))
+            );
+            if (outputFiles.length > 0) {
+                // Si des fichiers de sortie sont trouvés, les envoyer au client
+                const outputFilePaths = outputFiles.map(file => path.join(dir, file));
+                console.log(`Fichiers de sortie trouvés : ${outputFilePaths}`);
+                socket.emit('toolkitFilesResults', outputFilePaths);
+            } else {
+                console.log('Aucun fichier de sortie trouvé.');
+                socket.emit('consoleMessage', 'Aucun fichier de sortie trouvé.');
+            }
+        });
+    });
+
+    
+    // .______       __    __  .__   __. 
+    // |   _  \     |  |  |  | |  \ |  | 
+    // |  |_)  |    |  |  |  | |   \|  | 
+    // |      /     |  |  |  | |  . `  | 
+    // |  |\  \----.|  `--'  | |  |\   | 
+    // | _| `._____| \______/  |__| \__| 
+                                  
+    // Gestion générique pour n'importe quel service
+    socket.on('runService', (serviceName, serviceData, formData) => {
+        console.log(`[${getCurrentTimestamp()}] Lancement du service : ${serviceName}`);
+        console.log('formData:', formData);
+        console.log('serviceData:', serviceData);
+        console.log(`service : ${serviceData.service}`)
+
+        // Récupérer les fichiers et les paramètres depuis la requête
+        const uploadedFiles = formData.files;  // Les fichiers uploadés via multer
+        const params = formData.params;        // Les paramètres texte (comme la base de données sélectionnée)
+        let launchCommand ='';
+
+        //   ______   .______      ___       __      
+        //  /  __  \  |   _  \    /   \     |  |     
+        // |  |  |  | |  |_)  |  /  ^  \    |  |     
+        // |  |  |  | |   ___/  /  /_\  \   |  |     
+        // |  `--'  | |  |     /  _____  \  |  `----.
+        //  \______/  | _|    /__/     \__\ |_______|                                  
+        if(serviceData.service == "opal"){
+            // Fonction pour construire la commande de lancement Opal
+            function buildOpalLaunchCommand(formData, uploadedFiles, params) {
+                const { url, action, arguments } = formData;
+                const inputs = arguments.inputs;
+                if (!inputs) {
+                    throw new Error("Les 'inputs' ne sont pas définis pour ce service.");
+                }
+                let commandArgs = ``;
+                let aArgs = "";  // Les arguments pour -a
+                // Parcourir les inputs
+                inputs.forEach(input => {
+                    console.log("Traitement input:", input);
+                    if (input.flag) {
+                        if (input.type !== "file" && input.type !== "file[]") {
+                            const value = params[input.name];
+                            if (value && value !== "") {
+                                aArgs += ` ${input.flag} ${value}`;
+                            }
+                        }
+                    }
+                    if (input.type === "file" || input.type === "file[]") {
+                        const matchingFiles = uploadedFiles.filter(file => file.fieldname === input.name);
+                        console.log(`Fichiers trouvés pour ${input.name}:`, matchingFiles);
+                        matchingFiles.forEach(file => {
+                            if (file && file.path) {
+                                // Ajout du nom de fichier avec le flag au bloc -a
+                                const fileName = path.basename(file.path);
+                                aArgs += ` ${input.flag} ${fileName}`;
+                            }
+                        });
+                    }
+                });
+                // Ajout du bloc -a
+                if (aArgs) {
+                    commandArgs += aArgs.trim();
+                }
+                // Retourner la commande complète
+                return `python /app/workflow/create_conf.py ${commandArgs.trim()}`;
+            }
+            // Générer la commande de lancement
+            launchCommand = buildOpalLaunchCommand(serviceData, uploadedFiles, params);
+            console.log(`Commande générée : ${launchCommand}`);
+            socket.emit('consoleMessage', launchCommand);
+            // __________   ___  _______   ______ 
+            // |   ____\  \ /  / |   ____| /      |
+            // |  |__   \  V  /  |  |__   |  ,----'
+            // |   __|   >   <   |   __|  |  |     
+            // |  |____ /  .  \  |  |____ |  `----.
+            // |_______/__/ \__\ |_______| \______|                  
+            // Exécuter la commande
+            exec(launchCommand, (error, stdout, stderr) => {
+
+                if (error) {
+                    console.error(`Erreur d'exécution : ${error}`);
+                    socket.emit('consoleMessage', `Erreur : ${error}`);
+                    return;
+                }
+
+                console.log(`stdout: ${stdout}`);
+                socket.emit('consoleMessage', 'Lancement en cours...');
+                socket.emit('consoleMessage', `Sortie :\n ${stdout}`);
+
+                // Récupérer l'ID du job
+                const jobIdMatch = stdout.match(/Job ID: (\S+)/);
+                if (jobIdMatch && jobIdMatch[1]) {
+                    const jobId = jobIdMatch[1];
+                    socket.emit('consoleMessage', `Job lancé avec ID: ${jobId}`);
+
+                    //verifie le fichier de log pour récupérer les sortie quand elle sont disponibles.
+                    const logURL = 'http://io-biomaj.meso.umontpellier.fr:8080/opal-jobs/'+ jobId+'/stdout.txt';
+                    
+                    //revoie toolkitAnalysisDir au client pour générer une url d'accès aux resultats
+                    socket.emit('toolkitPath', toolkitAnalysisDir);
+
+                    let lastLogLength = 0; // Variable pour suivre la taille précédente du log
+
+                    function waitForOutputFiles(logURL, outputExtensions, callback) {
+                        const https = require('https');
+                        const http = require('http');
+                        const urlModule = require('url');
+                        const urlObj = urlModule.parse(logURL);
+
+                        let lastLogLength = 0;
+
+                        function checkLog() {
+                            const lib = urlObj.protocol === 'https:' ? https : http;
+                            lib.get(logURL, res => {
+                                let data = '';
+                                res.on('data', chunk => data += chunk);
+                                res.on('end', () => {
+                                    if (res.statusCode === 404) {
+                                        setTimeout(checkLog, 500);
+                                        return;
+                                    }
+                                    if (data.length > lastLogLength) {
+                                        const newContent = data.substring(lastLogLength);
+                                        lastLogLength = data.length;
+                                        newContent.split('\n').forEach(line => {
+                                            if (line.trim() !== '') {
+                                                console.log(`${line}`);
+                                                socket.emit('consoleMessage', `${line}`);
+                                            }
+                                        });
+                                    }
+
+                                    //Chercher la section "Checking expected output files:"
+                                    const outputSection = data.split('\n').find(line =>
+                                        line.includes("Checking expected output files:")
+                                    );
+
+                                    if (outputSection) {
+                                        // Filtrer toutes les extensions demandées
+                                        const fileLines = data.split('\n').filter(line =>
+                                            outputExtensions.some(ext => line.trim().endsWith(ext))
+                                        );
+
+                                        console.log(`Fichiers trouvés :`, fileLines);
+
+                                        if (fileLines.length > 0) {
+                                            callback(null, fileLines);
+                                        } else {
+                                            console.warn("Aucun fichier trouvé malgré la section de sortie");
+                                            socket.emit('consoleMessage', `No output files found.`);
+                                            callback('No output files found');
+                                        }
+                                    } else if (data.includes('Snakemake pipeline failed')) {
+                                        socket.emit('consoleMessage', `${jobId} Pipeline failed, no output.`);
+                                        callback('Pipeline failed');
+                                    } else {
+                                        setTimeout(checkLog, 500);
+                                    }
+                                });
+                            }).on('error', err => {
+                                callback(err);
+                            });
+                        }
+
+                        checkLog();
+                    }
+
+                    //   ______    __    __  .___________..______    __    __  .___________.
+                    //  /  __  \  |  |  |  | |           ||   _  \  |  |  |  | |           |
+                    // |  |  |  | |  |  |  | `---|  |----`|  |_)  | |  |  |  | `---|  |----`
+                    // |  |  |  | |  |  |  |     |  |     |   ___/  |  |  |  |     |  |     
+                    // |  `--'  | |  `--'  |     |  |     |  |      |  `--'  |     |  |     
+                    //  \______/   \______/      |__|     | _|       \______/      |__|                                                                     
+                    // Surveille stdout.txt jusqu'à trouver tous les fichiers .out, .bed et .anchors
+                    waitForOutputFiles(logURL, ['.out', '.bed', '.anchors'], (err, foundFiles) => {
+                        if (err) {
+                            console.error('Error while monitoring log:', err);
+                            socket.emit('consoleMessage', `Error while monitoring log: ${err.message}`);
+                            return;
+                        }
+
+                        if (foundFiles && foundFiles.length > 0) {
+                            console.log(`[${getCurrentTimestamp()}] Outputs found: ${foundFiles.length}`);
+                            socket.emit('consoleMessage', `Found ${foundFiles.length} output file(s).`);
+
+                            foundFiles.forEach((fileName, index) => {
+                                fileName = fileName.trim();
+                                const outputFileUrl = `http://io-biomaj.meso.umontpellier.fr:8080/opal-jobs/${jobId}/${fileName}`;
+                                console.log(`Downloading output file: ${outputFileUrl}`);
+
+                                const newFileName = `${toolkitAnalysisDir}${fileName}`;
+                                const downloadCommand = `curl -o ${newFileName} ${outputFileUrl}`;
+
+                                exec(downloadCommand, (error, stdout, stderr) => {
+                                    if (error) {
+                                        console.error(`Error while downloading ${fileName}: ${stderr}`);
+                                        socket.emit('consoleMessage', `Error while downloading ${fileName}: ${stderr}`);
+                                        return;
+                                    }
+
+                                    console.log(`File downloaded: ${newFileName}`);
+                                    socket.emit('consoleMessage', `File downloaded: ${newFileName}`);
+                                    socket.emit('outputResultOpal', newFileName);
+                                });
+                            });
+                        }
+                    });
+
+                } else {
+                    socket.emit('consoleMessage', "Impossible de récupérer l'ID du job.");
+                }
+            });
+        }                                                    
+    });
+
+    //fonction commune pour tout les sites
+    //quand le visiteur se déconnecte
+    socket.on ( "disconnect" , function (){
+
+        function rimraf(dir_path) {
+            const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
+            const now = Date.now();
+
+            if (fs.existsSync(dir_path)) {
+                fs.readdirSync(dir_path).forEach(function(entry) {
+                    var entry_path = path.join(dir_path, entry);
+                    var stats = fs.lstatSync(entry_path);
+                    var mtime = stats.mtime.getTime();
+
+                    if ((now - mtime) > TEN_DAYS_MS) {
+                        if (stats.isDirectory()) {
+                            rimraf(entry_path);
+                        } else {
+                            fs.unlinkSync(entry_path);
+                        }
+                    }
+                });
+                // Supprime le dossier si lui-même est vieux de plus de 10 jours et vide
+                var dirStats = fs.lstatSync(dir_path);
+                if ((now - dirStats.mtime.getTime()) > TEN_DAYS_MS && fs.readdirSync(dir_path).length === 0) {
+                    fs.rmdirSync(dir_path);
+                    console.log("cleaning " + dir_path);
+                }
+            }
+        }
+        rimraf(toolkitWorkingPath);//enlève aussi les fichiers temporaires du toolkit
+    });
+});
+
+const port = Number(process.env.PORT) || 3031;
 server.listen(port, () => {
     console.log(`SynFlow server is running on port ${port}`);
 });
