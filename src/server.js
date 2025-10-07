@@ -461,7 +461,7 @@ io.on('connection', socket => {
     });
 });
 
-const port = Number(process.env.PORT) || 3031;
-server.listen(port, () => {
+const port = 3031;
+server.listen(port, '0.0.0.0', () => {
     console.log(`SynFlow server is running on port ${port}`);
 });
