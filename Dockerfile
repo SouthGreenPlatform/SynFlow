@@ -36,11 +36,6 @@ WORKDIR /app/workflow
 RUN mamba env create -f envs/synflow.yml --yes && \
     mamba clean -a -y
 
-# Install Snakemake in base environment
-#RUN mamba install -n base -c conda-forge snakemake --yes && \
-#    mamba clean -a -y
-
-
 # Create data directories and download sample data
 RUN mkdir -p /data/comparisons/sample /data/input /data/output /data/uploads && \
     wget --no-check-certificate -q -O /data/comparisons/sample/m-acuminata-malaccensis.bed \
@@ -126,67 +121,14 @@ stdout_logfile_maxbytes=0\n\
 stderr_logfile=/dev/stderr\n\
 stderr_logfile_maxbytes=0\n\
 \n\
-[program:snakemake_watcher]\n\
-command=/app/snakemake_watcher.sh\n\
-autostart=true\n\
-autorestart=true\n\
-stdout_logfile=/dev/stdout\n\
-stdout_logfile_maxbytes=0\n\
-stderr_logfile=/dev/stderr\n\
-stderr_logfile_maxbytes=0\n\
 ' > /etc/supervisor/conf.d/supervisord.conf
-
-# Create Snakemake watcher script
-RUN echo '#!/bin/bash\n\
-echo "Snakemake watcher started..."\n\
-\n\
-# Initialize conda for bash\n\
-source /opt/conda/etc/profile.d/conda.sh\n\
-\n\
-# Activate synflow environment\n\
-conda activate synflow\n\
-\n\
-echo "Conda environment activated: synflow"\n\
-echo "Python: $(which python)"\n\
-echo "Snakemake: $(which snakemake)"\n\
-echo "Singularity: $(which singularity)"\n\
-\n\
-while true; do\n\
-    if [ -f /data/input/run_pipeline.json ]; then\n\
-        echo "Pipeline trigger detected, starting Snakemake..."\n\
-        cd /app/workflow\n\
-        \n\
-        # Run Snakemake with conda and singularity support\n\
-        snakemake --cores 4 \\\n\
-            --directory /data/output \\\n\
-            --configfile /data/input/run_pipeline.json \\\n\
-            --use-conda \\\n\
-            --use-singularity \\\n\
-            --singularity-args "--bind /data:/data"\n\
-        \n\
-        if [ $? -eq 0 ]; then\n\
-            echo "Pipeline completed successfully"\n\
-            cp /data/output/*.out /data/comparisons/ 2>/dev/null || true\n\
-            cp /data/output/*.anchors /data/comparisons/ 2>/dev/null || true\n\
-            cp /data/output/*.bed /data/comparisons/ 2>/dev/null || true\n\
-            echo "Results copied to /data/comparisons/"\n\
-        else\n\
-            echo "Pipeline failed"\n\
-        fi\n\
-        \n\
-        rm /data/input/run_pipeline.json\n\
-    fi\n\
-    sleep 5\n\
-done\n\
-' > /app/snakemake_watcher.sh && chmod +x /app/snakemake_watcher.sh
-
+  
 # Verify installations
 RUN bash -c "source /opt/conda/etc/profile.d/conda.sh && \
     conda activate synflow && \
     echo '=== Environment Check ===' && \
     python --version && \
-    snakemake --version && \
-    singularity --version && \
+    snakemake --version && \ 
     node --version"
 
 # Create bashrc to auto-activate conda environment
