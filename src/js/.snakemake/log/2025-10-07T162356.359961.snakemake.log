@@ -1,0 +1,3 @@
+TypeError in file /app/workflow/Snakefile, line 25:
+abspath() takes 1 positional argument but 2 were given
+  File "/app/workflow/Snakefile", line 25, in <module>

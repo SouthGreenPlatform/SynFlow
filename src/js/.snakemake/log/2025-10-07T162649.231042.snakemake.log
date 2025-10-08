@@ -1,0 +1,3 @@
+WildcardError in file /app/workflow/Snakefile, line 156:
+No values given for wildcard 'out_dir'.
+  File "/app/workflow/Snakefile", line 156, in <module>

@@ -264,9 +264,8 @@ io.on('connection', socket => {
                         console.log(`Fichiers trouvés pour ${input.name}:`, matchingFiles);
                         matchingFiles.forEach(file => {
                             if (file && file.path) {
-                                // Ajout du nom de fichier avec le flag au bloc -a
-                                const fileName = path.basename(file.path);
-                                aArgs += ` ${input.flag} ${fileName}`;
+                                // Ajout du path du fichier
+                                aArgs += ` ${input.flag} ${file.path}`;
                             }
                         });
                     }
@@ -275,8 +274,16 @@ io.on('connection', socket => {
                 if (aArgs) {
                     commandArgs += aArgs.trim();
                 }
-                // Retourner la commande complète
-                return `python /app/workflow/create_conf.py ${commandArgs.trim()}`;
+
+                // Extraire l'UUID des noms de fichiers (format: UUID_filename)
+                const uuidMatch = commandArgs.match(/(\d+-\d+)_/);
+                const uuid = uuidMatch ? uuidMatch[1] : '';
+
+                // Ajouter l'UUID à la commande si trouvé (avec un ESPACE avant -u)
+                const uuidArg = uuid ? ` -u ${uuid}` : ''; //ESPACE au début
+
+                // Retourner la commande complète avec activation de l'environnement conda
+                return `bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate synflow && python /app/workflow/create_conf.py ${commandArgs.trim()}${uuidArg}"`;
             }
             // Générer la commande de lancement
             launchCommand = buildOpalLaunchCommand(serviceData, uploadedFiles, params);
