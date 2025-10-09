@@ -467,7 +467,7 @@ io.on('connection', socket => {
         rimraf(toolkitWorkingPath);//enlève aussi les fichiers temporaires du toolkit
     });
 });
-const port = Number(process.env.PORT) || 3031;
+const port = 3031;
 server.listen(port, '0.0.0.0', () => {
     console.log(`SynFlow server is running on port ${port}`);
 });
