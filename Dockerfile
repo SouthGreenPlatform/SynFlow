@@ -6,6 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PATH=/opt/conda/bin:$PATH
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
+    coreutils \
     git \
     wget \
     curl \
