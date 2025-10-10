@@ -232,15 +232,17 @@ io.on('connection', socket => {
         const params = formData.params;        // Les paramètres texte (comme la base de données sélectionnée)
         let launchCommand ='';
 
-        //   ______   .______      ___       __      
-        //  /  __  \  |   _  \    /   \     |  |     
-        // |  |  |  | |  |_)  |  /  ^  \    |  |     
-        // |  |  |  | |   ___/  /  /_\  \   |  |     
-        // |  `--'  | |  |     /  _____  \  |  `----.
-        //  \______/  | _|    /__/     \__\ |_______|                                  
+        //  __        ______     ______     ___       __         .______       __    __  .__   __. 
+        // |  |      /  __  \   /      |   /   \     |  |        |   _  \     |  |  |  | |  \ |  | 
+        // |  |     |  |  |  | |  ,----'  /  ^  \    |  |        |  |_)  |    |  |  |  | |   \|  | 
+        // |  |     |  |  |  | |  |      /  /_\  \   |  |        |      /     |  |  |  | |  . `  | 
+        // |  `----.|  `--'  | |  `----./  _____  \  |  `----.   |  |\  \----.|  `--'  | |  |\   | 
+        // |_______| \______/   \______/__/     \__\ |_______|   | _| `._____| \______/  |__| \__| 
+                                       
+        //Opal = local dans docker
         if(serviceData.service == "opal"){
             // Fonction pour construire la commande de lancement Opal
-            function buildOpalLaunchCommand(formData, uploadedFiles, params) {
+            function buildLaunchCommand(formData, uploadedFiles, params) {
                 const { url, action, arguments } = formData;
                 const inputs = arguments.inputs;
                 if (!inputs) {
@@ -286,9 +288,10 @@ io.on('connection', socket => {
                 return `bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate synflow && python /app/workflow/create_conf.py ${commandArgs.trim()}${uuidArg}"`;
             }
             // Générer la commande de lancement
-            launchCommand = buildOpalLaunchCommand(serviceData, uploadedFiles, params);
+            launchCommand = buildLaunchCommand(serviceData, uploadedFiles, params);
             console.log(`Commande générée : ${launchCommand}`);
             socket.emit('consoleMessage', launchCommand);
+
             // __________   ___  _______   ______ 
             // |   ____\  \ /  / |   ____| /      |
             // |  |__   \  V  /  |  |__   |  ,----'
@@ -308,128 +311,151 @@ io.on('connection', socket => {
                 socket.emit('consoleMessage', 'Lancement en cours...');
                 socket.emit('consoleMessage', `Sortie :\n ${stdout}`);
 
-                // Récupérer l'ID du job
-                const jobIdMatch = stdout.match(/Job ID: (\S+)/);
-                if (jobIdMatch && jobIdMatch[1]) {
-                    const jobId = jobIdMatch[1];
-                    socket.emit('consoleMessage', `Job lancé avec ID: ${jobId}`);
-
-                    //verifie le fichier de log pour récupérer les sortie quand elle sont disponibles.
-                    const logURL = 'http://io-biomaj.meso.umontpellier.fr:8080/opal-jobs/'+ jobId+'/stdout.txt';
-                    
-                    //revoie toolkitAnalysisDir au client pour générer une url d'accès aux resultats
-                    socket.emit('toolkitPath', toolkitAnalysisDir);
-
-                    let lastLogLength = 0; // Variable pour suivre la taille précédente du log
-
-                    function waitForOutputFiles(logURL, outputExtensions, callback) {
-                        const https = require('https');
-                        const http = require('http');
-                        const urlModule = require('url');
-                        const urlObj = urlModule.parse(logURL);
-
-                        let lastLogLength = 0;
-
-                        function checkLog() {
-                            const lib = urlObj.protocol === 'https:' ? https : http;
-                            lib.get(logURL, res => {
-                                let data = '';
-                                res.on('data', chunk => data += chunk);
-                                res.on('end', () => {
-                                    if (res.statusCode === 404) {
-                                        setTimeout(checkLog, 500);
-                                        return;
-                                    }
-                                    if (data.length > lastLogLength) {
-                                        const newContent = data.substring(lastLogLength);
-                                        lastLogLength = data.length;
-                                        newContent.split('\n').forEach(line => {
-                                            if (line.trim() !== '') {
-                                                console.log(`${line}`);
-                                                socket.emit('consoleMessage', `${line}`);
-                                            }
-                                        });
-                                    }
-
-                                    //Chercher la section "Checking expected output files:"
-                                    const outputSection = data.split('\n').find(line =>
-                                        line.includes("Checking expected output files:")
-                                    );
-
-                                    if (outputSection) {
-                                        // Filtrer toutes les extensions demandées
-                                        const fileLines = data.split('\n').filter(line =>
-                                            outputExtensions.some(ext => line.trim().endsWith(ext))
-                                        );
-
-                                        console.log(`Fichiers trouvés :`, fileLines);
-
-                                        if (fileLines.length > 0) {
-                                            callback(null, fileLines);
-                                        } else {
-                                            console.warn("Aucun fichier trouvé malgré la section de sortie");
-                                            socket.emit('consoleMessage', `No output files found.`);
-                                            callback('No output files found');
-                                        }
-                                    } else if (data.includes('Snakemake pipeline failed')) {
-                                        socket.emit('consoleMessage', `${jobId} Pipeline failed, no output.`);
-                                        callback('Pipeline failed');
-                                    } else {
-                                        setTimeout(checkLog, 500);
-                                    }
-                                });
-                            }).on('error', err => {
-                                callback(err);
-                            });
-                        }
-
-                        checkLog();
-                    }
-
-                    //   ______    __    __  .___________..______    __    __  .___________.
-                    //  /  __  \  |  |  |  | |           ||   _  \  |  |  |  | |           |
-                    // |  |  |  | |  |  |  | `---|  |----`|  |_)  | |  |  |  | `---|  |----`
-                    // |  |  |  | |  |  |  |     |  |     |   ___/  |  |  |  |     |  |     
-                    // |  `--'  | |  `--'  |     |  |     |  |      |  `--'  |     |  |     
-                    //  \______/   \______/      |__|     | _|       \______/      |__|                                                                     
-                    // Surveille stdout.txt jusqu'à trouver tous les fichiers .out, .bed et .anchors
-                    waitForOutputFiles(logURL, ['.out', '.bed', '.anchors'], (err, foundFiles) => {
-                        if (err) {
-                            console.error('Error while monitoring log:', err);
-                            socket.emit('consoleMessage', `Error while monitoring log: ${err.message}`);
-                            return;
-                        }
-
-                        if (foundFiles && foundFiles.length > 0) {
-                            console.log(`[${getCurrentTimestamp()}] Outputs found: ${foundFiles.length}`);
-                            socket.emit('consoleMessage', `Found ${foundFiles.length} output file(s).`);
-
-                            foundFiles.forEach((fileName, index) => {
-                                fileName = fileName.trim();
-                                const outputFileUrl = `http://io-biomaj.meso.umontpellier.fr:8080/opal-jobs/${jobId}/${fileName}`;
-                                console.log(`Downloading output file: ${outputFileUrl}`);
-
-                                const newFileName = `${toolkitAnalysisDir}${fileName}`;
-                                const downloadCommand = `curl -o ${newFileName} ${outputFileUrl}`;
-
-                                exec(downloadCommand, (error, stdout, stderr) => {
-                                    if (error) {
-                                        console.error(`Error while downloading ${fileName}: ${stderr}`);
-                                        socket.emit('consoleMessage', `Error while downloading ${fileName}: ${stderr}`);
-                                        return;
-                                    }
-
-                                    console.log(`File downloaded: ${newFileName}`);
-                                    socket.emit('consoleMessage', `File downloaded: ${newFileName}`);
-                                    socket.emit('outputResultOpal', newFileName);
-                                });
-                            });
-                        }
-                    });
-
-                } else {
-                    socket.emit('consoleMessage', "Impossible de récupérer l'ID du job.");
+                //verifie le fichier de log pour récupérer les sortie quand elle sont disponibles.
+                function getUuidFromCommand(launchCommand) {
+                    const match = launchCommand.match(/-u\s+([a-f0-9-]+)/i);
+                    return match ? match[1] : null;
                 }
+                const uuid = getUuidFromCommand(launchCommand);
+                console.log('UUID:', uuid);
+
+                const logPath = path.join(toolkitWorkingPath, uuid, 'stdout.txt');
+                console.log(logPath);
+                
+                //revoie toolkitAnalysisDir au client pour générer une url d'accès aux resultats
+                socket.emit('toolkitPath', toolkitAnalysisDir);
+
+                let lastLogLength = 0; // Variable pour suivre la taille précédente du log
+
+function waitForOutputFiles(logPath, outputExtensions, callback) {
+    const fs = require('fs');
+    const path = require('path');
+
+    function checkLog() {
+        fs.readFile(logPath, 'utf8', (err, data) => {
+            if (err) {
+                if (err.code === 'ENOENT') {
+                    setTimeout(checkLog, 500);
+                    return;
+                }
+                callback(err);
+                return;
+            }
+            processLogData(data);
+        });
+    }
+
+    function processLogData(data) {
+        if (data.length > lastLogLength) {
+            const newContent = data.substring(lastLogLength);
+            lastLogLength = data.length;
+            newContent.split('\n').forEach(line => {
+                if (line.trim() !== '') {
+                    console.log(`${line}`);
+                    socket.emit('consoleMessage', `${line}`);
+                }
+            });
+        }
+
+        // Recherche de la section d'output
+        const outputSection = data.split('\n').find(line =>
+            line.includes("Checking expected output files:")
+        );
+
+        if (outputSection) {
+            // Vérifie la présence de fichiers correspondant aux extensions dans le dossier local
+            const outputDir = path.dirname(logPath);
+
+            fs.readdir(outputDir, (err, files) => {
+                if (err) {
+                    console.error('Erreur lecture dossier output:', err);
+                    callback(err);
+                    return;
+                }
+
+                const matchingFiles = files.filter(f =>
+                    outputExtensions.some(ext => f.endsWith(ext))
+                );
+
+                if (matchingFiles.length > 0) {
+                    console.log(`Fichiers de sortie détectés :`, matchingFiles);
+                    socket.emit('consoleMessage', `Output files detected locally: ${matchingFiles.join(', ')}`);
+                    callback(null, matchingFiles);
+                } else {
+                    socket.emit('consoleMessage', `No output files found yet.`);
+                    setTimeout(checkLog, 1000);
+                }
+            });
+        } else if (data.includes('Snakemake pipeline failed')) {
+            socket.emit('consoleMessage', `Pipeline failed, no output.`);
+            callback('Pipeline failed');
+        } else {
+            setTimeout(checkLog, 500);
+        }
+    }
+
+    checkLog();
+}
+
+
+                //   ______    __    __  .___________..______    __    __  .___________.
+                //  /  __  \  |  |  |  | |           ||   _  \  |  |  |  | |           |
+                // |  |  |  | |  |  |  | `---|  |----`|  |_)  | |  |  |  | `---|  |----`
+                // |  |  |  | |  |  |  |     |  |     |   ___/  |  |  |  |     |  |     
+                // |  `--'  | |  `--'  |     |  |     |  |      |  `--'  |     |  |     
+                //  \______/   \______/      |__|     | _|       \______/      |__|                                                                     
+                // Surveille stdout.txt jusqu'à trouver tous les fichiers .out, .bed et .anchors
+
+waitForOutputFiles(logPath, ['.out', '.bed', '.anchors'], (err, foundFiles) => {
+    if (err) {
+        console.error('Error while monitoring log:', err);
+        socket.emit('consoleMessage', `Error while monitoring log: ${err.message}`);
+        return;
+    }
+
+    if (foundFiles && foundFiles.length > 0) {
+        console.log(`[${getCurrentTimestamp()}] Outputs found: ${foundFiles.length}`);
+        socket.emit('consoleMessage', `Found ${foundFiles.length} output file(s).`);
+
+        const jobDir = path.dirname(logPath);  // ex: /var/www/html/synflow/data/comparisons/<uuid>/
+        const targetDir = toolkitAnalysisDir;  // ex: /var/www/html/synflow/data/comparisons/toolkit_<sessionID>/
+        
+        // Vérifie que le dossier de destination existe
+        if (!fs.existsSync(targetDir)) {
+            fs.mkdirSync(targetDir, { recursive: true });
+        }
+
+        let filesMoved = 0;
+
+        foundFiles.forEach(fileName => {
+            const srcPath = path.join(jobDir, fileName.trim());
+            const destPath = path.join(targetDir, path.basename(fileName.trim()));
+
+            // Déplace le fichier vers le répertoire toolkit
+            fs.rename(srcPath, destPath, (errMove) => {
+                if (errMove) {
+                    console.error(`Erreur déplacement de ${srcPath}:`, errMove);
+                    socket.emit('consoleMessage', `Erreur déplacement de ${fileName}: ${errMove.message}`);
+                    return;
+                }
+
+                console.log(`Fichier déplacé: ${destPath}`);
+                socket.emit('consoleMessage', `File moved: ${path.basename(destPath)}`);
+                filesMoved++;
+
+                // Quand tous les fichiers sont déplacés, renvoyer le dossier
+                if (filesMoved === foundFiles.length) {
+                    console.log(`Tous les fichiers (${filesMoved}) ont été déplacés dans ${targetDir}`);
+                    socket.emit('consoleMessage', `All output files moved to ${targetDir}`);
+                    socket.emit('outputResultOpal', targetDir);
+                }
+            });
+        });
+    }
+});
+
+
+
             });
         }                                                    
     });
