@@ -177,9 +177,21 @@ export function initSocketConnection() {
 
     //envoie l'url du ftp contenant les fichiers output
     socket.on('toolkitFTP', (toolkitID) => {
-        return `https://synflow.southgreen.fr/tmp/toolkit_run/${toolkitID}`;
+        // Détermine si on est en local ou en prod
+        const currentHost = window.location.hostname;
+        let outputFilesPath;
 
-        // Un seul event avec tous les fichiers
+        if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+            // En local → serveur sur port 8080
+            outputFilesPath = `http://localhost:8080/data/comparisons/${toolkitID}`;
+        } else {
+            // En prod → garde l’URL d’origine
+            outputFilesPath = `https://synflow.southgreen.fr/tmp/toolkit_run/${toolkitID}`;
+        }
+
+        console.log('Output files path:', outputFilesPath);
+
+        // Émet un seul event avec tous les fichiers
         const event = new CustomEvent('toolkitFilesFromID', { detail: outputFilesPath });
         document.dispatchEvent(event);
     });
