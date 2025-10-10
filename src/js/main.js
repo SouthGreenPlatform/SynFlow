@@ -37,7 +37,16 @@ function checkToolkitParam() {
     if (toolkitID) {
         console.log('Toolkit ID trouvé dans l\'URL :', toolkitID);
 
-        const url=`https://synflow.southgreen.fr/tmp/toolkit_run/${toolkitID}`;
+        const currentHost = window.location.hostname;
+        let url;
+        if (currentHost === 'localhost') {
+            // En local → serveur sur port 8080
+            url = `http://localhost:8080/data/comparisons/${toolkitID}`;
+        } else {
+            // En prod → garde l’URL d’origine
+            url = `https://synflow.southgreen.fr/tmp/toolkit_run/${toolkitID}`;
+        }
+
         console.log('URL des fichiers FTP :', url);
 
         // Sélectionne et affiche l'onglet 'ftp'
