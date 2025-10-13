@@ -327,75 +327,75 @@ io.on('connection', socket => {
 
                 let lastLogLength = 0; // Variable pour suivre la taille précédente du log
 
-function waitForOutputFiles(logPath, outputExtensions, callback) {
-    const fs = require('fs');
-    const path = require('path');
+                function waitForOutputFiles(logPath, outputExtensions, callback) {
+                    const fs = require('fs');
+                    const path = require('path');
 
-    function checkLog() {
-        fs.readFile(logPath, 'utf8', (err, data) => {
-            if (err) {
-                if (err.code === 'ENOENT') {
-                    setTimeout(checkLog, 500);
-                    return;
+                    function checkLog() {
+                        fs.readFile(logPath, 'utf8', (err, data) => {
+                            if (err) {
+                                if (err.code === 'ENOENT') {
+                                    setTimeout(checkLog, 500);
+                                    return;
+                                }
+                                callback(err);
+                                return;
+                            }
+                            processLogData(data);
+                        });
+                    }
+
+                    function processLogData(data) {
+                        if (data.length > lastLogLength) {
+                            const newContent = data.substring(lastLogLength);
+                            lastLogLength = data.length;
+                            newContent.split('\n').forEach(line => {
+                                if (line.trim() !== '') {
+                                    console.log(`${line}`);
+                                    socket.emit('consoleMessage', `${line}`);
+                                }
+                            });
+                        }
+
+                        // Recherche de la section d'output
+                        const outputSection = data.split('\n').find(line =>
+                            line.includes("Checking expected output files:")
+                        );
+
+                        if (outputSection) {
+                            // Vérifie la présence de fichiers correspondant aux extensions dans le dossier local
+                            const outputDir = path.dirname(logPath);
+
+                            fs.readdir(outputDir, (err, files) => {
+                                if (err) {
+                                    console.error('Erreur lecture dossier output:', err);
+                                    callback(err);
+                                    return;
+                                }
+
+                                const matchingFiles = files.filter(f =>
+                                    outputExtensions.some(ext => f.endsWith(ext))
+                                );
+
+                                if (matchingFiles.length > 0) {
+                                    console.log(`Fichiers de sortie détectés :`, matchingFiles);
+                                    socket.emit('consoleMessage', `Output files detected locally: ${matchingFiles.join(', ')}`);
+                                    callback(null, matchingFiles);
+                                } else {
+                                    socket.emit('consoleMessage', `No output files found yet.`);
+                                    setTimeout(checkLog, 1000);
+                                }
+                            });
+                        } else if (data.includes('Snakemake pipeline failed')) {
+                            socket.emit('consoleMessage', `Pipeline failed, no output.`);
+                            callback('Pipeline failed');
+                        } else {
+                            setTimeout(checkLog, 500);
+                        }
+                    }
+
+                    checkLog();
                 }
-                callback(err);
-                return;
-            }
-            processLogData(data);
-        });
-    }
-
-    function processLogData(data) {
-        if (data.length > lastLogLength) {
-            const newContent = data.substring(lastLogLength);
-            lastLogLength = data.length;
-            newContent.split('\n').forEach(line => {
-                if (line.trim() !== '') {
-                    console.log(`${line}`);
-                    socket.emit('consoleMessage', `${line}`);
-                }
-            });
-        }
-
-        // Recherche de la section d'output
-        const outputSection = data.split('\n').find(line =>
-            line.includes("Checking expected output files:")
-        );
-
-        if (outputSection) {
-            // Vérifie la présence de fichiers correspondant aux extensions dans le dossier local
-            const outputDir = path.dirname(logPath);
-
-            fs.readdir(outputDir, (err, files) => {
-                if (err) {
-                    console.error('Erreur lecture dossier output:', err);
-                    callback(err);
-                    return;
-                }
-
-                const matchingFiles = files.filter(f =>
-                    outputExtensions.some(ext => f.endsWith(ext))
-                );
-
-                if (matchingFiles.length > 0) {
-                    console.log(`Fichiers de sortie détectés :`, matchingFiles);
-                    socket.emit('consoleMessage', `Output files detected locally: ${matchingFiles.join(', ')}`);
-                    callback(null, matchingFiles);
-                } else {
-                    socket.emit('consoleMessage', `No output files found yet.`);
-                    setTimeout(checkLog, 1000);
-                }
-            });
-        } else if (data.includes('Snakemake pipeline failed')) {
-            socket.emit('consoleMessage', `Pipeline failed, no output.`);
-            callback('Pipeline failed');
-        } else {
-            setTimeout(checkLog, 500);
-        }
-    }
-
-    checkLog();
-}
 
 
                 //   ______    __    __  .___________..______    __    __  .___________.
@@ -406,56 +406,53 @@ function waitForOutputFiles(logPath, outputExtensions, callback) {
                 //  \______/   \______/      |__|     | _|       \______/      |__|                                                                     
                 // Surveille stdout.txt jusqu'à trouver tous les fichiers .out, .bed et .anchors
 
-waitForOutputFiles(logPath, ['.out', '.bed', '.anchors'], (err, foundFiles) => {
-    if (err) {
-        console.error('Error while monitoring log:', err);
-        socket.emit('consoleMessage', `Error while monitoring log: ${err.message}`);
-        return;
-    }
+                waitForOutputFiles(logPath, ['.out', '.bed', '.anchors'], (err, foundFiles) => {
+                    if (err) {
+                        console.error('Error while monitoring log:', err);
+                        socket.emit('consoleMessage', `Error while monitoring log: ${err.message}`);
+                        return;
+                    }
 
-    if (foundFiles && foundFiles.length > 0) {
-        console.log(`[${getCurrentTimestamp()}] Outputs found: ${foundFiles.length}`);
-        socket.emit('consoleMessage', `Found ${foundFiles.length} output file(s).`);
+                    if (foundFiles && foundFiles.length > 0) {
+                        console.log(`[${getCurrentTimestamp()}] Outputs found: ${foundFiles.length}`);
+                        socket.emit('consoleMessage', `Found ${foundFiles.length} output file(s).`);
 
-        const jobDir = path.dirname(logPath);  // ex: /var/www/html/synflow/data/comparisons/<uuid>/
-        const targetDir = toolkitAnalysisDir;  // ex: /var/www/html/synflow/data/comparisons/toolkit_<sessionID>/
-        
-        // Vérifie que le dossier de destination existe
-        if (!fs.existsSync(targetDir)) {
-            fs.mkdirSync(targetDir, { recursive: true });
-        }
+                        const jobDir = path.dirname(logPath);  // ex: /var/www/html/synflow/data/comparisons/<uuid>/
+                        const targetDir = toolkitAnalysisDir;  // ex: /var/www/html/synflow/data/comparisons/toolkit_<sessionID>/
+                        
+                        // Vérifie que le dossier de destination existe
+                        if (!fs.existsSync(targetDir)) {
+                            fs.mkdirSync(targetDir, { recursive: true });
+                        }
 
-        let filesMoved = 0;
+                        let filesMoved = 0;
 
-        foundFiles.forEach(fileName => {
-            const srcPath = path.join(jobDir, fileName.trim());
-            const destPath = path.join(targetDir, path.basename(fileName.trim()));
+                        foundFiles.forEach(fileName => {
+                            const srcPath = path.join(jobDir, fileName.trim());
+                            const destPath = path.join(targetDir, path.basename(fileName.trim()));
 
-            // Déplace le fichier vers le répertoire toolkit
-            fs.rename(srcPath, destPath, (errMove) => {
-                if (errMove) {
-                    console.error(`Erreur déplacement de ${srcPath}:`, errMove);
-                    socket.emit('consoleMessage', `Erreur déplacement de ${fileName}: ${errMove.message}`);
-                    return;
-                }
+                            // Déplace le fichier vers le répertoire toolkit
+                            fs.rename(srcPath, destPath, (errMove) => {
+                                if (errMove) {
+                                    console.error(`Erreur déplacement de ${srcPath}:`, errMove);
+                                    socket.emit('consoleMessage', `Erreur déplacement de ${fileName}: ${errMove.message}`);
+                                    return;
+                                }
 
-                console.log(`Fichier déplacé: ${destPath}`);
-                socket.emit('consoleMessage', `File moved: ${path.basename(destPath)}`);
-                filesMoved++;
+                                console.log(`Fichier déplacé: ${destPath}`);
+                                socket.emit('consoleMessage', `File moved: ${path.basename(destPath)}`);
+                                filesMoved++;
 
-                // Quand tous les fichiers sont déplacés, renvoyer le dossier
-                if (filesMoved === foundFiles.length) {
-                    console.log(`Tous les fichiers (${filesMoved}) ont été déplacés dans ${targetDir}`);
-                    socket.emit('consoleMessage', `All output files moved to ${targetDir}`);
-                    socket.emit('outputResultOpal', targetDir);
-                }
-            });
-        });
-    }
-});
-
-
-
+                                // Quand tous les fichiers sont déplacés, renvoyer le dossier
+                                if (filesMoved === foundFiles.length) {
+                                    console.log(`Tous les fichiers (${filesMoved}) ont été déplacés dans ${targetDir}`);
+                                    socket.emit('consoleMessage', `All output files moved to ${targetDir}`);
+                                    socket.emit('outputResultOpal', targetDir);
+                                }
+                            });
+                        });
+                    }
+                });
             });
         }                                                    
     });
