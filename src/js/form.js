@@ -199,10 +199,22 @@ async function fetchSynflowDirectories() {
 
 // Fonction pour récupérer la liste des fichiers .out depuis un dossier distant
 function fetchRemoteFileList(folder) {
-    // Récupère la liste des fichiers .out depuis le HTML du dossier distant
-    return fetch(folder)
+    // Normalise l'URL pour s'assurer qu'elle se termine par un /
+    let url = folder.trim();
+    if (!url.endsWith('/')) {
+        url += '/';
+    }
+    
+    console.log('Fetching from:', url);
+    
+    return fetch(url, {
+        method: 'GET',
+        headers: {
+            'Accept': 'text/html'
+        }
+    })
         .then(response => {
-            if (!response.ok) throw new Error('Erreur lors du chargement de la liste de fichiers');
+            if (!response.ok) throw new Error(`Erreur ${response.status}: ${response.statusText}`);
             return response.text();
         })
         .then(html => {
@@ -210,10 +222,22 @@ function fetchRemoteFileList(folder) {
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             const links = Array.from(doc.querySelectorAll('a'));
-            // Filtre les fichiers .out
+            
+            // Filtre les fichiers .out en utilisant l'attribut href
             const files = links
-                .map(link => link.textContent)
-                .filter(name => name.endsWith('.out'));
+                .map(link => {
+                    const href = link.getAttribute('href');
+                    // Ignore le lien parent (..)
+                    if (!href || href === '../') return null;
+                    // Retourne seulement les fichiers .out
+                    if (href.endsWith('.out')) {
+                        return href;
+                    }
+                    return null;
+                })
+                .filter(name => name !== null);
+            
+            console.log('Fichiers .out trouvés:', files);
             return files;
         });
 }
@@ -793,18 +817,29 @@ export function createFTPSection() {
     // Sélection ordonnée
     let ftpSelectedGenomes = [];
 
-    // Fonction pour charger et afficher la liste des fichiers .out depuis le FTP
     fetchButton.addEventListener('click', async () => {
         fileListDiv.innerHTML = '';
-        fileListDiv.style.display = 'block'; // Affiche la liste des fichiers
+        fileListDiv.style.display = 'block';
 
         ftpSelectedGenomes = [];
         chainDiv.innerHTML = '';
+        
+        // Récupère la valeur brute sans transformation
         const folder = ftpInput.value.trim();
+        
+        console.log('URL saisie:', folder); // Pour vérifier que le port est présent
+        
         if (!folder) {
             fileListDiv.innerHTML = '<span style="color:red;">Please enter a valid FTP folder URL.</span>';
             return;
         }
+        
+        // Vérification que le port est bien présent
+        if (folder.includes('localhost') && !folder.includes(':8080')) {
+            fileListDiv.innerHTML = '<span style="color:red;">Port 8080 is missing from the URL.</span>';
+            return;
+        }
+        
         try {
             const files = await fetchRemoteFileList(folder);
             if (files.length === 0) {
