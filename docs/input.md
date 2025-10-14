@@ -1,12 +1,11 @@
 
 # Input
-You can explore genomic comparisons in three ways:
+You can explore genomic comparisons in four ways:
 
 - [Use an existing dataset](#use-an-existing-dataset)
 - [Upload your own SyRI results](#upload-your-own-syri-output)
 - [Run the Synmake workflow with your FASTA genomes](#run-the-synmake-workflow)
 - [Browse_FTP](#browse-ftp)
-
 
 ## Use an existing dataset
 
