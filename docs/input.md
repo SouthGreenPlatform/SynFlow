@@ -64,14 +64,27 @@ Go to the **“Run Workflow”** tab.
 
 Upload two `.fasta` genome files (reference and query).
 
+Click **Submit**. 
+
+Once the workflow has finished, a link will appear allowing you to directly load the generated results into the same section as “Browse FTP” within the web application.
+This link provides quick access to all output files produced by the workflow, enabling you to visualize or reuse them in Synflow without having to manually transfer or upload data.
+
+![Run job](assets/workflow_result.png "Results")
+
 ---
 
 ## Browse FTP
 
+If you have already generated SyRI results locally using the Synmake workflow or another compatible pipeline, you can directly provide them to Synflow without uploading files manually.
+To do so, go to the “Browse FTP” section of the web application and submit the public URL pointing to your results directory.
+
+The application will automatically fetch the required files (such as alignment, annotation, and SyRI output files) from the provided location.
+Once validated, the data will be accessible in the same interface as results generated directly through the web-based workflow, allowing seamless visualization and comparison across datasets.
+
+![Run job](assets/browse_ftp.png "Browse FTP")
 
 ---
 
 
-Click **Submit**. 
 
  
