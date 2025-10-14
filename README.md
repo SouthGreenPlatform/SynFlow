@@ -8,6 +8,8 @@ SynFlow is available for free to use at [synflow.southgreen.fr](synflow.southgre
 
 A more descriptive documention of SynFlow is available [here](https://synflow.readthedocs.io/en/latest/)
 
+A Snakemake workflow to detect synteny blocks and identify chromosomal rearrangements. [here](https://gitlab.cirad.fr/agap/cluster/snakemake/synflow)
+
 ## Features
 
 - Upload your own data or explore the database
@@ -27,6 +29,7 @@ Example of file chain:
 - A-thaliana_C-rubella.out
 - C-rubella_B-rapa.out
 - B-rapa_O-sativa.out
+  
 This will create a visualization chain: **A-thaliana → C-rubella → B-rapa → O-sativa**
 
 #### Three ways to input data:
@@ -39,9 +42,9 @@ This will create a visualization chain: **A-thaliana → C-rubella → B-rapa �
 Use the zoom and pan features to explore the visualization. 
 Chromosome order can be changed by drag and drop.
 ![graph](public/img/chrom_switch.gif)
+
 #### Filter the bands using the legend and the slider.
-![Controle panel](public/img/filter.gif
-)
+![Controle panel](public/img/filter.gif)
 
 ## License
 
@@ -51,6 +54,7 @@ This project is licensed under the terms of the GNU General Public License v3.0.
 
 - Marilyne Summo
 - Gaëtan Droc
+- Mathieu Rouard
 - Gautier Sarah
 
 See also the list of [contributors](https://github.com/SouthGreenPlatform/SynFlow/contributors) who participated in this project.
