@@ -21,9 +21,14 @@ This project is licensed under the terms of the GNU General Public License v3.0.
 
 - Marilyne Summo
 - Gaëtan Droc
+- Mathieu Rouard
 - Gautier Sarah
 
 See also the list of [contributors](https://github.com/SouthGreenPlatform/SynFlow/contributors) who participated in this project.
+
+### Contact us
+
+Please open a GitHub [Issue](https://github.com/SouthGreenPlatform/SynFlow/issues) if you encounter any problems with Synflow. You can also write to marilyne.summo@cirad.fr to give us your feedback or if you have any questions. 
 
 ### Citation
 
