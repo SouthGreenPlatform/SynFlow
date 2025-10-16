@@ -69,8 +69,8 @@ export function createInfoPanel() {
 	// style="padding: 15px; background-color: white; border-radius: 5px; box-shadow: rgba(0, 0, 0, 0.1) 0px 0px 5px;"
 
     const menuItems = [
-        { id: 'details', icon: 'fas fa-info-circle', text: 'Sequence Band details' },
-        { id: 'anchors', icon: 'fas fa-project-diagram', text: 'Genes Orthology' }
+        { id: 'details', icon: 'fas fa-info-circle', text: 'Block details' },
+        { id: 'anchors', icon: 'fas fa-project-diagram', text: 'Synteny' }
     ];
 
     const tabs = {};

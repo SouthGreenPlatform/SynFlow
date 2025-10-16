@@ -78,7 +78,7 @@ export function createGraphSection() {
     
     // Ajout du titre
     const title = document.createElement('h4');
-    title.textContent = 'Graph Visualization';
+    title.textContent = 'Overview';
     title.style.margin = '0';
     headerBar.appendChild(title);
 

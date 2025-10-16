@@ -120,7 +120,7 @@ export function createControlPanel() {
         border-radius: 5px;
         box-shadow: 0 0 5px rgba(0,0,0,0.1);
     `;
-    chromControlSection.innerHTML = '<h5><i class="fas fa-list-ul"></i> Chromosomes</h5>';
+    chromControlSection.innerHTML = '<h5><i class="fas fa-list-ul"></i> Chromosome layout</h5>';
 
     const chromControler = document.createElement('div');
     chromControler.setAttribute('id', 'chrom-controler');
