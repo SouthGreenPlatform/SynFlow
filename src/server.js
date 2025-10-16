@@ -238,13 +238,13 @@ io.on('connection', socket => {
         // |  |     |  |  |  | |  |      /  /_\  \   |  |        |      /     |  |  |  | |  . `  | 
         // |  `----.|  `--'  | |  `----./  _____  \  |  `----.   |  |\  \----.|  `--'  | |  |\   | 
         // |_______| \______/   \______/__/     \__\ |_______|   | _| `._____| \______/  |__| \__| 
-                                       
+
         //Opal = local dans docker
         if(serviceData.service == "opal"){
             // Fonction pour construire la commande de lancement Opal
             function buildLaunchCommand(formData, uploadedFiles, params) {
-                const { url, action, arguments } = formData;
-                const inputs = arguments.inputs;
+                const { url, action, arguments: args } = formData;
+                const inputs = args.inputs;
                 if (!inputs) {
                     throw new Error("Les 'inputs' ne sont pas définis pour ce service.");
                 }
