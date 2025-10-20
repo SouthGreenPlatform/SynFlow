@@ -33,33 +33,6 @@
 				]
 			}
 		},
-		"synflow_old": {
-			"label": "Synflow",
-			"service": "opal",
-			"command": "python2 /opt/OpalPythonClient/opal-py-2.4.1/GenericServiceClient.py",
-			"url": "http://io-biomaj.meso.umontpellier.fr:8080/opal2/services/synflow",
-			"action": "launchJob",
-			"arguments": {
-				"inputs": [
-					{
-						"name": "input1",
-						"label": "First input file",
-						"type": "file",
-						"flag": "-i",
-						"default": "/NAS/muse/web/HUBs/coffea/opal/C21.fasta",
-						"required": true
-					},
-					{
-						"name": "input2",
-						"label": "Second input file",
-						"type": "file",
-						"flag": "-i",
-						"default": "/NAS/muse/web/HUBs/coffea/opal/DH.fasta",
-						"required": true
-					}
-				]
-			}
-		},
 		"synflow": {
 			"label": "Synflow",
 			"service": "opal",
@@ -70,7 +43,8 @@
 				"inputs": [
 					{
 						"name": "inputs",
-						"label": "Genome fasta files (min. 2 files)",
+						"label": "FASTA files",
+						"tooltip": "Genomes assemblies, minimum 2 genomes required",
 						"type": "file[]",
 						"flag": "-i",
 						"default": [
@@ -81,14 +55,15 @@
 					},
 					{
 						"name": "gff",
-						"label": "Corresponding gff files",
+						"label": "GFF3 files",
+						"tooltip": "Gene annotation, required only for MCScanX",
 						"type": "file[]",
 						"flag": "-g",
 						"required": false
 					},
 					{
 						"name": "workflow",
-						"label": "Workflow",
+						"label": "Method",
 						"type": "select",
 						"flag": "-m",
 						"optionsSource": "SyriWorkflows",

@@ -374,9 +374,66 @@ export function generateForm(selectedService) {
 
         // Générer les champs dynamiquement
         fields.forEach(field => {
+            const labelContainer = document.createElement("div");
+            labelContainer.style.display = "flex";
+            labelContainer.style.alignItems = "center";
+            labelContainer.style.gap = "5px";
+
             const label = document.createElement("label");
             label.textContent = field.label;
             label.htmlFor = field.name;
+            labelContainer.appendChild(label);
+
+            // Ajouter le tooltip s'il existe
+            if (field.tooltip) {
+                const tooltipIcon = document.createElement("span");
+                tooltipIcon.innerHTML = "?";
+                tooltipIcon.style.cursor = "help";
+                tooltipIcon.style.backgroundColor = "#f0f0f0";
+                tooltipIcon.style.borderRadius = "50%";
+                tooltipIcon.style.width = "16px";
+                tooltipIcon.style.height = "16px";
+                tooltipIcon.style.display = "inline-flex";
+                tooltipIcon.style.justifyContent = "center";
+                tooltipIcon.style.alignItems = "center";
+                tooltipIcon.style.fontSize = "12px";
+                tooltipIcon.style.position = "relative";
+                
+                const tooltipText = document.createElement("div");
+                tooltipText.textContent = field.tooltip;
+                tooltipText.style.visibility = "hidden";
+                tooltipText.style.backgroundColor = "black";
+                tooltipText.style.color = "white";
+                tooltipText.style.padding = "5px 10px";
+                tooltipText.style.borderRadius = "6px";
+                tooltipText.style.position = "absolute";
+                tooltipText.style.zIndex = "1";
+                tooltipText.style.width = "200px";
+                tooltipText.style.left = "25px";
+                tooltipText.style.top = "-5px";
+                tooltipText.style.fontSize = "12px";
+                
+                // Événements pour afficher/masquer le tooltip
+                const showTooltip = () => tooltipText.style.visibility = "visible";
+                const hideTooltip = () => tooltipText.style.visibility = "hidden";
+                
+                tooltipIcon.addEventListener("mouseover", showTooltip);
+                tooltipIcon.addEventListener("mouseout", hideTooltip);
+                tooltipIcon.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    if (tooltipText.style.visibility === "visible") {
+                        hideTooltip();
+                    } else {
+                        showTooltip();
+                    }
+                });
+                
+                // Fermer le tooltip si on clique ailleurs sur la page
+                document.addEventListener("click", hideTooltip);
+                
+                tooltipIcon.appendChild(tooltipText);
+                labelContainer.appendChild(tooltipIcon);
+            }
 
             let input;
             if (field.type === "select") {
@@ -416,7 +473,7 @@ export function generateForm(selectedService) {
                 input.required = true;
             }
 
-            formContainer.appendChild(label);
+            formContainer.appendChild(labelContainer);
             formContainer.appendChild(input);
             formContainer.appendChild(document.createElement("br"));
         });
