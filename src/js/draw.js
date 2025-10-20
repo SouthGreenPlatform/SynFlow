@@ -4,6 +4,30 @@ import { anchorsFiles, bedFiles, jbrowseLinks } from "./form.js";
 
 export let currentYOffset = 0; // Définir globalement
 
+// Définir les defs pour chaque type
+export const typeDefs = {
+    'SYN': 'Syntenic region', 
+    'SYNAL': 'Alignment in syntenic region',
+    'INV': 'Inverted region',
+    'INVAL': 'Alignment in inverted region',
+    'INVTR': 'Inverted translocated region',
+    'INVTRAL': 'Alignment in inverted translocated region',
+    'INVDP': 'Inverted duplicated region',
+    'INVDPAL': 'Alignment in inverted duplicated region',
+    'TRANS': 'Translocated region',
+    'TRANSAL': 'Alignment in translocated region',
+    'DUP': 'Duplicated region',
+    'DUPAL': 'Alignment in duplicated region',
+    'NOTAL': 'Un-aligned region',
+    'SNP': 'Single Nucleotide Polymorphism',
+    'CPG': 'Copy gain in query',
+    'CPL': 'Copy loss in query',
+    'HDR': 'Highly diverged regions',
+    'TDM': 'Tandem repeat',
+    'INS': 'Insertion in query',
+    'DEL': 'Deletion in query'
+};
+
 // Définir les couleurs pour chaque type
 export const bandeTypeColors = {
     'SYN': '#d3d3d3', // gris clair

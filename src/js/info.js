@@ -1,4 +1,4 @@
-import { typeColors } from "./draw.js";
+import { typeColors, typeDefs } from "./draw.js";
 import { genomeColors } from "./process.js";
 import { jbrowseLinks } from "./form.js";
 
@@ -405,6 +405,19 @@ export function createTableBadges(lines) {
         typeCounts[d.type] = (typeCounts[d.type] || 0) + 1;
     });
 
+    // Conteneur pour la définition
+    const definitionHtml = `
+        <div id="type-definition" style="
+            min-height: 50px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: opacity 0.2s;
+            opacity: 0;
+        ">
+        </div>
+    `;
+
     // Badges
     const typeCountsHtml = Object.keys(typeColors)
         .filter(type => typeCounts[type])
@@ -414,8 +427,17 @@ export function createTableBadges(lines) {
             const style = background.includes('gradient') 
                 ? `background: ${background}` 
                 : `background-color: ${background}`;
+            const definition = typeDefs[type] || '';
+            
             return `
-                <div class="type-badge" data-type="${type}" data-active="true" style="${style}">
+                <div class="type-badge" 
+                    data-type="${type}" 
+                    data-active="true" 
+                    data-definition="${definition}"
+                    style="${style};"
+                    onmouseover="document.getElementById('type-definition').innerHTML = this.dataset.definition; document.getElementById('type-definition').style.opacity = '1';"
+                    onmouseout="document.getElementById('type-definition').innerHTML = ''; document.getElementById('type-definition').style.opacity = '0.7';"
+                >
                     <span class="type-label">${type}</span>
                     <span class="type-count">${count}</span>
                 </div>
@@ -428,6 +450,8 @@ export function createTableBadges(lines) {
         <div class="type-badges-container" style="margin-top:8px;">
             ${typeCountsHtml}
         </div>
+
+        ${definitionHtml}
     `;
 }
 
