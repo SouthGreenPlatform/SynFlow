@@ -93,7 +93,7 @@ export async function createForm() {
         { id: 'existing', icon: 'fas fa-folder-open', text: 'Existing Files' },
         { id: 'upload', icon: 'fas fa-upload', text: 'Upload Files' },
         { id: 'ftp', icon: 'fas fa-network-wired', text: 'Browse FTP' },
-        { id: 'calculate', icon: 'fas fa-cogs', text: 'Run Calculation' }
+        { id: 'calculate', icon: 'fas fa-cogs', text: 'Run analysis' }
     ];
 
     menuItems.forEach(item => {
