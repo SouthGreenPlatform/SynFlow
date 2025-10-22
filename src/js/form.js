@@ -558,7 +558,8 @@ function createUploadSection() {
     bandInput.setAttribute('id', 'band-files');
     bandInput.setAttribute('name', 'band-files');
     bandInput.setAttribute('multiple', true);
-    bandInput.setAttribute('accept', '.out');
+    //fichiers acceptés = out bed anchors json
+    bandInput.setAttribute('accept', '.out,.bed,.anchors,.json');
     bandInput.style.display = 'none'; // Cache l'input file par défaut
 
     // Créer un bouton personnalisé
@@ -581,7 +582,52 @@ function createUploadSection() {
     // Mettre à jour le label quand des fichiers sont sélectionnés
     bandInput.addEventListener('change', () => {
         if (bandInput.files.length > 0) {
+            //compte chaque type de fichier
+            const fileCounts = {
+                out: 0,
+                bed: 0,
+                anchors: 0,
+                json: 0
+            };
+            Array.from(bandInput.files).forEach(file => {
+                const ext = file.name.split('.').pop();
+                if (fileCounts.hasOwnProperty(ext)) {
+                    fileCounts[ext]++;
+                }
+            });
+            
             fileLabel.textContent = `${bandInput.files.length} file(s) selected`;
+            const details = [];
+            for (const [ext, count] of Object.entries(fileCounts)) {
+                if (count > 0) {
+                    details.push(`${count} ${ext} file(s)`);
+                }
+            }
+            fileLabel.textContent += ` (${details.join(', ')})`;
+
+            // Chercher le fichier .json
+            const jbrowseFile = Array.from(bandInput.files).find(file => file.name.endsWith('.json'));
+            if (jbrowseFile) {
+                console.log('jbrowse_link.json found, reading...');
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        jbrowseLinks = JSON.parse(event.target.result);
+                        console.log('Found jbrowse links:', jbrowseLinks);
+                    } catch (error) {
+                        console.log('Error parsing jbrowse_link.json:', error);
+                    }
+                };
+                reader.readAsText(jbrowseFile);
+            }
+
+            //met les fichiers .anchors dans anchorsFiles
+            anchorsFiles = Array.from(bandInput.files).filter(file => file.name.endsWith('.anchors'));
+            //met les fichiers .bed dans bedFiles
+            bedFiles = Array.from(bandInput.files).filter(file => file.name.endsWith('.bed'));
+            console.log('Anchors files:', anchorsFiles);
+            console.log('Bed files:', bedFiles);
+
         } else {
             fileLabel.textContent = 'No files chosen';
         }
@@ -1244,22 +1290,25 @@ export function updateFileList(inputElement, fileListElement) {
     selectedGenomes = [];
     updateChainDiv();
 
-
     const files = inputElement.files;
+    const outFiles = Array.from(files).filter(file => file.name.endsWith('.out'));
+    const anchorsFiles = Array.from(files).filter(file => file.name.endsWith('.anchors'));
+    const bedFiles = Array.from(files).filter(file => file.name.endsWith('.bed'));
+    const jsonFiles = Array.from(files).filter(file => file.name.endsWith('.json'));
+
     fileListElement.innerHTML = ''; // Clear the previous file list
-    for (let i = 0; i < files.length; i++) {
+    for (let i = 0; i < outFiles.length; i++) {
         const listItem = document.createElement('div');
-        listItem.textContent = files[i].name;
+        listItem.textContent = outFiles[i].name;
         fileListElement.appendChild(listItem);
     }
 
-    //detecte le all vs all 
-    const bandFileNames = Array.from(inputElement.files).map(file => file.name);
-    const genomes = extractAllGenomes(bandFileNames);
+    //detecte le all vs all
+    const genomes = extractAllGenomes(outFiles.map(file => file.name));
     const expectedFileCount = genomes.length * (genomes.length - 1);
 
 
-    if (bandFileNames.length === expectedFileCount) {
+    if (outFiles.length === expectedFileCount) {
         // Mode all vs all
         fileOrderMode = 'allvsall';
         console.log("All vs All mode detected with genomes: ", genomes);
