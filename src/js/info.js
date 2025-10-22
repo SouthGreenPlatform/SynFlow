@@ -476,9 +476,12 @@ export function createZoomedSyntenyView(orthologPairs, refGenome, queryGenome, r
     const refY = 50;
     const queryY = 200;
 
-    // Créer le conteneur SVG
+    // Créer le conteneur SVG avec style centré
     const svg = d3.select('#zoomed-synteny')
         .html('') // Nettoyer le contenu précédent
+        .style('display', 'flex')
+        .style('justify-content', 'center')
+        .style('align-items', 'center')
         .append('svg')
         .attr('id', 'anchor-viz')
         .attr('width', width + margin.left + margin.right)

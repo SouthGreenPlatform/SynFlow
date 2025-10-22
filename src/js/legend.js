@@ -57,7 +57,7 @@ export function createControlPanel() {
         padding: 20px;
         background-color: #f5f5f5;
         display: grid;
-        grid-template-columns: 345px 600px 270px;
+        grid-template-columns: 25% auto 25%;
         gap: 20px;
     `;
 
@@ -75,32 +75,17 @@ export function createControlPanel() {
 
     // Création des sections
     const legendSection = document.createElement('div');
-    legendSection.style.cssText = `
-        padding: 15px;
-        background-color: white;
-        border-radius: 5px;
-        box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    `;
+    legendSection.setAttribute('class', 'menu-section');
     legendSection.innerHTML = '<h5><i class="fas fa-info-circle"></i> Legend</h5>';
     legendSection.appendChild(createLegendContainer());
 
     const filtersSection = document.createElement('div');
-    filtersSection.style.cssText = `
-        padding: 15px;
-        background-color: white;
-        border-radius: 5px;
-        box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    `;
+    filtersSection.setAttribute('class', 'menu-section');
     filtersSection.innerHTML = '<h5><i class="fas fa-filter"></i> Filters</h5>';
     filtersSection.appendChild(createFiltersContent());
 
     const paramsSection = document.createElement('div');
-    paramsSection.style.cssText = `
-        padding: 15px;
-        background-color: white;
-        border-radius: 5px;
-        box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    `;
+    paramsSection.setAttribute('class', 'menu-section');
     paramsSection.innerHTML = '<h5><i class="fas fa-cog"></i> Parameters</h5>';
     paramsSection.appendChild(createParametersContent());
 
@@ -114,12 +99,7 @@ export function createControlPanel() {
     `;
 
     const chromControlSection = document.createElement('div');
-    chromControlSection.style.cssText = `
-        padding: 15px;
-        background-color: white;
-        border-radius: 5px;
-        box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    `;
+    chromControlSection.setAttribute('class', 'menu-section');
     chromControlSection.innerHTML = '<h5><i class="fas fa-list-ul"></i> Chromosome layout</h5>';
 
     const chromControler = document.createElement('div');

@@ -122,7 +122,7 @@ export function createGraphSection() {
         overflow: hidden;
         max-height: 1000px;
         padding: 20px;
-        width: 95vw;          /* Prend toute la largeur de la fenêtre */
+        width: 100%;          /* Prend toute la largeur de la fenêtre */
         margin-left: 50%;      /* Décale de 50% vers la droite */
         transform: translateX(-50%); /* Recentre en décalant de -50% */
         position: relative;    /* Nécessaire pour le positionnement */
@@ -686,12 +686,17 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
                     formContainer.removeChild(existingDownloadButton);
                 }
 
+                //download button for synteny svg
+                const buttonDiv = document.createElement('div');
                 const downloadAnchorSvgButton = document.createElement('button');
                 downloadAnchorSvgButton.id = 'download-anchor-svg';
                 downloadAnchorSvgButton.setAttribute('type', 'button');
                 downloadAnchorSvgButton.classList.add('btn-simple');
                 downloadAnchorSvgButton.textContent = 'Download SVG';
-                zoomedSynteny.appendChild(downloadAnchorSvgButton);
+                buttonDiv.appendChild(downloadAnchorSvgButton);
+                //append entre zoomedSynteny et orthology-table
+                zoomedSynteny.parentNode.insertBefore(buttonDiv, document.getElementById('orthology-table'));
+
                 const svgElement = document.getElementById('anchor-viz');
                 downloadAnchorSvgButton.addEventListener('click', function(event) {
                     event.preventDefault();

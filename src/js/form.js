@@ -82,12 +82,7 @@ export async function createForm() {
 
     // Colonne 1 : Menu de sélection
     const menuColumn = document.createElement('div');
-    menuColumn.style.cssText = `
-        padding: 15px;
-        background-color: white;
-        border-radius: 5px;
-        box-shadow: 0 0 5px rgba(0,0,0,0.1);
-    `;
+    menuColumn.setAttribute('class', 'menu-section');
 
     const menuItems = [
         { id: 'existing', icon: 'fas fa-folder-open', text: 'Existing Files' },

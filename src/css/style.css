@@ -3,7 +3,7 @@
     border-radius: 8px;
     box-shadow: 0 2px 12px rgba(0,0,0,0.07);
     margin: 32px auto 24px auto;
-    max-width: 1100px;
+    max-width: 90%;
     padding: 0;
 }
 
@@ -31,7 +31,19 @@
     color: #ffa500;
 }
 
+.my-container{
+  max-width: 90%;
+  margin: 32px auto 24px auto;
 
+}
+
+/* menu */
+.menu-section{
+  padding: 15px;
+  background-color: white;
+  border-radius: 5px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
 
 .svg-container {
   width: 100%;
