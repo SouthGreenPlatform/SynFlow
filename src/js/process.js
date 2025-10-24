@@ -20,7 +20,15 @@ const CHUNK_SIZE = 20000; // Nombre de lignes à traiter à la fois
 let numGenomes; //nombre de génomes à traiter
 export let scale = 100000; // diviseur pour la taille des chromosomes
 export let isFirstDraw = true; //premier dessin
-
+// Mode de coloration des bandes : 'type' (par défaut) ou 'byChrom'
+export let bandColorMode = 'type';
+export function setBandColorMode(mode) {
+    if (mode === 'type' || mode === 'byChrom') {
+        bandColorMode = mode;
+    } else {
+        console.warn('Unknown bandColorMode:', mode);
+    }
+}
 //spinner
 const opts = {
     lines: 20, length: 120, width: 50, radius: 1, scale: 0.8,
@@ -48,7 +56,7 @@ function resetGlobals() {
 
 }
 
-function generateColor(index) {
+export function generateColor(index) {
     const colors = [
         '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
         '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
@@ -1315,7 +1323,7 @@ export function downloadSvg(svgElement) {
     URL.revokeObjectURL(url);
 }
 
-export { generateColor, readFileInChunks, handleFileUpload };
+export { readFileInChunks, handleFileUpload };
 
 
 function reorderFileList(fileListElement, orderedFileNames, fileType) {

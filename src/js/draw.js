@@ -1,5 +1,5 @@
 import { showInfoPanel, showInfoUpdatedMessage, createDetailedTable, initializeTableFiltering, createTableBadges, createSummarySection, createZoomedSyntenyView, createOrthologsTable} from "./info.js";
-import { refGenome, queryGenome, genomeColors, genomeData, scale, allParsedData, isFirstDraw, downloadSvg } from "./process.js";
+import { refGenome, queryGenome, genomeColors, bandColorMode, genomeData, scale, allParsedData, isFirstDraw, downloadSvg, generateColor } from "./process.js";
 import { anchorsFiles, bedFiles, jbrowseLinks } from "./form.js";
 
 export let currentYOffset = 0; // Définir globalement
@@ -394,23 +394,30 @@ function drawChromPathNoArm(x, y, width, radius, chromNum, chromName, genome, sv
 
     const gradientId = `gradient-${genome}-${chromName.split('_ref')[0].split('_query')[0]}`; // Générer un ID de gradient unique
 
+    // Déterminer la couleur selon le mode
+    let chromColor;
+    if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
+        // Utilise l'index du chromosome pour la couleur
+        const chromIndex = parseInt(chromNum, 10) - 1;
+        chromColor = generateColor(chromIndex >= 0 ? chromIndex : 0);
+    } else {
+        chromColor = genomeColors[genome];
+    }
+
     svg.append("path")
         .attr("d", path)
         .attr("class", "chrom") // Ajoute une classe chrom
         .attr("data-genome", genome)
         .attr("data-chrom-name", chromName)
         .attr("data-chrom-num", chromNum)
-        .style("stroke", genomeColors[genome]) // Utiliser la couleur du génome
-        // .style("fill", "rgba(0, 0, 0, 0)")
-        //fill avec le gradient s'il existe
-        // #gradient-m-AA-pisangmadu-h1-Macmad_h1_01
+        .style("stroke", chromColor)
         .style('fill', `url(#${gradientId})`)
         .on('mouseover', function (event, d) {
-                 tip.show(event, d); // Afficher le tooltip
-            })
-            .on('mouseout', function (event, d) {
-                tip.hide(event, d); // Masquer le tooltip
-            });
+            tip.show(event, d); // Afficher le tooltip
+        })
+        .on('mouseout', function (event, d) {
+            tip.hide(event, d); // Masquer le tooltip
+        });
 }
 
 
@@ -455,7 +462,15 @@ function drawSNPDensityHeatmap(snpDensity, refLengths, chromPositions, binSize =
         
         //attribut le gradient au chromosome
         const monChromColor = d3.selectAll("#" + chr + "_ref.chrom");
-        monChromColor.style('fill', null); // Supprimer le style existant
+        // Déterminer la couleur selon le mode
+        let chromColor;
+        if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
+            const chromIndex = parseInt(chr, 10) - 1;
+            chromColor = generateColor(chromIndex >= 0 ? chromIndex : 0);
+        } else {
+            chromColor = genomeColors[refGenome];
+        }
+        monChromColor.style('stroke', chromColor);
         monChromColor.style('fill', `url(#${gradientId})`);
     }
 }
@@ -554,6 +569,20 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
     const refX = chromPositions[[refChromNum]]?.refX;
     const queryX = chromPositions[[queryChromNum]]?.queryX;
 
+    let color;
+    if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
+        // Utilise le numéro de chromosome de référence (refChromNum) pour choisir la couleur
+        // refChromNum est 1-based ; generateColor attend un index, on met refChromNum-1
+        // Si refChromNum est invalide, on retombe sur la couleur par type
+        if (Number.isFinite(refChromNum) && refChromNum > 0) {
+            color = generateColor(refChromNum - 1);
+        } else {
+            color = currentBandTypeColors[d.type] || '#ccc';
+        }
+    } else {
+        // Mode par type (par défaut)
+        color = currentBandTypeColors[d.type] || '#ccc';
+    }
     // Tooltip
     const tip = d3.tip()
         .attr('class', 'd3-tip')
@@ -573,7 +602,7 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
                     </div>
                     <div>
                         <span style="font-weight:bold;">Type :</span> 
-                        <span style="background:${typeColors[d.type]}; border-radius:6px; padding:2px 8px; margin-left:4px;">${d.type}</span>
+                        <span style="background:${color}; border-radius:6px; padding:2px 8px; margin-left:4px;">${d.type}</span>
                     </div>
                 </div>
             `;
@@ -587,7 +616,7 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
         const refEndX = refX + (d.refEnd / scale);
         let queryStartX = queryX + (d.queryStart / scale);
         let queryEndX = queryX + (d.queryEnd / scale);
-        const color = currentBandTypeColors[d.type] || '#ccc'; // Utiliser la couleur définie ou gris clair par défaut
+        // const color = currentBandTypeColors[d.type] || '#ccc'; // Utiliser la couleur définie ou gris clair par défaut
 
         const refY = chromPositions[[refChromNum]]?.refY + 10; // Ajuster pour aligner sur le chromosome de référence
         // const queryY = chromPositions[d.queryChr]?.queryY; // Ajuster pour aligner sur le chromosome de requête
@@ -894,8 +923,76 @@ function isBandVisible(d) {
     return isVisibleChrom && isVisibleBandType && isVisibleBandPos && isVisibleBandLength;
 }
 
+export function updateBandColors() {
+    // Recolor all existing bands according to current bandColorMode
+    // Recolorer les bandes
+    d3.selectAll('path.band').each(function() {
+        const bandEl = d3.select(this);
+        const type = bandEl.attr('data-type');
+        const refNum = parseInt(bandEl.attr('data-ref-num'), 10);
+        let newColor;
+        if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
+            if (!isNaN(refNum) && refNum > 0) {
+                newColor = generateColor(refNum - 1);
+            } else {
+                newColor = currentBandTypeColors[type] || '#ccc';
+            }
+        } else {
+            newColor = currentBandTypeColors[type] || '#ccc';
+        }
+        bandEl.attr('fill', newColor);
+    });
 
+    // Recolorer les chromosomes
+    d3.selectAll('path.chrom').each(function() {
+        const chromEl = d3.select(this);
+        const chromNum = chromEl.attr('data-chrom-num');
+        const genome = chromEl.attr('data-genome');
+        let chromColor;
+        if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
+            const chromIndex = parseInt(chromNum, 10) - 1;
+            chromColor = generateColor(chromIndex >= 0 ? chromIndex : 0);
+        } else {
+            chromColor = genomeColors[genome];
+        }
+        chromEl.style('stroke', chromColor);
+    });
 
+    // Recolorer les gradients SNP
+    d3.selectAll('linearGradient').each(function() {
+        const gradEl = d3.select(this);
+        const gradId = gradEl.attr('id');
+        // On suppose que l'id contient le numéro du chromosome
+        const match = gradId && gradId.match(/grad-(\d+)/);
+        if (match) {
+            const chromIndex = parseInt(match[1], 10) - 1;
+            let chromColor;
+            if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
+                chromColor = generateColor(chromIndex >= 0 ? chromIndex : 0);
+            } else {
+                chromColor = genomeColors[refGenome];
+            }
+            // On pourrait ici modifier les stops du gradient si besoin
+            gradEl.selectAll('stop').attr('stop-color', chromColor);
+        }
+        //applique le gradient aux chromosomes
+        const monChromColor = d3.selectAll("#" + match[1] + "_ref.chrom");
+        monChromColor.style('stroke', chromColor);
+        monChromColor.style('fill', `url(#${gradId})`);
+    });
+
+    // Recolorer les cases du chromcontroler
+    const chromItems = document.querySelectorAll('#chrom-controler .chrom-item');
+    chromItems.forEach((item, idx) => {
+        let color;
+        if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
+            color = generateColor(idx);
+        } else {
+            color = genomeColors[refGenome];
+        }
+        item.style.backgroundColor = color;
+    });
+}
 
 
 

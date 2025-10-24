@@ -1,7 +1,7 @@
 import { fileUploadMode } from "./form.js";
-import { uniqueGenomes } from "./process.js";
+import { uniqueGenomes, setBandColorMode } from "./process.js";
 import { jbrowseLinks } from "./form.js";
-import { bandeTypeColors, currentBandTypeColors } from "./draw.js";
+import { bandeTypeColors, currentBandTypeColors, updateBandColors } from "./draw.js";
 
 //Fonction pour les contrôles et paramètres
 export function createControlPanel() {
@@ -193,6 +193,74 @@ function createParametersContent() {
             if (submitButton) submitButton.click();
         }
     });
+
+    // --- Color mode control ---
+    const colorModeDiv = document.createElement('div');
+    colorModeDiv.style.margin = '10px 0';
+    const colorModeLabel = document.createElement('label');
+    colorModeLabel.textContent = 'Band coloring: ';
+    colorModeLabel.style.marginRight = '8px';
+    colorModeDiv.appendChild(colorModeLabel);
+
+    const radioType = document.createElement('input');
+    radioType.type = 'radio';
+    radioType.name = 'color-mode';
+    radioType.value = 'type';
+    radioType.id = 'color-mode-type';
+    radioType.checked = true;
+
+    const radioTypeLabel = document.createElement('label');
+    radioTypeLabel.setAttribute('for', 'color-mode-type');
+    radioTypeLabel.style.marginRight = '12px';
+    radioTypeLabel.textContent = 'By type';
+
+    const radioChrom = document.createElement('input');
+    radioChrom.type = 'radio';
+    radioChrom.name = 'color-mode';
+    radioChrom.value = 'byChrom';
+    radioChrom.id = 'color-mode-chrom';
+
+    const radioChromLabel = document.createElement('label');
+    radioChromLabel.setAttribute('for', 'color-mode-chrom');
+    radioChromLabel.textContent = 'By chromosome';
+
+    colorModeDiv.appendChild(radioType);
+    colorModeDiv.appendChild(radioTypeLabel);
+    colorModeDiv.appendChild(radioChrom);
+    colorModeDiv.appendChild(radioChromLabel);
+
+    // Append to your params container (par exemple `params.appendChild(colorModeDiv);`)
+    params.appendChild(colorModeDiv);
+
+    // On importe/modifie la variable globale bandColorMode dans process.js
+    radioType.addEventListener('change', () => {
+        if (radioType.checked) {
+            setBandColorMode('type');
+            updateBandColors();
+            updateChromControlerColors('type');
+        }
+    });
+    radioChrom.addEventListener('change', () => {
+        if (radioChrom.checked) {
+            setBandColorMode('byChrom');
+            updateBandColors();
+            updateChromControlerColors('byChrom');
+        }
+    });
+
+    // Fonction pour mettre à jour la couleur des chromosomes dans le ChromControler
+    function updateChromControlerColors(mode) {
+        const chromItems = document.querySelectorAll('#chrom-controler .chrom-item');
+        chromItems.forEach((item, idx) => {
+            let color;
+            if (mode === 'byChrom') {
+                color = generateColor(idx);
+            } else {
+                color = genomeColors[refGenome];
+            }
+            item.style.backgroundColor = color;
+        });
+    }
 
     // Ajouter le bouton de réinitialisation des couleurs
     const resetButton = document.createElement('button');
