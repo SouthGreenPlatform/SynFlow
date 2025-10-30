@@ -936,25 +936,34 @@ export function createFTPSection() {
         }
         
         try {
-            const files = await fetchRemoteOutFileList(folder);
+            const files = await fetchRemoteAllFileList(folder);
+
+            // Met à jour la matrice avec les fichiers récupérés
+            updateFileMatrix(files);
+
             if (files.length === 0) {
                 fileListDiv.innerHTML = '<span style="color:red;">No .out files found in this folder.</span>';
                 return;
             }
             const genomes = extractAllGenomes(files);
+            const outFiles = Array.from(files).filter(file => {
+                // Si c'est un objet File, utilise file.name, sinon utilise la chaîne directement
+                const fileName = typeof file === 'string' ? file : file.name;
+                return fileName.endsWith('.out');
+            });
             
             // Mode all vs all ou chaîne
             const expectedFileCount = genomes.length * (genomes.length - 1);
             
-            if (files.length === 1 && genomes.length === 2) {
+            if (outFiles.length === 1 && genomes.length === 2) {
                 // Mode chaîne avec 2 génomes
-                console.log(files, genomes);
+                console.log(outFiles, genomes);
                 //mets les genomes dans l'ordre d'apparition du nom du fichier out
-                const file = files[0];
+                const file = outFiles[0];
                 const parts = file.replace('.out', '').split('_').map(part => part.trim());
                 ftpSelectedGenomes = parts;
                 updateChainDivFTP(chainDiv, ftpSelectedGenomes);
-            } else if (files.length === expectedFileCount) {
+            } else if (outFiles.length === expectedFileCount) {
                 // Mode all vs all
                 fileListDiv.innerHTML = '<div style="margin-bottom:8px;color:#555;font-style:italic;">Select genomes in the desired order for the chain.</div>';
                 populateGenomeListFTP(genomes, fileListDiv, ftpSelectedGenomes, chainDiv);
@@ -1859,8 +1868,8 @@ function createFileMatrix(files, containerId = 'file-matrix-container') {
             } else {
                 // Cherche la comparaison
                 const key1 = `${rowGenome}_${colGenome}`;
-                const key2 = `${colGenome}_${rowGenome}`;
-                const comp = comparisonMatrix[key1] || comparisonMatrix[key2];
+                //const key2 = `${colGenome}_${rowGenome}`;
+                const comp = comparisonMatrix[key1]; // || comparisonMatrix[key2];
                 
                 if (comp) {
                     const cellContent = document.createElement('div');
@@ -1947,8 +1956,8 @@ function updateFileMatrix(files) {
     const matrix = createFileMatrix(files, 'file-matrix-container');
     
     if (matrix) {
-        // Insère la matrice après le chainDiv
-        const chainDiv = document.getElementById('selected-chain');
+        // Insère la matrice après le chainDiv (gère les deux cas : FTP et normal)
+        const chainDiv = document.getElementById('selected-chain') || document.getElementById('selected-chain-ftp');
         if (chainDiv && !document.getElementById('file-matrix-container')) {
             chainDiv.parentNode.insertBefore(matrix, chainDiv.nextSibling);
         }
