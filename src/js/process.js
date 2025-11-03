@@ -254,9 +254,10 @@ function updateChromList(globalMaxChromosomeLengths) {
         
         // const text = document.createElement('span');
         // text.textContent = chromNum;
-        const text = document.createElement('span');
-        const chromName = genomeData[refGenome][chromNum].name;
-        text.textContent = chromName;
+    const text = document.createElement('span');
+    const chromObj = genomeData[refGenome] && genomeData[refGenome][chromNum];
+    const chromName = (chromObj && chromObj.name) ? chromObj.name : '-';
+    text.textContent = chromName;
 
         listItem.appendChild(text);
         
@@ -1027,7 +1028,7 @@ function handleFileUpload(bandFiles, bedFiles) {
     }
 
     // Lire les longueurs des chromosomes à partir du fichier band
-    calculateChromosomeDataFromBandFiles(orderedFileObjects, uniqueGenomes).then((data) => {
+    calculateChromosomeDataFromBandFilesAlphabetical(orderedFileObjects, uniqueGenomes).then((data) => {
         genomeData = data;
         // console.log(genomeData)
         globalMaxChromosomeLengths = calculateGlobalMaxChromosomeLengths(genomeData);
@@ -1205,6 +1206,60 @@ async function calculateChromosomeDataFromBandFiles(orderedFileObjects, uniqueGe
 
     console.log("genomeData mis à jour :");
     console.log(genomeData);
+    return genomeData;
+}
+
+async function calculateChromosomeDataFromBandFilesAlphabetical(orderedFileObjects, uniqueGenomes) {
+    const genomeData = {};
+
+    // Temp stock par génome : name -> {name, length}
+    const genomeChromMap = {};
+    uniqueGenomes.forEach(g => {
+        genomeChromMap[g] = {};
+    });
+
+    // Parcourir tous les fichiers et accumuler les chromosomes trouvés
+    for (let i = 0; i < orderedFileObjects.length; i++) {
+        const file = orderedFileObjects[i];
+        const refGenome = uniqueGenomes[i];
+        const queryGenome = uniqueGenomes[i + 1];
+
+        try {
+            const { refLengths, queryLengths } = await readChromosomeLengthsFromBandFile(file);
+
+            // Ajouter/refresher les chromosomes ref
+            Object.values(refLengths).forEach(ch => {
+                if (!ch || !ch.name) return;
+                const existing = genomeChromMap[refGenome][ch.name];
+                if (!existing || (ch.length && ch.length > existing.length)) {
+                    genomeChromMap[refGenome][ch.name] = { name: ch.name, length: ch.length };
+                }
+            });
+
+            // Ajouter/refresher les chromosomes query
+            Object.values(queryLengths).forEach(ch => {
+                if (!ch || !ch.name) return;
+                const existing = genomeChromMap[queryGenome][ch.name];
+                if (!existing || (ch.length && ch.length > existing.length)) {
+                    genomeChromMap[queryGenome][ch.name] = { name: ch.name, length: ch.length };
+                }
+            });
+        } catch (err) {
+            console.warn('Erreur lecture fichier band pour', file && file.name, err);
+        }
+    }
+
+    // Construire genomeData en triant par nom (ordre naturel)
+    uniqueGenomes.forEach(genome => {
+        genomeData[genome] = {};
+        const names = Object.keys(genomeChromMap[genome] || {});
+        names.sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+        names.forEach((name, idx) => {
+            genomeData[genome][idx + 1] = genomeChromMap[genome][name];
+        });
+    });
+
+    console.log('genomeData (alphabetical) mis à jour :', genomeData);
     return genomeData;
 }
 
@@ -1442,12 +1497,16 @@ function calculateGlobalMaxChromosomeLengths(genomeData) {
         const chromosomes = genomeData[genome];
         for (const index in chromosomes) {
             const chrData = chromosomes[index];
-            if (!globalMaxLengths[index]) {
-                globalMaxLengths[index] = chrData.length;
+            // Treat undefined or invalid entries as length 0
+            const len = (chrData && typeof chrData.length === 'number') ? chrData.length : 0;
+            if (chrData === undefined) {
+                console.warn(`Genome: ${genome}, Chromosome Index: ${index} is undefined - treating length as 0`);
             } else {
-                if (chrData.length > globalMaxLengths[index]) {
-                    globalMaxLengths[index] = chrData.length;
-                }
+                console.log(`Genome: ${genome}, Chromosome Index: ${index}, Data: `, chrData);
+            }
+
+            if (globalMaxLengths[index] === undefined || len > globalMaxLengths[index]) {
+                globalMaxLengths[index] = len;
             }
         }
     }

@@ -242,13 +242,16 @@ export function drawChromosomes(genomeData, maxLengths, refGenome, queryGenome, 
     // Dessiner d'abord tous les chromosomes ref
     if (isFirstFile) {
         for (const chrom in genomeData[refGenome]) {
-            const refData = genomeData[refGenome][chrom];
-            const refWidth = refData.length / scale;
-            const chromWidth = maxLengths[chrom] / scale;
+            // Défenses : si l'entrée est undefined, utiliser length=0 et name='-'
+            const refData = genomeData[refGenome][chrom] || { length: 0, name: '-' };
+            const refLen = (typeof refData.length === 'number') ? refData.length : 0;
+            const refWidth = refLen / scale;
+            const chromLen = (maxLengths[chrom] !== undefined) ? maxLengths[chrom] : refLen;
+            const chromWidth = chromLen / scale;
 
             if (!isNaN(chromWidth) && chromWidth > 0 && refWidth > 0) {
-                drawChromPathNoArm(currentX, yRefPosition, refWidth, radius, chrom, 
-                    refData.name + "_ref", refGenome, svgGroup, scale);
+                drawChromPathNoArm(currentX, yRefPosition, refWidth, radius, chrom,
+                    (refData.name || '-') + "_ref", refGenome, svgGroup, scale);
                 
                 // Ajouter le nom du chromosome
                 svgGroup.append('text')
@@ -257,7 +260,7 @@ export function drawChromosomes(genomeData, maxLengths, refGenome, queryGenome, 
                     .attr('text-anchor', 'middle')
                     .attr('class', 'chrom-title')
                     .attr("data-genome", refGenome)
-                    .attr("data-chrom-name", refData.name)
+                    .attr("data-chrom-name", refData.name || '-')
                     .attr("data-chrom-num", chrom)
                     .text(refData.name);
 
@@ -279,13 +282,15 @@ export function drawChromosomes(genomeData, maxLengths, refGenome, queryGenome, 
 
     // Dessiner tous les chromosomes query
     for (const chrom in genomeData[queryGenome]) {
-        const queryData = genomeData[queryGenome][chrom];
-        const queryWidth = queryData.length / scale;
-        const chromWidth = maxLengths[chrom] / scale || queryWidth;
+        const queryData = genomeData[queryGenome][chrom] || { length: 0, name: '-' };
+        const queryLen = (typeof queryData.length === 'number') ? queryData.length : 0;
+        const queryWidth = queryLen / scale;
+        const chromLenForWidth = (maxLengths[chrom] !== undefined) ? maxLengths[chrom] : queryLen;
+        const chromWidth = chromLenForWidth / scale || queryWidth;
 
         if (!isNaN(chromWidth) && chromWidth > 0 && queryWidth > 0) {
-            drawChromPathNoArm(currentX, yQueryPosition, queryWidth, radius, chrom, 
-                queryData.name + "_query", queryGenome, svgGroup, scale);
+            drawChromPathNoArm(currentX, yQueryPosition, queryWidth, radius, chrom,
+                (queryData.name || '-') + "_query", queryGenome, svgGroup, scale);
 
             if (!chromPositions[chrom]) {
                 chromPositions[chrom] = {
@@ -322,25 +327,27 @@ export function drawStackedChromosomes(genomeData, maxLengths, fileIndex, totalG
     const chromPositions = {};
 
     for (const chrom in maxLengths) {
-        const refLength = genomeData[refGenome][chrom]?.length;
-        const queryLength = genomeData[queryGenome][chrom]?.length;
-        const refWidth = (refLength || 0) / scale;
-        const queryWidth = (queryLength || 0) / scale;
-        const chromWidth = maxLengths[chrom] / scale;
+        const refData = genomeData[refGenome][chrom] || { length: 0, name: '-' };
+        const queryData = genomeData[queryGenome][chrom] || { length: 0, name: '-' };
+        const refLength = (typeof refData.length === 'number') ? refData.length : 0;
+        const queryLength = (typeof queryData.length === 'number') ? queryData.length : 0;
+        const refWidth = refLength / scale;
+        const queryWidth = queryLength / scale;
+        const chromWidth = (maxLengths[chrom] !== undefined ? maxLengths[chrom] : Math.max(refLength, queryLength)) / scale;
 
         if (!isNaN(chromWidth) && chromWidth > 0) {
             if (fileIndex === 0) {
                 // Dessin chromosome référence
-                drawChromPathNoArm(currentX, currentY, refWidth, radius, chrom, genomeData[refGenome][chrom].name + "_ref", refGenome, svgGroup, scale);
+                drawChromPathNoArm(currentX, currentY, refWidth, radius, chrom, (refData.name || '-') + "_ref", refGenome, svgGroup, scale);
                 // Label du chromosome (nom réel)
                 svgGroup.append('text')
                     .attr('x', currentX + chromWidth / 2)
                     .attr('y', currentY - 10)
                     .attr('text-anchor', 'middle')
-                    .text(genomeData[refGenome][chrom].name);
+                    .text(refData.name || '-');
             }
             // Dessin chromosome query
-            drawChromPathNoArm(currentX, currentY + spaceBetween, queryWidth, radius, chrom, genomeData[queryGenome][chrom].name + "_query", queryGenome, svgGroup, scale);
+            drawChromPathNoArm(currentX, currentY + spaceBetween, queryWidth, radius, chrom, (queryData.name || '-') + "_query", queryGenome, svgGroup, scale);
 
             // Stockage des positions avec le numéro du chromosome comme clé
             chromPositions[chrom] = {
@@ -564,8 +571,8 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
         }
     }
     
-    let refChromNum = Object.values(genomeData[refGenome]).findIndex(item => item.name === d.refChr) + 1;
-    let queryChromNum = Object.values(genomeData[queryGenome]).findIndex(item => item.name === d.queryChr) + 1;
+    let refChromNum = Object.values(genomeData[refGenome]).findIndex(item => item && item.name === d.refChr) + 1;
+    let queryChromNum = Object.values(genomeData[queryGenome]).findIndex(item => item && item.name === d.queryChr) + 1;
     const refX = chromPositions[[refChromNum]]?.refX;
     const queryX = chromPositions[[queryChromNum]]?.queryX;
 
@@ -908,8 +915,8 @@ function isBandVisible(d) {
     const max = window.sliderMaxValue ?? Infinity;
 
     // Numéros de chromosomes
-    const refChromNum = Object.values(genomeData[refGenome]).findIndex(item => item.name === d.refChr) + 1;
-    const queryChromNum = Object.values(genomeData[queryGenome]).findIndex(item => item.name === d.queryChr) + 1;
+    const refChromNum = Object.values(genomeData[refGenome]).findIndex(item => item && item.name === d.refChr) + 1;
+    const queryChromNum = Object.values(genomeData[queryGenome]).findIndex(item => item && item.name === d.queryChr) + 1;
 
     // Vérifications
     const isVisibleChrom = chromEyeIcons.length === 0 || 
