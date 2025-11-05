@@ -85,9 +85,9 @@ export async function createForm() {
 
     const menuItems = [
         { id: 'existing', icon: 'fas fa-folder-open', text: 'Existing Files' },
-        { id: 'upload', icon: 'fas fa-upload', text: 'Upload Files' },
+        { id: 'calculate', icon: 'fas fa-cogs', text: 'Run analysis' },
         { id: 'ftp', icon: 'fas fa-network-wired', text: 'Browse FTP' },
-        { id: 'calculate', icon: 'fas fa-cogs', text: 'Run analysis' }
+        { id: 'upload', icon: 'fas fa-upload', text: 'Upload Files' }
     ];
 
     menuItems.forEach(item => {
@@ -160,10 +160,10 @@ export async function createForm() {
     // Afficher le formulaire "existing" par défaut
     // Ajouter la classe active à l'item sélectionné
     //selectionne la dive "existing" par défaut
-    const selectedItem = menuColumn.querySelector(`div[data-option="upload"]`);
+    const selectedItem = menuColumn.querySelector(`div[data-option="existing"]`);
     selectedItem.style.backgroundColor = 'black';
     selectedItem.style.color = 'white';
-    (async () => { await showForm('upload'); })();    
+    (async () => { await showForm('existing'); })();
     return form;
 }
 
