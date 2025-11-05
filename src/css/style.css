@@ -529,3 +529,49 @@
   border-radius: 0 0 8px 8px;
   box-shadow: 0 0 5px rgba(0,0,0,0.1);
 }
+
+/* Menu contextuel selectiond de bandes */
+.band-context-menu {
+    position: fixed;
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    border-radius: 4px;
+    padding: 8px;
+    z-index: 1000;
+}
+
+.band-context-menu-item {
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.band-context-menu-separator {
+    height: 1px;
+    background: #ddd;
+    margin: 4px 0;
+}
+
+.band-selected {
+    stroke: #000;
+    stroke-width: 1px;
+    opacity: 100%;
+}
+
+.distance-slider-container {
+    padding: 8px 12px;
+}
+
+.distance-slider-container input[type="range"] {
+    width: 100%;
+    margin: 8px 0;
+}
+
+.color-picker-container {
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}

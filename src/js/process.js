@@ -14,7 +14,7 @@ let maxAlignments; //duo de chromosomes ref/query avec le plus grand alignement
 export let uniqueGenomes;
 let orderedFileObjects = []; // Défini globalement
 let previousChromosomePositions = null;
-let globalMaxChromosomeLengths = {};
+export let globalMaxChromosomeLengths = {};
 let currentFile; // Défini globalement
 const CHUNK_SIZE = 20000; // Nombre de lignes à traiter à la fois
 let numGenomes; //nombre de génomes à traiter

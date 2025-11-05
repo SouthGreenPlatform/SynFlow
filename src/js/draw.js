@@ -1,6 +1,8 @@
 import { showInfoPanel, showInfoUpdatedMessage, createDetailedTable, initializeTableFiltering, createTableBadges, createSummarySection, createZoomedSyntenyView, createOrthologsTable} from "./info.js";
 import { refGenome, queryGenome, genomeColors, bandColorMode, genomeData, scale, allParsedData, isFirstDraw, downloadSvg, generateColor } from "./process.js";
 import { anchorsFiles, bedFiles, jbrowseLinks } from "./form.js";
+import { createContextMenu, selectedBands, updateBandSelection, 
+    selectSimilarBands, colorSelectedBands, updateInfoForSelectedBands } from './band-selection.js';
 
 export let currentYOffset = 0; // Définir globalement
 
@@ -561,6 +563,13 @@ function mergeBands(bandsToMerge, otherBands, threshold) {
 }
 
 function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
+    // Ajouter un écouteur de clic sur le svg pour déselectionner
+    d3.select('#viz').on('click', function(event) {
+        if (event.target.tagName === 'svg') {
+            selectedBands.clear();
+            updateBandSelection();
+        }
+    });
 
     let display = 'null';
     //Si c'est un redraw alors on vérifie les filtres de bandes
@@ -666,6 +675,10 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
             .attr('data-query-num', queryChromNum) // ajoute l'attribut query
             .attr('data-query', d.queryChr) // ajoute l'attribut query
             .attr('data-query-genome', queryGenome) // ajoute l'attribut query-genome
+            .attr('data-ref-start', d.refStart)
+            .attr('data-ref-end', d.refEnd)
+            .attr('data-query-start', d.queryStart)
+            .attr('data-query-end', d.queryEnd)
             .on('mouseover', function (event, d) {
                 d3.select(this).attr('opacity', 1); // Mettre en gras au survol
                 tip.show(event, d); // Afficher le tooltip
@@ -675,70 +688,93 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
                 tip.hide(event, d); // Masquer le tooltip
             })
             .on('click', async function (event, d) {
-                // Cherche le bon jeu de données dans allParsedData
-                const parsedSet = allParsedData.find(set =>
-                    set.refGenome === refGenome && set.queryGenome === queryGenome
-                );
-                if (!parsedSet) {
-                    d3.select('#info').html('<p>No data found for this band.</p>');
-                    return;
-                }
-                 //affiche la section info
-                showInfoPanel();
-                showInfoUpdatedMessage()
-                const linesInRange = getLinesInRange(parsedSet.data, d.refChr, d.queryChr, d.refStart, d.refEnd, d.queryStart, d.queryEnd);
-                
-                // const tableHtml = await convertLinesToTableHtml(linesInRange, d.refStart, d.refEnd, d.queryStart, d.queryEnd, refGenome, queryGenome);               
-                // d3.select('#info').html(`${tableHtml}`);
-                
-                const summary = createSummarySection(linesInRange, d.refStart, d.refEnd, d.queryStart, d.queryEnd, refGenome, queryGenome);
-                d3.select('#summary').html(`<div class="summary-section"><h4>Summary</h4>${summary}</div>`);
-
-                const tableBadges = createTableBadges(linesInRange);
-                
-                const table = createDetailedTable(linesInRange, refGenome, queryGenome);
-                d3.select('#info').html(`${tableBadges}${table}`);
-
-                // Initialiser le filtrage après l'insertion dans le DOM
-                setTimeout(() => {
-                    initializeTableFiltering();
-                }, 0);
-
-
-                // Récupérer les données d'anchors
-                const anchorsResult = await createAnchorsSection(linesInRange, d.refStart, d.refEnd, d.queryStart, d.queryEnd, refGenome, queryGenome);
-                // Afficher le HTML des anchors
-                const anchorsHtml = anchorsResult.html; 
-                d3.select('#orthology-table').html(`<br>${anchorsHtml}`);
-                // Utiliser les données pour créer la vue zoomée
-                const orthologPairs = anchorsResult.data;
-                createZoomedSyntenyView(orthologPairs, refGenome, queryGenome, d.refStart, d.refEnd, d.queryStart, d.queryEnd);
-                
-                //// Remove existing download button if it exists
-                const zoomedSynteny = document.getElementById('zoomed-synteny');
-
-                const existingDownloadButton = document.getElementById('download-anchor-svg');
-                if (existingDownloadButton) {
-                    formContainer.removeChild(existingDownloadButton);
-                }
-
-                //download button for synteny svg
-                const buttonDiv = document.createElement('div');
-                const downloadAnchorSvgButton = document.createElement('button');
-                downloadAnchorSvgButton.id = 'download-anchor-svg';
-                downloadAnchorSvgButton.setAttribute('type', 'button');
-                downloadAnchorSvgButton.classList.add('btn-simple');
-                downloadAnchorSvgButton.textContent = 'Download SVG';
-                buttonDiv.appendChild(downloadAnchorSvgButton);
-                //append entre zoomedSynteny et orthology-table
-                zoomedSynteny.parentNode.insertBefore(buttonDiv, document.getElementById('orthology-table'));
-
-                const svgElement = document.getElementById('anchor-viz');
-                downloadAnchorSvgButton.addEventListener('click', function(event) {
+                if (event.ctrlKey || event.metaKey) {
+                    // Multi-sélection avec Ctrl/Cmd
+                    if (selectedBands.has(this)) {
+                        selectedBands.delete(this);
+                    } else {
+                        selectedBands.add(this);
+                    }
+                    updateBandSelection();
+                    if (selectedBands.size > 0) {
+                        updateInfoForSelectedBands();
+                    }
+                } else {
+                    // Clic normal : menu contextuel
                     event.preventDefault();
-                    downloadSvg(svgElement);
-                });
+                    createContextMenu(event.clientX, event.clientY, this);
+                    
+                    // Sélection simple
+                    selectedBands.clear();
+                    selectedBands.add(this);
+                    updateBandSelection();
 
+
+                    // Cherche le bon jeu de données dans allParsedData
+                    const parsedSet = allParsedData.find(set =>
+                        set.refGenome === refGenome && set.queryGenome === queryGenome
+                    );
+                    if (!parsedSet) {
+                        d3.select('#info').html('<p>No data found for this band.</p>');
+                        return;
+                    }
+                    //affiche la section info
+                    showInfoPanel();
+                    showInfoUpdatedMessage()
+                    const linesInRange = getLinesInRange(parsedSet.data, d.refChr, d.queryChr, d.refStart, d.refEnd, d.queryStart, d.queryEnd);
+                    
+                    // const tableHtml = await convertLinesToTableHtml(linesInRange, d.refStart, d.refEnd, d.queryStart, d.queryEnd, refGenome, queryGenome);               
+                    // d3.select('#info').html(`${tableHtml}`);
+                    
+                    const summary = createSummarySection(linesInRange, d.refStart, d.refEnd, d.queryStart, d.queryEnd, refGenome, queryGenome);
+                    d3.select('#summary').html(`<div class="summary-section"><h4>Summary</h4>${summary}</div>`);
+
+                    const tableBadges = createTableBadges(linesInRange);
+                    
+                    const table = createDetailedTable(linesInRange, refGenome, queryGenome);
+                    d3.select('#info').html(`${tableBadges}${table}`);
+
+                    // Initialiser le filtrage après l'insertion dans le DOM
+                    setTimeout(() => {
+                        initializeTableFiltering();
+                    }, 0);
+
+
+                    // Récupérer les données d'anchors
+                    const anchorsResult = await createAnchorsSection(linesInRange, d.refStart, d.refEnd, d.queryStart, d.queryEnd, refGenome, queryGenome);
+                    // Afficher le HTML des anchors
+                    const anchorsHtml = anchorsResult.html; 
+                    d3.select('#orthology-table').html(`<br>${anchorsHtml}`);
+                    // Utiliser les données pour créer la vue zoomée
+                    const orthologPairs = anchorsResult.data;
+                    createZoomedSyntenyView(orthologPairs, refGenome, queryGenome, d.refStart, d.refEnd, d.queryStart, d.queryEnd);
+                    
+                    //// Remove existing download button if it exists
+                    const zoomedSynteny = document.getElementById('zoomed-synteny');
+
+                    const existingDownloadButton = document.getElementById('download-anchor-svg');
+                    if (existingDownloadButton) {
+                        formContainer.removeChild(existingDownloadButton);
+                    }
+
+                    //download button for synteny svg
+                    const buttonDiv = document.createElement('div');
+                    const downloadAnchorSvgButton = document.createElement('button');
+                    downloadAnchorSvgButton.id = 'download-anchor-svg';
+                    downloadAnchorSvgButton.setAttribute('type', 'button');
+                    downloadAnchorSvgButton.classList.add('btn-simple');
+                    downloadAnchorSvgButton.textContent = 'Download SVG';
+                    buttonDiv.appendChild(downloadAnchorSvgButton);
+                    //append entre zoomedSynteny et orthology-table
+                    zoomedSynteny.parentNode.insertBefore(buttonDiv, document.getElementById('orthology-table'));
+
+                    const svgElement = document.getElementById('anchor-viz');
+                    downloadAnchorSvgButton.addEventListener('click', function(event) {
+                        event.preventDefault();
+                        downloadSvg(svgElement);
+                    });
+
+                }
             });
         ;
     }else {
@@ -747,13 +783,13 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
 }
 
 
-function getLinesInRange(parsedData, refChr, queryChr, refStart, refEnd, queryStart, queryEnd) {
+export function getLinesInRange(parsedData, refChr, queryChr, refStart, refEnd, queryStart, queryEnd) {
     // console.log("getLinesInRange", refChr, queryChr, refStart, refEnd, queryStart, queryEnd);
     return parsedData.filter(d => d.refChr === refChr && d.queryChr === queryChr && d.refStart >= refStart && d.refEnd <= refEnd && d.queryStart >= queryStart && d.queryEnd <= queryEnd);
 }
 
 
-async function createAnchorsSection(lines, refStart, refEnd, queryStart, queryEnd, refGenome, queryGenome) {
+export async function createAnchorsSection(lines, refStart, refEnd, queryStart, queryEnd, refGenome, queryGenome) {
     const refChr = lines[0].refChr;
     const queryChr = lines[0].queryChr;
 
