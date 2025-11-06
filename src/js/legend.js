@@ -248,20 +248,6 @@ function createParametersContent() {
         }
     });
 
-    // Fonction pour mettre à jour la couleur des chromosomes dans le ChromControler
-    function updateChromControlerColors(mode) {
-        const chromItems = document.querySelectorAll('#chrom-controler .chrom-item');
-        chromItems.forEach((item, idx) => {
-            let color;
-            if (mode === 'byChrom') {
-                color = generateColor(idx);
-            } else {
-                color = genomeColors[refGenome];
-            }
-            item.style.backgroundColor = color;
-        });
-    }
-
     // Ajouter le bouton de réinitialisation des couleurs
     const resetButton = document.createElement('button');
     resetButton.textContent = 'Reset Colors';
@@ -301,7 +287,29 @@ function createParametersContent() {
     return params;
 }
 
-
+// Fonction pour mettre à jour la couleur des chromosomes dans le ChromControler
+export function updateChromControlerColors(mode) {
+    console.log("Update chrom controller colors, mode:", mode);
+    const chromItems = document.querySelectorAll('#chrom-controler .chrom-item');
+    chromItems.forEach((item, idx) => {
+        try {
+            const g = item.dataset && item.dataset.genome ? item.dataset.genome : null;
+            let color;
+            if (g && window.genomeDisplaySettings && window.genomeDisplaySettings[g] && window.genomeDisplaySettings[g].color) {
+                color = window.genomeDisplaySettings[g].color;
+            } else if (mode === 'byChrom') {
+                color = generateColor(idx);
+            } else {
+                color = genomeColors[refGenome];
+            }
+            item.style.backgroundColor = color;
+            // also set border to be consistent with chrom cells
+            item.style.border = `2px solid ${color}`;
+        } catch (e) {
+            // noop
+        }
+    });
+}
 
 
 

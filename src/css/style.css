@@ -530,8 +530,8 @@
   box-shadow: 0 0 5px rgba(0,0,0,0.1);
 }
 
-/* Menu contextuel selectiond de bandes */
-.band-context-menu {
+/* Menu contextuel selectiond */
+.context-menu {
     position: fixed;
     background: white;
     border: 1px solid #ccc;
@@ -541,14 +541,14 @@
     z-index: 1000;
 }
 
-.band-context-menu-item {
+.context-menu-item {
     padding: 6px 12px;
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.band-context-menu-separator {
+.context-menu-separator {
     height: 1px;
     background: #ddd;
     margin: 4px 0;

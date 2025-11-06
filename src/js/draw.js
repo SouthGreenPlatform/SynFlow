@@ -1,7 +1,7 @@
 import { showInfoPanel, showInfoUpdatedMessage, createDetailedTable, initializeTableFiltering, createTableBadges, createSummarySection, createZoomedSyntenyView, createOrthologsTable} from "./info.js";
 import { refGenome, queryGenome, genomeColors, bandColorMode, genomeData, scale, allParsedData, isFirstDraw, downloadSvg, generateColor } from "./process.js";
 import { anchorsFiles, bedFiles, jbrowseLinks } from "./form.js";
-import { createContextMenu, selectedBands, updateBandSelection, 
+import { createContextMenu, createChromContextMenu, selectedBands, updateBandSelection, 
     selectSimilarBands, colorSelectedBands, updateInfoForSelectedBands } from './band-selection.js';
 
 export let currentYOffset = 0; // Définir globalement
@@ -197,27 +197,96 @@ export function createGraphSection() {
     return graphSection;
 }
 
-export function drawMiniChromosome(genome, svg) {
+export function drawMiniChromosome(genome, svg, options = {}) {
     const width = 40;
     const height = 10;
     const radius = 2;
 
-    // Chemin pour le mini chromosome avec des bouts arrondis
-    // Chemin premier bras
-    let path = "M" + 5 + "," + 10; // Déplacer vers x y
-    path += "h" + width; // Ligne horizontale
-    path += "a" + radius + "," + radius + " 0 0 1 " + radius + "," + radius; // Arc
-    path += "a" + radius + "," + radius + " 0 0 1 " + -radius + "," + radius; // Arc
-    path += "h" + -width; // Ligne horizontale
-    path += "a" + radius + "," + radius + " 0 0 1 " + -radius + "," + -radius; // Arc
-    path += "a" + radius + "," + radius + " 0 0 1 " + radius + "," + -radius; // Arc
-    path += "Z";
+    // build path below
 
-    svg.append("path")
-        .attr("d", path)
-        .attr("fill", "rgba(0, 0, 0, 0)")
-        .style("fill-opacity", "0")
-        .attr("stroke", genomeColors[genome]);
+    // Ensure svg element has identifying attributes so it can be updated later
+    try {
+        svg.attr('class', (d, i, nodes) => {
+            const existing = svg.attr('class') || '';
+            return (existing + ' mini-chrom').trim();
+        });
+        svg.attr('data-genome', genome);
+    } catch (e) {
+        try {
+            const node = svg.node ? svg.node() : svg;
+            if (node && node.setAttribute) {
+                node.setAttribute('class', (node.getAttribute('class') || '') + ' mini-chrom');
+                node.setAttribute('data-genome', genome);
+            }
+        } catch (ee) {
+            // noop
+        }
+    }
+
+    // build path for mini chromosome with rounded ends
+    let path = 'M' + 5 + ',' + 10;
+    path += 'h' + width;
+    path += 'a' + radius + ',' + radius + ' 0 0 1 ' + radius + ',' + radius;
+    path += 'a' + radius + ',' + radius + ' 0 0 1 ' + -radius + ',' + radius;
+    path += 'h' + -width;
+    path += 'a' + radius + ',' + radius + ' 0 0 1 ' + -radius + ',' + -radius;
+    path += 'a' + radius + ',' + radius + ' 0 0 1 ' + radius + ',' + -radius;
+    path += 'Z';
+
+    // Determine color/mode to render the mini chrom based on options or genome settings
+    const genomeSetting = (window.genomeDisplaySettings && window.genomeDisplaySettings[genome]) ? window.genomeDisplaySettings[genome] : null;
+    const mode = options.mode || (genomeSetting && genomeSetting.mode) || 'filled';
+    const color = options.color || (genomeSetting && genomeSetting.color) || genomeColors[genome] || '#000000';
+    const gradientId = `gradient-${genome}`;
+
+    // Append path and apply styles according to mode
+    try {
+        const p = svg.append('path').attr('d', path).attr('class', 'mini-chrom-shape');
+        if (mode === 'outline') {
+            p.attr('fill', 'none').attr('stroke', color);
+        } else if (mode === 'filled') {
+            p.attr('fill', color).attr('stroke', color);
+        } else if (mode === 'heatmap') {
+            if (document.getElementById(gradientId) || document.querySelector(`linearGradient[id="${gradientId}"]`)) {
+                p.attr('fill', `url(#${gradientId})`).attr('stroke', color);
+            } else {
+                p.attr('fill', color).attr('stroke', color);
+            }
+        } else {
+            p.attr('fill', color).attr('stroke', color);
+        }
+    } catch (e) {
+        // fallback if svg is not a d3 selection
+        try {
+            const node = svg.node ? svg.node() : svg;
+            if (!node) return;
+            const svgNs = 'http://www.w3.org/2000/svg';
+            const pathEl = document.createElementNS(svgNs, 'path');
+            pathEl.setAttribute('d', path);
+            pathEl.setAttribute('class', 'mini-chrom-shape');
+            if (mode === 'outline') {
+                pathEl.setAttribute('fill', 'none');
+                pathEl.setAttribute('stroke', color);
+            } else if (mode === 'filled') {
+                pathEl.setAttribute('fill', color);
+                pathEl.setAttribute('stroke', color);
+            } else if (mode === 'heatmap') {
+                if (document.getElementById(gradientId) || document.querySelector(`linearGradient[id="${gradientId}"]`)) {
+                    pathEl.setAttribute('fill', `url(#${gradientId})`);
+                    pathEl.setAttribute('stroke', color);
+                } else {
+                    pathEl.setAttribute('fill', color);
+                    pathEl.setAttribute('stroke', color);
+                }
+            } else {
+                pathEl.setAttribute('fill', color);
+                pathEl.setAttribute('stroke', color);
+            }
+            node.appendChild(pathEl);
+        } catch (ee) {
+            // noop
+        }
+    }
 }
 
 export function drawChromosomes(genomeData, maxLengths, refGenome, queryGenome, isFirstFile, scale) {
@@ -413,14 +482,80 @@ function drawChromPathNoArm(x, y, width, radius, chromNum, chromName, genome, sv
         chromColor = genomeColors[genome];
     }
 
+    // Determine initial fill/stroke according to any overrides (per-chrom or per-genome)
+    const chromNameAttr = chromName || '';
+    const chromBase = chromNameAttr.split('_ref')[0].split('_query')[0];
+    const chromKey = `${genome}|${chromBase}`;
+
+    let initFill = null;
+    let initStroke = null;
+
+    const override = (window.chromDisplaySettings && window.chromDisplaySettings[chromKey]) ? window.chromDisplaySettings[chromKey] : null;
+    const genomeSetting = (window.genomeDisplaySettings && window.genomeDisplaySettings[genome]) ? window.genomeDisplaySettings[genome] : null;
+
+    if (override) {
+        const mode = override.mode || 'filled';
+        const color = override.color || (genomeColors && genomeColors[genome]) || chromColor;
+        const gId = `gradient-${genome}-${chromBase}`;
+        if (mode === 'outline') {
+            initFill = 'none';
+            initStroke = color;
+        } else if (mode === 'filled') {
+            initFill = color;
+            initStroke = color;
+        } else if (mode === 'heatmap') {
+            if (document.getElementById(gId) || document.querySelector(`linearGradient[id="${gId}"]`)) {
+                initFill = `url(#${gId})`;
+            } else {
+                initFill = color;
+            }
+            initStroke = color;
+        }
+    } else if (genomeSetting) {
+        const mode = genomeSetting.mode || 'filled';
+        const color = genomeSetting.color || (genomeColors && genomeColors[genome]) || chromColor;
+        const gId = `gradient-${genome}-${chromBase}`;
+        if (mode === 'outline') {
+            initFill = 'none';
+            initStroke = color;
+        } else if (mode === 'filled') {
+            initFill = color;
+            initStroke = color;
+        } else if (mode === 'heatmap') {
+            if (document.getElementById(gId) || document.querySelector(`linearGradient[id="${gId}"]`)) {
+                initFill = `url(#${gId})`;
+            } else {
+                initFill = color;
+            }
+            initStroke = color;
+        }
+    } else {
+        initStroke = chromColor;
+        initFill = `url(#${gradientId})`;
+    }
+
     svg.append("path")
         .attr("d", path)
         .attr("class", "chrom") // Ajoute une classe chrom
         .attr("data-genome", genome)
         .attr("data-chrom-name", chromName)
         .attr("data-chrom-num", chromNum)
-        .style("stroke", chromColor)
-        .style('fill', `url(#${gradientId})`)
+        .style("stroke", initStroke)
+        .style('fill', initFill)
+        .on('click', function(event, d) {
+            // Ouvrir le menu contextuel spécifique au chromosome
+            console.log('Chromosome path clicked:', { genome, chromName });
+            try {
+                event.preventDefault();
+                if (typeof createChromContextMenu !== 'function') {
+                    console.error('createChromContextMenu is not a function (import may be undefined due to circular imports)');
+                } else {
+                    createChromContextMenu(event.clientX, event.clientY, this);
+                }
+            } catch (e) {
+                console.warn('Failed to open chromosome context menu', e);
+            }
+        })
         .on('mouseover', function (event, d) {
             tip.show(event, d); // Afficher le tooltip
         })
@@ -973,17 +1108,33 @@ export function updateBandColors() {
         const bandEl = d3.select(this);
         const type = bandEl.attr('data-type');
         const refNum = parseInt(bandEl.attr('data-ref-num'), 10);
-        let newColor;
+        const refGenomeAttr = bandEl.attr('data-ref-genome') || refGenome;
+        const refChrAttr = bandEl.attr('data-ref') || '';
+        const chromKey = `${refGenomeAttr}|${refChrAttr}`;
+
+        // Prefer per-chrom override if present
+        // Only respect per-chrom overrides for band coloring when bandColorMode === 'byChrom'
+        let chromOverride = null;
         if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
+            chromOverride = (window.chromDisplaySettings && window.chromDisplaySettings[chromKey] && window.chromDisplaySettings[chromKey].color) ? window.chromDisplaySettings[chromKey].color : null;
+        }
+
+        let newColor = null;
+        if (chromOverride) {
+            newColor = chromOverride;
+        } else if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
             if (!isNaN(refNum) && refNum > 0) {
                 newColor = generateColor(refNum - 1);
             } else {
                 newColor = currentBandTypeColors[type] || '#ccc';
             }
         } else {
+            // default: color by type
             newColor = currentBandTypeColors[type] || '#ccc';
         }
-        bandEl.attr('fill', newColor);
+
+        // Apply the color
+        try { bandEl.attr('fill', newColor); } catch (e) { console.warn('Failed to set band color', e); }
     });
 
     // Recolorer les chromosomes
@@ -991,14 +1142,61 @@ export function updateBandColors() {
         const chromEl = d3.select(this);
         const chromNum = chromEl.attr('data-chrom-num');
         const genome = chromEl.attr('data-genome');
-        let chromColor;
-        if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
-            const chromIndex = parseInt(chromNum, 10) - 1;
-            chromColor = generateColor(chromIndex >= 0 ? chromIndex : 0);
+        // Determine base color and mode, but allow per-chrom overrides (window.chromDisplaySettings)
+        const chromNameAttr = chromEl.attr('data-chrom-name') || '';
+        const chromBase = chromNameAttr.split('_ref')[0].split('_query')[0];
+        const chromKey = `${genome}|${chromBase}`;
+
+        let override = (window.chromDisplaySettings && window.chromDisplaySettings[chromKey]) ? window.chromDisplaySettings[chromKey] : null;
+        let genomeSetting = (window.genomeDisplaySettings && window.genomeDisplaySettings[genome]) ? window.genomeDisplaySettings[genome] : null;
+
+        if (override) {
+            const mode = override.mode || 'filled';
+            const color = override.color || (genomeColors && genomeColors[genome]) || '#000000';
+            const gradientId = `gradient-${genome}-${chromBase}`;
+            if (mode === 'outline') {
+                chromEl.style('fill', 'none');
+                chromEl.style('stroke', color);
+            } else if (mode === 'filled') {
+                chromEl.style('fill', color);
+                chromEl.style('stroke', color);
+            } else if (mode === 'heatmap') {
+                if (document.getElementById(gradientId) || document.querySelector(`linearGradient[id="${gradientId}"]`)) {
+                    chromEl.style('fill', `url(#${gradientId})`);
+                } else {
+                    chromEl.style('fill', color);
+                }
+                chromEl.style('stroke', color);
+            }
+        } else if (genomeSetting) {
+            // Apply genome level settings
+            const mode = genomeSetting.mode || 'filled';
+            const color = genomeSetting.color || (genomeColors && genomeColors[genome]) || '#000000';
+            const gradientId = `gradient-${genome}-${chromBase}`;
+            if (mode === 'outline') {
+                chromEl.style('fill', 'none');
+                chromEl.style('stroke', color);
+            } else if (mode === 'filled') {
+                chromEl.style('fill', color);
+                chromEl.style('stroke', color);
+            } else if (mode === 'heatmap') {
+                if (document.getElementById(gradientId) || document.querySelector(`linearGradient[id="${gradientId}"]`)) {
+                    chromEl.style('fill', `url(#${gradientId})`);
+                } else {
+                    chromEl.style('fill', color);
+                }
+                chromEl.style('stroke', color);
+            }
         } else {
-            chromColor = genomeColors[genome];
+            let chromColor;
+            if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
+                const chromIndex = parseInt(chromNum, 10) - 1;
+                chromColor = generateColor(chromIndex >= 0 ? chromIndex : 0);
+            } else {
+                chromColor = genomeColors[genome];
+            }
+            chromEl.style('stroke', chromColor);
         }
-        chromEl.style('stroke', chromColor);
     });
 
     // Recolorer les gradients SNP

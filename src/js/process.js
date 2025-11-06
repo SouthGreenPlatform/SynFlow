@@ -6,7 +6,7 @@ import { fileOrderMode, fileUploadMode, hideForm, setSelectedGenomes } from './f
 
 export let refGenome; // Définir globalement
 export let queryGenome; // Définir globalement
-export let genomeColors = {};
+export const genomeColors = {};
 export let allParsedData = [];
 let genomeLengths; // taille des chromosomes
 export let genomeData; // Données des chromosomes
@@ -44,7 +44,16 @@ function resetGlobals() {
     isFirstDraw = true;
     refGenome = null;
     queryGenome = null;
-    genomeColors = {};
+    // Clear genomeColors without reassigning the exported object so other modules
+    // can't accidentally replace the reference. This keeps consumers holding
+    // the same object while removing all keys.
+    try {
+        for (const k in genomeColors) {
+            if (Object.prototype.hasOwnProperty.call(genomeColors, k)) delete genomeColors[k];
+        }
+    } catch (e) {
+        // noop
+    }
     uniqueGenomes = null;
     orderedFileObjects = [];
     previousChromosomePositions = null;
@@ -53,6 +62,14 @@ function resetGlobals() {
     numGenomes = null;
     allParsedData = [];
     resetDrawGlobals(); // Réinitialiser currentYOffset
+
+    // Clear any per-chrom or per-genome display overrides stored on window to avoid leaking between sessions
+    try {
+        if (window.genomeDisplaySettings) delete window.genomeDisplaySettings;
+        if (window.chromDisplaySettings) delete window.chromDisplaySettings;
+    } catch (e) {
+        // noop
+    }
 
 }
 
