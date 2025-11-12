@@ -251,7 +251,7 @@ export function createChromContextMenu(x, y, chromEl) {
 	title.className = 'context-menu-item';
 	title.style.marginBottom = '8px';
 	title.style.marginRight = '24px'; // espace pour le bouton close
-	title.textContent = `Chromosome: ${chromNameAttr} (Genome: ${genome})`;
+	title.textContent = `${genome} - ${chromNameAttr}`;
 	contextMenu.appendChild(title);
 
 	const separator = document.createElement('div');
@@ -295,7 +295,7 @@ export function createChromContextMenu(x, y, chromEl) {
 	const modesLabel = document.createElement('div');
 	modesLabel.className = 'context-menu-item';
 	modesLabel.style.marginBottom = '6px';
-	modesLabel.textContent = 'Display Mode:';
+	modesLabel.textContent = 'Display Modes';
 	contextMenu.appendChild(modesLabel);
 
     // Scope selector: this chromosome / all chromosomes of genome / all chromosomes of all genomes
