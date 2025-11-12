@@ -177,16 +177,25 @@ export function hideForm() {
 }
 
 // Fonction pour récupérer les répertoires Synflow depuis un fichier JSON
+//ATTENTION PROXY APACHE NÉCESSAIRE POUR ACCÉDER AUX RÉPERTOIRES HPC
 async function fetchSynflowDirectories() {
-    try {
-        const response = await fetch('public/data/config.json');
-        if (!response.ok) throw new Error('Erreur lors du chargement du JSON');
-        const dirs = await response.json();
-        return dirs; // tableau d'URLs
-    } catch (error) {
-        console.error('Error fetching Synflow directories:', error);
-        return [];
-    }
+  try {
+    const response = await fetch('public/data/config.json');
+    if (!response.ok) throw new Error('Erreur lors du chargement du JSON');
+    const dirs = await response.json();
+    
+    // Utiliser le domaine actuel comme base du proxy
+    const proxyBase = `${window.location.origin}/hpc-bank/`;
+    
+    const adjustedDirs = dirs.map(url => {
+      return url.replace('https://hpc.cirad.fr/bank/', proxyBase);
+    });
+
+    return adjustedDirs;
+  } catch (error) {
+    console.error('Error fetching Synflow directories:', error);
+    return [];
+  }
 }
 
 // Fonction pour récupérer la liste des fichiers .out depuis un dossier distant
@@ -856,10 +865,14 @@ export function createFTPSection() {
     formContainer.appendChild(ftpInput);
 
     //exemple cliquable
+    const proxyBase = `${window.location.origin}/hpc-bank/`;
+    const url = 'https://hpc.cirad.fr/bank/banana/synflow/';
+    const adjustedUrl = url.replace('https://hpc.cirad.fr/bank/', proxyBase);
+
     const exampleLink = document.createElement('a');
-    exampleLink.setAttribute('href', 'https://hpc.cirad.fr/bank/banana/synflow/');
+    exampleLink.setAttribute('href', adjustedUrl);
     exampleLink.setAttribute('target', '_blank');
-    exampleLink.textContent = 'Example: https://hpc.cirad.fr/bank/banana/synflow/';
+    exampleLink.textContent = `Example: ${adjustedUrl}`;
     exampleLink.style.display = 'block';
     exampleLink.style.marginBottom = '10px';
     exampleLink.style.color = 'grey';
