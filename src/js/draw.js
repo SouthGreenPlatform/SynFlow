@@ -294,7 +294,7 @@ export function drawChromosomes(genomeData, maxLengths, refGenome, queryGenome, 
     const svgGroup = d3.select('#zoomGroup');
     const height = 300;
     
-    const margin = { top: 30, bottom: 30, left: 50, right: 50 };
+    const margin = { top: 30, bottom: 30, left: 200, right: 200 };
     const yRefPosition = currentYOffset + margin.top + (height - margin.top - margin.bottom) / 4;
     const yQueryPosition = currentYOffset + margin.top + 3 * (height - margin.top - margin.bottom) / 4;
 
@@ -319,6 +319,19 @@ export function drawChromosomes(genomeData, maxLengths, refGenome, queryGenome, 
             const refWidth = refLen / scale;
             const chromLen = (maxLengths[chrom] !== undefined) ? maxLengths[chrom] : refLen;
             const chromWidth = chromLen / scale;
+
+            //si premier chromosome, affiche le nom du génome sur le coté gauche
+            if(chrom === Object.keys(genomeData[refGenome])[0]) {
+                svgGroup.append('text')
+                    .attr('x', currentX - 10)
+                    .attr('y', yRefPosition + radius * 2)
+                    .attr('text-anchor', 'end')
+                    .attr('class', 'chrom-title')
+                    .attr("data-genome", refGenome)
+                    .attr("data-chrom-name", refData.name || '-')
+                    .attr("data-chrom-num", chrom)
+                    .text(refGenome);
+            }
 
             if (!isNaN(chromWidth) && chromWidth > 0 && refWidth > 0) {
                 drawChromPathNoArm(currentX, yRefPosition, refWidth, radius, chrom,
@@ -359,6 +372,18 @@ export function drawChromosomes(genomeData, maxLengths, refGenome, queryGenome, 
         const chromLenForWidth = (maxLengths[chrom] !== undefined) ? maxLengths[chrom] : queryLen;
         const chromWidth = chromLenForWidth / scale || queryWidth;
 
+        //si premier chromosome, affiche le nom du génome sur le coté gauche
+        if(chrom === Object.keys(genomeData[queryGenome])[0]) {
+            svgGroup.append('text')
+                .attr('x', currentX - 10)
+                .attr('y', yQueryPosition + radius * 2)
+                .attr('text-anchor', 'end')
+                .attr('class', 'chrom-title')
+                .attr("data-genome", queryGenome)
+                .attr("data-chrom-name", queryData.name || '-')
+                .attr("data-chrom-num", chrom)
+                .text(queryGenome);
+        }
         if (!isNaN(chromWidth) && chromWidth > 0 && queryWidth > 0) {
             drawChromPathNoArm(currentX, yQueryPosition, queryWidth, radius, chrom,
                 (queryData.name || '-') + "_query", queryGenome, svgGroup, scale);
