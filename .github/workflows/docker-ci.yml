@@ -28,9 +28,19 @@ jobs:
       - name: Cleanup & create directories
         run: |
           for d in comparisons input output uploads; do
-            if [ -f "data/$d" ]; then rm data/$d; fi
-            mkdir -p data/$d
+            if [ -f "data/$d" ]; then
+              echo "Removing file data/$d"
+              rm -f "data/$d"
+            fi 
+            if [ -d "data/$d" ]; then
+              echo "Removing directory data/$d"
+              rm -rf "data/$d"
+            fi
+ 
+            echo "Creating directory data/$d"
+            mkdir -p "data/$d"
           done
+
 
       # Test docker-compose (build + up)
       - name: Test docker-compose
