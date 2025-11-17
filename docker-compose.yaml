@@ -5,11 +5,6 @@ services:
     container_name: synflow_app
     ports:
       - "8080:80"
-    volumes: 
-      - ./data/comparisons:/data/comparisons 
-      - ./data/input:/data/input 
-      - ./data/output:/data/output 
-      - ./data/uploads:/data/uploads
     environment:
       - SNAKEMAKE_CORES=4
     restart: unless-stopped
