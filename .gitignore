@@ -3,3 +3,4 @@ public/data/*
 !public/data/config.json
 node_modules/*
 data/*
+volumes
