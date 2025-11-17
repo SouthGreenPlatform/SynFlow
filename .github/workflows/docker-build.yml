@@ -68,8 +68,9 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: ${{ github.event.inputs.no-cache != 'true' && 'type=gha' || '' }}
+          cache-to: ${{ github.event.inputs.no-cache != 'true' && 'type=gha,mode=max' || '' }}
+          no-cache: ${{ github.event.inputs.no-cache == 'true' }} 
           platforms: linux/amd64
 
   
