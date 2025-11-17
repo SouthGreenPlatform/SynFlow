@@ -1,0 +1,42 @@
+name: Docker CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build direct du Dockerfile (comme ton docker-compose)
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          tags: synflow:test
+
+      # Test docker-compose (build + up)
+      - name: Test docker-compose
+        run: |
+          docker compose version
+          docker compose build
+          docker compose up -d
+          docker compose ps
+
+      # Optionnel : test que le conteneur répond bien
+      - name: Wait for app to start
+        run: |
+          sleep 5
+          curl -I http://localhost:8080 || exit 1
+
