@@ -12,6 +12,12 @@ on:
       - main
       - develop
   workflow_dispatch:
+    inputs:
+      no-cache:
+        description: 'Build without cache'
+        required: false
+        type: boolean
+        default: false
 
 env:
   REGISTRY: ghcr.io
