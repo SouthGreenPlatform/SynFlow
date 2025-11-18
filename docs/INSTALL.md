@@ -6,25 +6,18 @@ This document provides instructions to install and run **SynFlow**, a web-based 
 
 ## Quick Start with Docker
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/SouthGreenPlatform/SynFlow.git
-cd SynFlow
-```
-
-### 2. Build the Docker Image
-
-```bash
-docker build -t synflow .
-```
-
 This command builds a lightweight Nginx-based Docker image containing the full SynFlow web application and some example data files.
 
-### 3. Run the Application
+### Create directory
 
 ```bash
-docker run --rm -p 8080:80 synflow
+mkdir -p data/{comparisons,input,output,uploads}
+```
+
+###  Run the Application
+
+```bash
+docker run -d --name synflow  -p 8080:80   -p 3031:3031   -v $(pwd)/data/comparisons:/data/comparisons  -v $(pwd)/data/input:/data/input -v $(pwd)/data/output:/data/output  -v $(pwd)/data/uploads:/data/uploads  -e SNAKEMAKE_CORES=4  ghcr.io/southgreenplatform/synflow:latest
 ```
 
 Then open your browser and navigate to:
@@ -32,7 +25,6 @@ Then open your browser and navigate to:
 ```
 http://localhost:8080
 ```
-
 ---
 
 ## Example Data Included
@@ -54,14 +46,8 @@ docker run --rm -p 8080:80 \
   -v $(pwd)/my_data:/usr/share/nginx/html/public/data \
   synflow
 ```
-
 ---
 
-## Advanced (Optional)
-
-To customize the behavior of the Nginx server (e.g., headers, caching), you can provide your own `nginx.conf` and modify the Dockerfile accordingly.
-
----
 
 ## Requirements
 
