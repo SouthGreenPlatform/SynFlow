@@ -2,13 +2,13 @@
 
 ## Description
 
-SynFlow is a powerful web application for visualizing genome alignments and structural variations using SyRI (Structural Rearrangement Identifier) data. It provides an interactive platform for exploring genomic synteny, inversions, translocations, duplications, and other structural rearrangements between genomes.
+Synflow is a powerful web application for visualizing genome alignments and structural variations using SyRI (Structural Rearrangement Identifier) data. It provides an interactive platform for exploring genomic synteny, inversions, translocations, duplications, and other structural rearrangements between genomes.
 
-SynFlow is available for free to use at [synflow.southgreen.fr](synflow.southgreen.fr)
+Synflow is available for free to use at [synflow.southgreen.fr](synflow.southgreen.fr)
 
-A more descriptive documention of SynFlow is available [here](https://synflow.readthedocs.io/en/latest/)
+A more descriptive documention of SynFlow is available [https://synflow.readthedocs.io/en/latest/](https://synflow.readthedocs.io/en/latest/)
 
-A Snakemake workflow to detect synteny blocks and identify chromosomal rearrangements. [here](https://gitlab.cirad.fr/agap/cluster/snakemake/synflow)
+A Snakemake workflow to detect synteny blocks and identify chromosomal rearrangements [https://gitlab.cirad.fr/agap/cluster/snakemake/synflow](https://gitlab.cirad.fr/agap/cluster/snakemake/synflow)
 
 ## Features
 
@@ -32,11 +32,12 @@ Example of file chain:
   
 This will create a visualization chain: **A-thaliana → C-rubella → B-rapa → O-sativa**
 
-#### Three ways to input data:
+#### Four ways to input data:
 ![input data](public/img/input.png)
-  - **Existing files**: select from precomputed datasets. The available files come from analyses performed on several organisms using the SynMake workflow. [See the Synmake documentation.](https://gitlab.cirad.fr/agap/cluster/snakemake/synmake)
-  - **Classic upload**: use the "Browse" button to upload your own files
-  - **Run the pipeline**: launch the Synmake workflow via the integrated toolkit
+  - **Existing files**: select from precomputed datasets. The available files come from analyses performed on several organisms using the workflow [See the documentation](https://gitlab.cirad.fr/agap/cluster/snakemake/synflow)
+  - **Run analysis**: run workflow
+  - **Browse FTP**: import files from FTP
+  - **Upload file**: use the "Browse" button to upload your own files
 
 #### Click the "Draw" button to generate the visualization.
 Use the zoom and pan features to explore the visualization. 
