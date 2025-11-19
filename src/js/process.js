@@ -99,7 +99,7 @@ function readFileInChunks(file, isFirstFile) {
 }
 
 function processChunks(lines, isFirstFile) {
-    console.log(isFirstFile, refGenome, queryGenome);
+    // console.log(isFirstFile, refGenome, queryGenome);
     let offset = 0;
     let parsedData = [];
 
@@ -711,49 +711,49 @@ function allDone() {
     //cache le formulaire
     hideForm();
 
-    // Remove existing chromlist container
-    const vizContainer = document.getElementById('viz-container')
-    const existingchromListContainer = document.getElementById('chrom-list-container');
-    if (existingchromListContainer) {
-        vizContainer.removeChild(existingchromListContainer);
-    }
+    // // Remove existing chromlist container
+    // const vizContainer = document.getElementById('viz-container')
+    // const existingchromListContainer = document.getElementById('chrom-list-container');
+    // if (existingchromListContainer) {
+    //     vizContainer.removeChild(existingchromListContainer);
+    // }
 
-    // Container for chromosomes list
-    const chromListContainer = document.createElement('div');
-    chromListContainer.setAttribute('id', 'chrom-list-container');
-    chromListContainer.style.marginRight = '20px';
+    // // Container for chromosomes list
+    // const chromListContainer = document.createElement('div');
+    // chromListContainer.setAttribute('id', 'chrom-list-container');
+    // chromListContainer.style.marginRight = '20px';
 
-    // Toggle button
-    const toggleButton = document.createElement('div');
-    toggleButton.setAttribute('id', 'toggle-button');
-    toggleButton.style.position = 'absolute';
-    toggleButton.style.top = '0px';
-    toggleButton.style.left = '0px';
-    toggleButton.style.cursor = 'pointer';
-    toggleButton.style.zIndex = '20';
-    toggleButton.innerHTML = '&#x25C0;'; // Flèche gauche
+    // // Toggle button
+    // const toggleButton = document.createElement('div');
+    // toggleButton.setAttribute('id', 'toggle-button');
+    // toggleButton.style.position = 'absolute';
+    // toggleButton.style.top = '0px';
+    // toggleButton.style.left = '0px';
+    // toggleButton.style.cursor = 'pointer';
+    // toggleButton.style.zIndex = '20';
+    // toggleButton.innerHTML = '&#x25C0;'; // Flèche gauche
 
-    const chromListDiv = document.createElement('div');
-    chromListDiv.setAttribute('id', 'chrom-list');
-    chromListContainer.appendChild(toggleButton); 
-    chromListContainer.appendChild(chromListDiv);
+    // const chromListDiv = document.createElement('div');
+    // chromListDiv.setAttribute('id', 'chrom-list');
+    // chromListContainer.appendChild(toggleButton); 
+    // chromListContainer.appendChild(chromListDiv);
 
-    // Append legend and chromosomes list container to viz container
-    const viz = document.getElementById('viz')
-    vizContainer.insertBefore(chromListContainer, viz);
+    // // Append legend and chromosomes list container to viz container
+    // const viz = document.getElementById('viz')
+    // vizContainer.insertBefore(chromListContainer, viz);
 
-    // Toggle button event listener
-    let isListVisible = true;
-    toggleButton.addEventListener('click', () => {
-        if (isListVisible) {
-            chromListDiv.style.display = 'none';
-            toggleButton.innerHTML = '&#x25B6;'; // Flèche droite
-        } else {
-            chromListDiv.style.display = 'flex'; // Réappliquer flex pour garder l'affichage en ligne
-            toggleButton.innerHTML = '&#x25C0;'; // Flèche gauche
-        }
-        isListVisible = !isListVisible;
-    });
+    // // Toggle button event listener
+    // let isListVisible = true;
+    // toggleButton.addEventListener('click', () => {
+    //     if (isListVisible) {
+    //         chromListDiv.style.display = 'none';
+    //         toggleButton.innerHTML = '&#x25B6;'; // Flèche droite
+    //     } else {
+    //         chromListDiv.style.display = 'flex'; // Réappliquer flex pour garder l'affichage en ligne
+    //         toggleButton.innerHTML = '&#x25C0;'; // Flèche gauche
+    //     }
+    //     isListVisible = !isListVisible;
+    // });
 
 
     // updateChromList(globalMaxChromosomeLengths);
@@ -809,7 +809,7 @@ function calculateSNPDensity(data, refLengths, binSize = 100000) {
 //chromosome    start	end	name	strand
 //Macmad_h1_01	16953	25284	Macmad_h1_01g000010	+
 export function calculateAnnotationDensity(data, genomeName, binSize = 20000) {
-    console.log("Calculating annotation density for genome:", genomeName);
+    // console.log("Calculating annotation density for genome:", genomeName);
     const annotationDensity = {};
 
     // Compter les annotations par bin
@@ -981,11 +981,11 @@ function handleFileUpload(bandFiles, bedFiles) {
 
     // Extraire les noms de fichiers des objets File
     const bandFileNames = Array.from(bandFiles).map(file => file.name);
-    console.log(bandFileNames);
+    // console.log(bandFileNames);
     
     // Trouver et ordonne les génomes à partir des noms de fichiers de bandes
     uniqueGenomes = findUniqueGenomes(bandFileNames);
-    console.log(uniqueGenomes);
+    // console.log(uniqueGenomes);
 
     // Vérifier si tous les fichiers de bandes nécessaires sont présents
     if (!uniqueGenomes || uniqueGenomes.length < 2) {
@@ -1003,7 +1003,7 @@ function handleFileUpload(bandFiles, bedFiles) {
 
     //retrouve l'ordre des fichier 
     const orderedFiles = orderFilesByGenomes(bandFileNames, uniqueGenomes);
-    console.log("Ordered Files: ", orderedFiles);
+    // console.log("Ordered Files: ", orderedFiles);
 
     // Vérifier si tous les fichiers de bandes nécessaires sont présents et dans l'ordre
     if (orderedFiles.length !== bandFileNames.length) {
@@ -1221,7 +1221,7 @@ async function calculateChromosomeDataFromBandFiles(orderedFileObjects, uniqueGe
         });
     }
 
-    console.log("genomeData mis à jour :");
+    // console.log("genomeData mis à jour :");
     console.log(genomeData);
     return genomeData;
 }
@@ -1276,7 +1276,7 @@ async function calculateChromosomeDataFromBandFilesAlphabetical(orderedFileObjec
         });
     });
 
-    console.log('genomeData (alphabetical) mis à jour :', genomeData);
+    // console.log('genomeData (alphabetical) mis à jour :', genomeData);
     return genomeData;
 }
 
@@ -1507,7 +1507,7 @@ function orderFilesByGenomes(files, genomes) {
 }
 
 function calculateGlobalMaxChromosomeLengths(genomeData) {
-    console.log("Calculating global max chromosome lengths from genome data:");
+    // console.log("Calculating global max chromosome lengths from genome data:");
     const globalMaxLengths = {};
 
     for (const genome in genomeData) {
@@ -1519,7 +1519,7 @@ function calculateGlobalMaxChromosomeLengths(genomeData) {
             if (chrData === undefined) {
                 console.warn(`Genome: ${genome}, Chromosome Index: ${index} is undefined - treating length as 0`);
             } else {
-                console.log(`Genome: ${genome}, Chromosome Index: ${index}, Data: `, chrData);
+                // console.log(`Genome: ${genome}, Chromosome Index: ${index}, Data: `, chrData);
             }
 
             if (globalMaxLengths[index] === undefined || len > globalMaxLengths[index]) {
@@ -1527,7 +1527,7 @@ function calculateGlobalMaxChromosomeLengths(genomeData) {
             }
         }
     }
-    console.log(globalMaxLengths);
+    // console.log(globalMaxLengths);
     return globalMaxLengths;
 }
 

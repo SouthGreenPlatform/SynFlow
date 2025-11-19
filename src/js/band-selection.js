@@ -177,7 +177,7 @@ export function createContextMenu(x, y, band) {
 
 // Créer et afficher le menu contextuel pour un chromosome
 export function createChromContextMenu(x, y, chromEl) {
-    console.log('createChromContextMenu called', { x, y, chromEl });
+    // console.log('createChromContextMenu called', { x, y, chromEl });
 
     // Réutiliser le même mécanisme de fermeture
     if (contextMenu) {

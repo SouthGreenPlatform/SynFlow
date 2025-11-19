@@ -179,23 +179,30 @@ export function hideForm() {
 // Fonction pour récupérer les répertoires Synflow depuis un fichier JSON
 //ATTENTION PROXY APACHE NÉCESSAIRE POUR ACCÉDER AUX RÉPERTOIRES HPC
 async function fetchSynflowDirectories() {
-  try {
-    const response = await fetch('public/data/config.json');
-    if (!response.ok) throw new Error('Erreur lors du chargement du JSON');
-    const dirs = await response.json();
-    
-    // Utiliser le domaine actuel comme base du proxy
-    const proxyBase = `${window.location.origin}/hpc-bank/`;
-    
-    const adjustedDirs = dirs.map(url => {
-      return url.replace('https://hpc.cirad.fr/bank/', proxyBase);
-    });
+    try {
+        const response = await fetch('public/data/config.json');
+        if (!response.ok) throw new Error('Erreur lors du chargement du JSON');
+        const configData = await response.json();
+        
+        // Utiliser le domaine actuel comme base du proxy
+        const proxyBase = `${window.location.origin}/hpc-bank/`;
+        
+        // Mapper les URLs en fonction du flag useProxy
+        const adjustedDirs = configData.map(({organism, url, useProxy = false}) => {
+            const adjustedUrl = useProxy 
+                ? url.replace('https://hpc.cirad.fr/bank/', proxyBase)
+                : url;
+            return {
+                organism: organism,
+                url: adjustedUrl
+            };
+        });
 
-    return adjustedDirs;
-  } catch (error) {
-    console.error('Error fetching Synflow directories:', error);
-    return [];
-  }
+        return adjustedDirs;
+    } catch (error) {
+        console.error('Error fetching Synflow directories:', error);
+        return [];
+    }
 }
 
 // Fonction pour récupérer la liste des fichiers .out depuis un dossier distant
@@ -206,7 +213,7 @@ function fetchRemoteOutFileList(folder) {
         url += '/';
     }
     
-    console.log('Fetching out files from:', url);
+    // console.log('Fetching out files from:', url);
     
     return fetch(url, {
         method: 'GET',
@@ -238,7 +245,7 @@ function fetchRemoteOutFileList(folder) {
                 })
                 .filter(name => name !== null);
             
-            console.log('Fichiers .out trouvés:', files);
+            // console.log('Fichiers .out trouvés:', files);
             return files;
         });
 }
@@ -251,7 +258,7 @@ function fetchRemoteAllFileList(folder) {
         url += '/';
     }
     
-    console.log('Fetching all files from:', url);
+    // console.log('Fetching all files from:', url);
     
     return fetch(url, {
         method: 'GET',
@@ -281,7 +288,7 @@ function fetchRemoteAllFileList(folder) {
                 })
                 .filter(name => name !== null);
             
-            console.log('Fichiers trouvés:', files);
+            // console.log('Fichiers trouvés:', files);
             return files;
         });
 }
@@ -323,15 +330,11 @@ async function createExistingFilesForm() {
 
     //va chercher les répertoires Synflow depuis le fichier JSON
     const remoteFolders = await fetchSynflowDirectories();
-    remoteFolders.forEach(folder => {
+    remoteFolders.forEach(({organism, url}) => {
         const option = document.createElement('option');
-        option.value = folder;
-        //affiche uniquement le nom du dossier avant /synflow (avec ou sans majuscules)
-        //exemple : https://hpc.cirad.fr/bank/banana/synflow/ devient "Banana"
-        //exemple : https://hpc.cirad.fr/bank/vitis/Synflow/ devient "Vitis"
-        const folderName = folder.replace('/synflow/', '').replace('/Synflow/', '').split('/').pop();
+        option.value = url;
         // Mettre la première lettre en majuscule et le reste en minuscules
-        const formattedFolderName = folderName.charAt(0).toUpperCase() + folderName.slice(1).toLowerCase();
+        const formattedFolderName = organism.charAt(0).toUpperCase() + organism.slice(1).toLowerCase();
         option.textContent = formattedFolderName;
         folderSelect.appendChild(option);
     });
@@ -658,12 +661,12 @@ function createUploadSection() {
             // Chercher le fichier .json
             const jbrowseFile = Array.from(bandInput.files).find(file => file.name.endsWith('.json'));
             if (jbrowseFile) {
-                console.log('jbrowse_link.json found, reading...');
+                // console.log('jbrowse_link.json found, reading...');
                 const reader = new FileReader();
                 reader.onload = function(event) {
                     try {
                         jbrowseLinks = JSON.parse(event.target.result);
-                        console.log('Found jbrowse links:', jbrowseLinks);
+                        // console.log('Found jbrowse links:', jbrowseLinks);
                     } catch (error) {
                         console.log('Error parsing jbrowse_link.json:', error);
                     }
@@ -675,8 +678,8 @@ function createUploadSection() {
             anchorsFiles = Array.from(bandInput.files).filter(file => file.name.endsWith('.anchors'));
             //met les fichiers .bed dans bedFiles
             bedFiles = Array.from(bandInput.files).filter(file => file.name.endsWith('.bed'));
-            console.log('Anchors files:', anchorsFiles);
-            console.log('Bed files:', bedFiles);
+            // console.log('Anchors files:', anchorsFiles);
+            // console.log('Bed files:', bedFiles);
 
 
             //////////////////
@@ -933,7 +936,7 @@ export function createFTPSection() {
         // Récupère la valeur brute sans transformation
         const folder = ftpInput.value.trim();
         
-        console.log('URL saisie:', folder); // Pour vérifier que le port est présent
+        // console.log('URL saisie:', folder); // Pour vérifier que le port est présent
         
         if (!folder) {
             fileListDiv.innerHTML = '<span style="color:red;">Please enter a valid FTP folder URL.</span>';
@@ -968,7 +971,7 @@ export function createFTPSection() {
             
             if (outFiles.length === 1 && genomes.length === 2) {
                 // Mode chaîne avec 2 génomes
-                console.log(outFiles, genomes);
+                // console.log(outFiles, genomes);
                 //mets les genomes dans l'ordre d'apparition du nom du fichier out
                 const file = outFiles[0];
                 const parts = file.replace('.out', '').split('_').map(part => part.trim());
@@ -1566,7 +1569,7 @@ async function searchAdditionalFiles(selectedGenomes, files, folder) {
         const jbrowseResponse = await fetch(jbrowseFilePath);
         if (jbrowseResponse.ok) {
             jbrowseLinks = await jbrowseResponse.json();   
-            console.log(jbrowseLinks);         
+            // console.log(jbrowseLinks);         
         }
     } catch (error) {
         console.log("No jbrowse links");

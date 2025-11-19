@@ -588,6 +588,31 @@ export function createZoomedSyntenyView(orthologPairs, refGenome, queryGenome, r
         .attr('class', 'legend')
         .attr('transform', `translate(${width - 160}, 20)`);
 
+    // Gérer le bouton de téléchargement (créer ou mettre à jour)
+    const zoomedSynteny = document.getElementById('zoomed-synteny');
+    const svgElement = document.getElementById('anchor-viz');
+    
+    let downloadAnchorSvgButton = document.getElementById('download-anchor-svg');
+    
+    if (!downloadAnchorSvgButton) {
+        // Créer le bouton s'il n'existe pas
+        const buttonDiv = document.createElement('div');
+        downloadAnchorSvgButton = document.createElement('button');
+        downloadAnchorSvgButton.id = 'download-anchor-svg';
+        downloadAnchorSvgButton.setAttribute('type', 'button');
+        downloadAnchorSvgButton.classList.add('btn-simple');
+        downloadAnchorSvgButton.textContent = 'Download SVG';
+        buttonDiv.appendChild(downloadAnchorSvgButton);
+        // Insérer entre zoomed-synteny et orthology-table
+        zoomedSynteny.parentNode.insertBefore(buttonDiv, document.getElementById('orthology-table'));
+    }
+    
+    // Ajouter (ou réajouter) l'event listener au bouton
+    downloadAnchorSvgButton.onclick = function(event) {
+        event.preventDefault();
+        downloadSvg(svgElement);
+    };
+
     return svg.node();
 }
 

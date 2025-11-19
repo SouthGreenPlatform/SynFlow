@@ -290,7 +290,7 @@ export function drawMiniChromosome(genome, svg, options = {}) {
 }
 
 export function drawChromosomes(genomeData, maxLengths, refGenome, queryGenome, isFirstFile, scale) {
-    console.log("Draw chromosomes"); 
+    // console.log("Draw chromosomes"); 
     const svgGroup = d3.select('#zoomGroup');
     const height = 300;
     
@@ -407,7 +407,7 @@ export function drawChromosomes(genomeData, maxLengths, refGenome, queryGenome, 
 }
 
 export function drawStackedChromosomes(genomeData, maxLengths, fileIndex, totalGenomes, scale) {
-    console.log("Draw stacked chromosomes"); 
+    // console.log("Draw stacked chromosomes"); 
     const svgGroup = d3.select('#zoomGroup');
     const margin = { top: 30, bottom: 30, left: 50, right: 50 };
     const spaceBetween = 100;
@@ -569,7 +569,7 @@ function drawChromPathNoArm(x, y, width, radius, chromNum, chromName, genome, sv
         .style('fill', initFill)
         .on('click', function(event, d) {
             // Ouvrir le menu contextuel spécifique au chromosome
-            console.log('Chromosome path clicked:', { genome, chromName });
+            // console.log('Chromosome path clicked:', { genome, chromName });
             try {
                 event.preventDefault();
                 if (typeof createChromContextMenu !== 'function') {
@@ -645,7 +645,7 @@ function drawSNPDensityHeatmap(snpDensity, refLengths, chromPositions, binSize =
 }
 
 export function drawCorrespondenceBands(data, chromPositions, isFirstFile, scale, mergeThreshold = 500000) {
-    console.log("Draw correspondence bands");
+    // console.log("Draw correspondence bands");
     // console.log(mergeThreshold);
     const svgGroup = d3.select('#zoomGroup');
 
@@ -735,7 +735,7 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
     //Si c'est un redraw alors on vérifie les filtres de bandes
     if(!isFirstDraw){
         if (!isBandVisible(d)) {
-            console.log(`Band of type ${d.type} between ${d.refChr} and ${d.queryChr} is hidden by filter.`);
+            // console.log(`Band of type ${d.type} between ${d.refChr} and ${d.queryChr} is hidden by filter.`);
             display = 'none';
         }
     }
@@ -909,31 +909,6 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
                     const orthologPairs = anchorsResult.data;
                     createZoomedSyntenyView(orthologPairs, refGenome, queryGenome, d.refStart, d.refEnd, d.queryStart, d.queryEnd);
                     
-                    //// Remove existing download button if it exists
-                    const zoomedSynteny = document.getElementById('zoomed-synteny');
-
-                    const existingDownloadButton = document.getElementById('download-anchor-svg');
-                    if (existingDownloadButton) {
-                        formContainer.removeChild(existingDownloadButton);
-                    }
-
-                    //download button for synteny svg
-                    const buttonDiv = document.createElement('div');
-                    const downloadAnchorSvgButton = document.createElement('button');
-                    downloadAnchorSvgButton.id = 'download-anchor-svg';
-                    downloadAnchorSvgButton.setAttribute('type', 'button');
-                    downloadAnchorSvgButton.classList.add('btn-simple');
-                    downloadAnchorSvgButton.textContent = 'Download SVG';
-                    buttonDiv.appendChild(downloadAnchorSvgButton);
-                    //append entre zoomedSynteny et orthology-table
-                    zoomedSynteny.parentNode.insertBefore(buttonDiv, document.getElementById('orthology-table'));
-
-                    const svgElement = document.getElementById('anchor-viz');
-                    downloadAnchorSvgButton.addEventListener('click', function(event) {
-                        event.preventDefault();
-                        downloadSvg(svgElement);
-                    });
-
                 }
             });
         ;
@@ -1041,7 +1016,7 @@ export async function createAnchorsSection(lines, refStart, refEnd, queryStart, 
             });
         });
 
-        console.log('Paires orthologues trouvées:', orthologPairs);
+        // console.log('Paires orthologues trouvées:', orthologPairs);
 
         const orthologsHtml = createOrthologsTable(orthologPairs, refGenome, queryGenome );
 

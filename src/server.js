@@ -65,19 +65,38 @@ if (keyPath && certPath) {
 const configFilePath = process.env.CONFIG_FILE_PATH || path.resolve(__dirname, '../public/data/config.json');
 const configUrlsEnv = process.env.CONFIG_URLS;
 if (configUrlsEnv) {
-    let urls = [];
+    let configData = [];
     try {
         const parsed = JSON.parse(configUrlsEnv);
         if (Array.isArray(parsed)) {
-            urls = parsed;
+            // Format tableau d'objets {organism, url, useProxy?} ou ancien format tableau simple
+            if (parsed.length > 0 && typeof parsed[0] === 'object' && parsed[0].organism && parsed[0].url) {
+                // Nouveau format : tableau d'objets
+                configData = parsed;
+            } else if (typeof parsed[0] === 'string') {
+                // Ancien format : tableau simple d'URLs
+                configData = parsed.map((url, index) => ({
+                    organism: `organism_${index}`,
+                    url: url,
+                    useProxy: false
+                }));
+            }
         }
     } catch (error) {
-        urls = configUrlsEnv.split(',').map((entry) => entry.trim()).filter(Boolean);
+        // Format chaîne séparée par virgules
+        const urls = configUrlsEnv.split(',').map((entry) => entry.trim()).filter(Boolean);
+        if (urls.length > 0) {
+            configData = urls.map((url, index) => ({
+                organism: `organism_${index}`,
+                url: url,
+                useProxy: false
+            }));
+        }
     }
 
-    if (urls.length > 0) {
+    if (configData.length > 0) {
         fs.mkdirSync(path.dirname(configFilePath), { recursive: true });
-        fs.writeFileSync(configFilePath, JSON.stringify(urls, null, 4));
+        fs.writeFileSync(configFilePath, JSON.stringify(configData, null, 4));
         console.log(`Update configuration file: ${configFilePath}`);
     } else {
         console.warn("CONFIG_URLS is define but URL is not valid. Keep existing config file.");

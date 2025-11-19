@@ -180,14 +180,14 @@ function createParametersContent() {
     checkbox.addEventListener('change', () => {
         //si les fichiers ont ete uploadés
         if (fileUploadMode == 'local') {
-            console.log('Stack mode for uploaded files');
+            // console.log('Stack mode for uploaded files');
             const submitButton = document.querySelector('#submit-local');
             // console.log('submitButton', submitButton);
             if (submitButton) submitButton.click();
         }
         //si les fichier proviennent de la base de données
         if (fileUploadMode == 'remote') {
-            console.log('Stack mode for remote files');
+            // console.log('Stack mode for remote files');
             const submitButton = document.querySelector('#submit-remote');
             // console.log('submitButton', submitButton);
             if (submitButton) submitButton.click();
@@ -417,8 +417,8 @@ export function createLegendContainer() {
 }
 
 function configJBrowse() {
-    console.log("Config jbrowse");
-    console.log(uniqueGenomes);
+    // console.log("Config jbrowse");
+    // console.log(uniqueGenomes);
 
     // Crée la fenêtre
     const container = document.createElement('div');
@@ -582,7 +582,7 @@ function configJBrowse() {
             return; // Ne ferme pas la popup
         }
 
-        console.log('Nouvelle configuration JBrowse :', jbrowseLinks);
+        // console.log('Nouvelle configuration JBrowse :', jbrowseLinks);
 
         // Fermer la popup
         document.body.removeChild(container);
