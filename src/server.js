@@ -64,7 +64,21 @@ if (keyPath && certPath) {
 
 const configFilePath = process.env.CONFIG_FILE_PATH || path.resolve(__dirname, '../public/data/config.json');
 const configUrlsEnv = process.env.CONFIG_URLS;
-if (configUrlsEnv) {
+if (process.env.CONFIG_FILE_PATH) {
+    if (fs.existsSync(configFilePath)) {
+        console.log(`Using existing configuration file: ${configFilePath}`);
+        try {
+            const existingConfig = fs.readFileSync(configFilePath, 'utf8');
+            const parsed = JSON.parse(existingConfig);
+            console.log(`Loaded configuration with ${parsed.length} organism(s)`);
+        } catch (error) {
+            console.error(`Failed to read existing config file: ${error.message}`);
+        }
+    } else {
+        console.warn(`No CONFIG_URLS provided and no existing config file found at: ${configFilePath}`);
+    }
+} else {
+    // CONFIG_URLS est défini, utilisons cette logique (code existant) 
     let configData = [];
     try {
         const parsed = JSON.parse(configUrlsEnv);
