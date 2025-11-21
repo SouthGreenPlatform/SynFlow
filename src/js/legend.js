@@ -1,7 +1,7 @@
 import { fileUploadMode } from "./form.js";
 import { uniqueGenomes, setBandColorMode } from "./process.js";
 import { jbrowseLinks } from "./form.js";
-import { bandeTypeColors, currentBandTypeColors, updateBandColors } from "./draw.js";
+import { bandeTypeColors, currentBandTypeColors, updateBandColors, drawMiniChromosome } from "./draw.js";
 
 //Fonction pour les contrôles et paramètres
 export function createControlPanel() {
@@ -57,7 +57,7 @@ export function createControlPanel() {
         padding: 20px;
         background-color: #f5f5f5;
         display: grid;
-        grid-template-columns: 25% auto 25%;
+        grid-template-columns: auto 30%;
         gap: 20px;
     `;
 
@@ -74,10 +74,10 @@ export function createControlPanel() {
     });
 
     // Création des sections
-    const legendSection = document.createElement('div');
-    legendSection.setAttribute('class', 'menu-section');
-    legendSection.innerHTML = '<h5><i class="fas fa-info-circle"></i> Legend</h5>';
-    legendSection.appendChild(createLegendContainer());
+    // const legendSection = document.createElement('div');
+    // legendSection.setAttribute('class', 'menu-section');
+    // legendSection.innerHTML = '<h5><i class="fas fa-info-circle"></i> Legend</h5>';
+    // legendSection.appendChild(createLegendContainer());
 
     const filtersSection = document.createElement('div');
     filtersSection.setAttribute('class', 'menu-section');
@@ -107,7 +107,7 @@ export function createControlPanel() {
     chromControlSection.appendChild(chromControler);
 
     // Ajout des sections à la grille
-    gridContainer.appendChild(legendSection);
+    // gridContainer.appendChild(legendSection);
     gridContainer.appendChild(filtersSection);
     gridContainer.appendChild(paramsSection);
     chromControlContent.appendChild(chromControlSection);
@@ -142,6 +142,46 @@ export function showControlPanel() {
 }
 
 // Fonctions helpers pour créer le contenu des onglets
+
+// Helper function to create a curved band path for mini band visualization
+// Handles both normal and inverted bands
+// Can work with absolute coordinates or relative (default 20x20 SVG)
+function createMiniBandPath(bandType, options = {}) {
+    // Options par défaut pour un SVG mini de 20x20
+    const {
+        refStartX = 1,
+        refEndX = 10,
+        refY = 1,
+        queryStartX = 10,
+        queryEndX = 19,
+        queryY = 19,
+        invertIfNeeded = true
+    } = options;
+
+    let x1 = refStartX;
+    let x2 = queryStartX;
+    let x2End = queryEndX;
+    let x1End = refEndX;
+
+    // Invert query positions for inverted band types if requested
+    if (invertIfNeeded && (bandType === 'Inverted region' || bandType === 'INV')) {
+        [x2, x2End] = [x2End, x2];
+    }
+
+    // Create curved band path
+    const pathData = `M${x1},${refY} C${x1},${(refY + queryY) / 2} ${x2},${(refY + queryY) / 2} ${x2},${queryY} L${x2End},${queryY} C${x2End},${(refY + queryY) / 2} ${x1End},${(refY + queryY) / 2} ${x1End},${refY} Z`;
+
+    return { 
+        pathData, 
+        refStartX: x1, 
+        refEndX: x1End, 
+        refY, 
+        queryStartX: x2, 
+        queryEndX: x2End, 
+        queryY 
+    };
+}
+
 function createFiltersContent() {
     const filters = document.createElement('div');
     filters.innerHTML = `
@@ -159,7 +199,9 @@ function createFiltersContent() {
 
 function createParametersContent() {
     const params = document.createElement('div');
-    params.style = 'margin-top: 20px;';
+    params.style.marginTop = '20px';
+    params.style.marginLeft = '20px';
+    params.style.marginRight = '20px';
     params.className = 'params-section';
 
     // Container pour la checkbox
@@ -202,51 +244,93 @@ function createParametersContent() {
     colorModeLabel.style.marginRight = '8px';
     colorModeDiv.appendChild(colorModeLabel);
 
-    const radioType = document.createElement('input');
-    radioType.type = 'radio';
-    radioType.name = 'color-mode';
-    radioType.value = 'type';
-    radioType.id = 'color-mode-type';
-    radioType.checked = true;
+    // Instead of radio buttons, use clickable mini-graphs. Clicking a graph
+    // will select the corresponding color mode.
+    // We'll create the two SVG thumbnails once and attach click handlers below.
+    const svgTypeThumb = createColorModeVisualization('byType');
+    const svgChromThumb = createColorModeVisualization('byChrom');
 
-    const radioTypeLabel = document.createElement('label');
-    radioTypeLabel.setAttribute('for', 'color-mode-type');
-    radioTypeLabel.style.marginRight = '12px';
-    radioTypeLabel.textContent = 'By type';
+    // Afficher les deux options côte-à-côte avec une légende sous chaque mini-graph
+    const optionsRow = document.createElement('div');
+    optionsRow.style.display = 'flex';
+    optionsRow.style.gap = '18px';
+    optionsRow.style.alignItems = 'flex-start';
 
-    const radioChrom = document.createElement('input');
-    radioChrom.type = 'radio';
-    radioChrom.name = 'color-mode';
-    radioChrom.value = 'byChrom';
-    radioChrom.id = 'color-mode-chrom';
+    // Colonne option: By band type
+    const optionTypeCol = document.createElement('div');
+    optionTypeCol.style.display = 'flex';
+    optionTypeCol.style.flexDirection = 'column';
+    optionTypeCol.style.alignItems = 'center';
 
-    const radioChromLabel = document.createElement('label');
-    radioChromLabel.setAttribute('for', 'color-mode-chrom');
-    radioChromLabel.textContent = 'By chromosome';
+    const optionTypeTop = document.createElement('div');
+    optionTypeTop.style.display = 'flex';
+    optionTypeTop.style.alignItems = 'center';
+    optionTypeTop.style.cursor = 'pointer';
+    optionTypeTop.appendChild(svgTypeThumb);
 
-    colorModeDiv.appendChild(radioType);
-    colorModeDiv.appendChild(radioTypeLabel);
-    colorModeDiv.appendChild(radioChrom);
-    colorModeDiv.appendChild(radioChromLabel);
+    const optionTypeCaption = document.createElement('div');
+    optionTypeCaption.style.marginTop = '6px';
+    optionTypeCaption.style.fontSize = '0.95em';
+    optionTypeCaption.style.color = '#333';
+    optionTypeCaption.textContent = 'By band type';
 
-    // Append to your params container (par exemple `params.appendChild(colorModeDiv);`)
-    params.appendChild(colorModeDiv);
+    optionTypeCol.appendChild(optionTypeTop);
+    optionTypeCol.appendChild(optionTypeCaption);
 
-    // On importe/modifie la variable globale bandColorMode dans process.js
-    radioType.addEventListener('change', () => {
-        if (radioType.checked) {
+    // Colonne option: By chromosome
+    const optionChromCol = document.createElement('div');
+    optionChromCol.style.display = 'flex';
+    optionChromCol.style.flexDirection = 'column';
+    optionChromCol.style.alignItems = 'center';
+
+    const optionChromTop = document.createElement('div');
+    optionChromTop.style.display = 'flex';
+    optionChromTop.style.alignItems = 'center';
+    optionChromTop.style.cursor = 'pointer';
+    optionChromTop.appendChild(svgChromThumb);
+
+    const optionChromCaption = document.createElement('div');
+    optionChromCaption.style.marginTop = '6px';
+    optionChromCaption.style.fontSize = '0.95em';
+    optionChromCaption.style.color = '#333';
+    optionChromCaption.textContent = 'By chromosome';
+
+    optionChromCol.appendChild(optionChromTop);
+    optionChromCol.appendChild(optionChromCaption);
+
+    optionsRow.appendChild(optionTypeCol);
+    optionsRow.appendChild(optionChromCol);
+
+    // Selection handling: visual highlight + update global mode
+    function selectColorMode(mode) {
+        if (mode === 'type') {
+            optionTypeCol.style.boxShadow = '0 0 0 2px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.3)';
+            optionChromCol.style.boxShadow = 'none';
             setBandColorMode('type');
             updateBandColors();
             updateChromControlerColors('type');
-        }
-    });
-    radioChrom.addEventListener('change', () => {
-        if (radioChrom.checked) {
+        } else {
+            optionChromCol.style.boxShadow = '0 0 0 2px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.3)';
+            optionTypeCol.style.boxShadow = 'none';
             setBandColorMode('byChrom');
             updateBandColors();
             updateChromControlerColors('byChrom');
         }
-    });
+    }
+
+    // Attach click handlers to thumbnails
+    svgTypeThumb.addEventListener('click', () => selectColorMode('type'));
+    svgChromThumb.addEventListener('click', () => selectColorMode('byChrom'));
+
+    // Default selection
+    selectColorMode('type');
+
+    colorModeDiv.appendChild(optionsRow);
+
+    // Append to your params container (par exemple `params.appendChild(colorModeDiv);`)
+    params.appendChild(colorModeDiv);
+
+    // Selection handled by clicking the thumbnails (see selectColorMode above)
 
     // Ajouter le bouton de réinitialisation des couleurs
     const resetButton = document.createElement('button');
@@ -274,6 +358,13 @@ function createParametersContent() {
         });
     });
 
+    const jbrowseButton = document.createElement('button');
+    jbrowseButton.textContent = 'JBrowse Links';
+    jbrowseButton.setAttribute('type', 'button');
+    jbrowseButton.classList.add('btn-simple');
+    jbrowseButton.style.marginLeft = '10px';   
+    jbrowseButton.addEventListener('click', configJBrowse);
+
     // Zone d'upload
     const uploadDiv = document.createElement('div');
     uploadDiv.id = 'file-upload';
@@ -282,6 +373,7 @@ function createParametersContent() {
     // Ajout au conteneur principal
     params.appendChild(stackDiv);
     params.appendChild(resetButton);
+    params.appendChild(jbrowseButton);
     params.appendChild(uploadDiv);
 
     return params;
@@ -397,12 +489,12 @@ export function createLegendContainer() {
     const legendDiv = document.createElement('div');
     legendDiv.setAttribute('id', 'legend');
 
-    const jbrowseButton = document.createElement('button');
-    jbrowseButton.textContent = 'JBrowse Links';
-    jbrowseButton.setAttribute('type', 'button');
-    jbrowseButton.classList.add('btn-simple');
-    jbrowseButton.style.marginLeft = '10px';   
-    jbrowseButton.addEventListener('click', configJBrowse);
+    // const jbrowseButton = document.createElement('button');
+    // jbrowseButton.textContent = 'JBrowse Links';
+    // jbrowseButton.setAttribute('type', 'button');
+    // jbrowseButton.classList.add('btn-simple');
+    // jbrowseButton.style.marginLeft = '10px';   
+    // jbrowseButton.addEventListener('click', configJBrowse);
 
     legendContent.appendChild(genomeList);
     legendContent.appendChild(legendDiv);
@@ -603,7 +695,9 @@ function configJBrowse() {
 export function generateBandTypeFilters() {
     const filterDiv = document.querySelector('.filter-section'); 
     filterDiv.innerHTML = ''; // Clear previous legend
-    filterDiv.style = 'margin-top: 20px;';
+    filterDiv.style.marginTop = '20px';
+    filterDiv.style.marginLeft = '20px';
+    filterDiv.style.marginRight = '20px';
 
     // Créer un conteneur pour les deux colonnes
     const columnsContainer = document.createElement('div');
@@ -656,27 +750,7 @@ export function generateBandTypeFilters() {
         miniBandSvg.setAttribute("height", "20");
         miniBandSvg.style.marginRight = "10px";
 
-        let refStartX = 1;
-        let refEndX = 10;
-        let refY = 1;
-
-        let queryStartX = 10;
-        let queryEndX = 19;
-        let queryY = 19;
-
-        // Inverser les positions queryStart et queryEnd pour les types d'inversion
-        if (entry.type === 'Inverted region') {
-            [queryStartX, queryEndX] = [queryEndX, queryStartX];
-        }
-
-        // Dessiner une bande courbée pour la correspondance
-        const pathData = `
-            M${refStartX},${refY}
-            C${refStartX},${(refY + queryY) / 2} ${queryStartX},${(refY + queryY) / 2} ${queryStartX},${queryY}
-            L${queryEndX},${queryY}
-            C${queryEndX},${(refY + queryY) / 2} ${refEndX},${(refY + queryY) / 2} ${refEndX},${refY}
-            Z
-        `;
+        const { pathData } = createMiniBandPath(entry.type);
 
         const miniBand = document.createElementNS("http://www.w3.org/2000/svg", "path");
         miniBand.setAttribute("d", pathData);
@@ -1118,4 +1192,81 @@ export function mergeBands(bands, threshold) {
     if (current) merged.push(current);
 
     return merged;
+}
+
+// Crée un mini-graph illustrant le mode de coloration (chromosomes + bandes)
+function createColorModeVisualization(mode) {
+    // Création du conteneur SVG principal
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '130');
+    svg.setAttribute('height', '60');
+    svg.style.verticalAlign = 'middle';
+    svg.style.backgroundColor = 'white';
+
+    // Wrapper d3 pour drawMiniChromosome
+    const svgD3 = d3.select(svg);
+
+    // Positions pour les mini-chromosomes
+    const chromW = 20, chromH = 8;
+    const refY = 8, queryY = 40;
+    const chrom1X = 15, chrom2X = 65;
+
+    // Créer des groupes pour chaque chromosome
+    const g1 = svgD3.append('g').attr('transform', `translate(${chrom1X},${refY})`);
+    const g2 = svgD3.append('g').attr('transform', `translate(${chrom2X},${refY})`);
+    const g3 = svgD3.append('g').attr('transform', `translate(${chrom1X},${queryY})`);
+    const g4 = svgD3.append('g').attr('transform', `translate(${chrom2X},${queryY})`);
+
+    // Dessiner les mini-chromosomes avec drawMiniChromosome
+    try {
+        drawMiniChromosome('ref', g1, { mode: 'filled', color: '#1f77b4'});
+        drawMiniChromosome('ref', g2, { mode: 'filled', color: '#ff7f0e'});
+        drawMiniChromosome('query', g3, { mode: 'filled', color: '#1f77b4'});
+        drawMiniChromosome('query', g4, { mode: 'filled', color: '#ff7f0e'});
+    } catch (e) {
+        // noop
+    }
+
+    // Définition des couleurs de bandes
+    const bandTypes = [
+        { type: 'SYN', color: '#d3d3d37a' },
+        { type: 'INV', color: '#ffa5007a' },
+        { type: 'TRANS', color: '#0080007a' },
+        { type: 'DUP', color: '#0000ff7a' }
+    ];
+    const chromColors = ['#1f77b47a', '#ff7f0e7a'];
+
+    // Bandes à dessiner avec positions ajustées
+    const bands = [
+        { x1: chrom1X+5, y1: refY + chromH*2 -2, x2: chrom1X+5, y2: queryY + chromH+2, idx: 0, type: 'SYN' },
+        { x1: chrom2X+25, y1: refY + chromH*2 -2, x2: chrom2X+25, y2: queryY + chromH+2, idx: 1, type: 'INV' },
+        { x1: chrom1X+25, y1: refY + chromH*2 -2, x2: chrom2X+5, y2: queryY + chromH+2, idx: 2, type: 'TRANS' },
+        { x1: chrom2X+5, y1: refY + chromH*2 -2, x2: chrom1X+25, y2: queryY + chromH+2, idx: 3, type: 'TRANS' }
+    ];
+
+    bands.forEach((b, i) => {
+        // color en fonction du mode et du type de la bande.
+        let color = (mode === 'byType') ? bandTypes.find(bt => bt.type === b.type).color : chromColors[i%2];
+        
+        // Pour les bandes, gérer l'inversion si INV
+        let x1Start = b.x1;
+        let x2Start = b.x2;
+        let x1End = b.x1 + chromW;
+        let x2End = b.x2 + chromW;
+        
+        // Appliquer inversion pour INV
+        if (b.type === 'INV' || b.type === 'Inverted region') {
+            [x1Start, x1End] = [x1End, x1Start];
+        }
+        
+        // Créer un chemin courbe qui relie les côtés des deux chromosomes
+        const pathData = `M${x1Start},${b.y1} C${x1Start},${(b.y1 + b.y2) / 2} ${x2Start},${(b.y1 + b.y2) / 2} ${x2Start},${b.y2} L${x2End},${b.y2} C${x2End},${(b.y1 + b.y2) / 2} ${x1End},${(b.y1 + b.y2) / 2} ${x1End},${b.y1} Z`;
+        
+        svgD3.append('path')
+            .attr('d', pathData)
+            .attr('fill', color)
+            .attr('opacity', 0.7);
+    });
+
+    return svg;
 }
