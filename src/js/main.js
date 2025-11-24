@@ -1,4 +1,4 @@
-import { createForm, updateFileList } from './form.js';
+import { createForm, showForm } from './form.js';
 import { createControlPanel } from './legend.js';
 import { createGraphSection } from './draw.js';
 import { setupAnalytics } from './analytics.js';
@@ -52,6 +52,8 @@ function checkToolkitParam() {
         // Sélectionne et affiche l'onglet 'ftp'
         const menuColumn = document.querySelector('[data-option="ftp"]');
         console.log('menuColumn :', menuColumn);
+        
+        showForm("ftp")
         if (menuColumn) menuColumn.click();
 
         // Met à jour le champ de saisie FTP

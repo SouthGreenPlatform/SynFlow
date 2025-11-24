@@ -119,6 +119,7 @@ export async function createForm() {
 
     // Colonne 2 : Zone de contenu dynamique
     const contentColumn = document.createElement('div');
+    contentColumn.setAttribute('id', 'dynamic-content');
     contentColumn.style.cssText = `
         padding: 15px;
         background-color: white;
@@ -126,25 +127,6 @@ export async function createForm() {
         overflow: hidden;
         box-shadow: 0 0 5px rgba(0,0,0,0.1);
     `;
-
-    // Fonction pour afficher le bon formulaire
-    async function showForm(option) {
-        contentColumn.innerHTML = '';
-        switch(option) {
-            case 'existing':
-                contentColumn.appendChild(await createExistingFilesForm());
-                break;
-            case 'upload':
-                contentColumn.appendChild(createUploadSection());
-                break;
-            case 'calculate':
-                contentColumn.appendChild(createToolkitContainer());
-                break;
-            case 'ftp':
-                contentColumn.appendChild(createFTPSection());
-                break;
-        }
-    }
 
     // Ajout des colonnes au container
     gridContainer.appendChild(menuColumn);
@@ -163,6 +145,26 @@ export async function createForm() {
     selectedItem.style.color = 'white';
     (async () => { await showForm('existing'); })();
     return form;
+}
+
+// Fonction pour afficher le bon formulaire
+export async function showForm(option) {
+    const contentColumn = document.getElementById('dynamic-content');
+    contentColumn.innerHTML = '';
+    switch(option) {
+        case 'existing':
+            contentColumn.appendChild(await createExistingFilesForm());
+            break;
+        case 'upload':
+            contentColumn.appendChild(createUploadSection());
+            break;
+        case 'calculate':
+            contentColumn.appendChild(createToolkitContainer());
+            break;
+        case 'ftp':
+            contentColumn.appendChild(createFTPSection());
+            break;
+    }
 }
 
 //fonction hide form
