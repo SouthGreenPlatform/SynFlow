@@ -66,6 +66,7 @@ export function createControlPanel() {
         event.preventDefault();
         if(panelContent.style.maxHeight === '0px' || !panelContent.style.maxHeight) {
             // panelContent.style.maxHeight = panelContent.scrollHeight + 'px';
+            panelContent.style.maxHeight = 'unset';
             chevronIcon.className = 'fas fa-chevron-up';
         } else {
             panelContent.style.maxHeight = '0px';
@@ -132,7 +133,8 @@ export function createControlPanel() {
 export function showControlPanel() {
     const panelContent = document.getElementById('control-panel-content');
     if (panelContent) {
-        panelContent.style.maxHeight = panelContent.scrollHeight + 'px';
+        // panelContent.style.maxHeight = panelContent.scrollHeight + 'px';
+        panelContent.style.maxHeight = 'unset';
         // Mettre à jour l'icône du bouton
         const hideButton = document.querySelector('#control-panel-chevron');
         if (hideButton) {
