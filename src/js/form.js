@@ -704,14 +704,14 @@ function createUploadSection() {
 
 
     // Button to load test dataset
-    const loadTestButton = document.createElement('button');
-    loadTestButton.setAttribute('type', 'button');
-    loadTestButton.classList.add('btn-simple');
-    loadTestButton.setAttribute('id', 'load-test');
-    loadTestButton.textContent = 'Load Test Data';
+    // const loadTestButton = document.createElement('button');
+    // loadTestButton.setAttribute('type', 'button');
+    // loadTestButton.classList.add('btn-simple');
+    // loadTestButton.setAttribute('id', 'load-test');
+    // loadTestButton.textContent = 'Load Test Data';
 
-    // Event listener for the load test button
-    loadTestButton.addEventListener('click', loadTestData);
+    // // Event listener for the load test button
+    // loadTestButton.addEventListener('click', loadTestData);
 
     // Submit button
     const submitButton = document.createElement('button');
@@ -798,7 +798,7 @@ function createUploadSection() {
      // Boutons
     const buttonContainer = document.createElement('div');
     buttonContainer.style.marginTop = '20px';
-    buttonContainer.appendChild(loadTestButton);
+    // buttonContainer.appendChild(loadTestButton);
     buttonContainer.appendChild(submitButton);
 
     // Assemblage final
@@ -1472,37 +1472,37 @@ export function loadAllChromosomeLengths(files) {
     return Promise.all(lengthPromises);
 }
 
-async function loadTestData() {
-    // Define paths to your test files
-    const testBandFiles = [
-        'public/data/C21-464_C23-A03.out',
-        'public/data/C23-A03_C45-410.out',
-        'public/data/C45-410_C5-126-2.out',
-        'public/data/DH-200-94_C21-464.out'
-    ];
+// async function loadTestData() {
+//     // Define paths to your test files
+//     const testBandFiles = [
+//         'public/data/C21-464_C23-A03.out',
+//         'public/data/C23-A03_C45-410.out',
+//         'public/data/C45-410_C5-126-2.out',
+//         'public/data/DH-200-94_C21-464.out'
+//     ];
 
-    const bandFiles = await Promise.all(testBandFiles.map(async path => {
-        const response = await fetch(path);
-        const text = await response.text();
-        const fileName = path.split('/').pop();
-        return new File([text], fileName, { type: 'text/plain' });
-    }));
+//     const bandFiles = await Promise.all(testBandFiles.map(async path => {
+//         const response = await fetch(path);
+//         const text = await response.text();
+//         const fileName = path.split('/').pop();
+//         return new File([text], fileName, { type: 'text/plain' });
+//     }));
 
-    // Creating DataTransfer objects to simulate file upload
-    const bandDataTransfer = new DataTransfer();
+//     // Creating DataTransfer objects to simulate file upload
+//     const bandDataTransfer = new DataTransfer();
 
-    // Add files to the DataTransfer objects
-    bandFiles.forEach(file => bandDataTransfer.items.add(file));
+//     // Add files to the DataTransfer objects
+//     bandFiles.forEach(file => bandDataTransfer.items.add(file));
 
-    // Set the files to the input fields
-    const bandInput = document.getElementById('band-files');
+//     // Set the files to the input fields
+//     const bandInput = document.getElementById('band-files');
 
-    // chrLenInput.files = chrLenDataTransfer.files;
-    bandInput.files = bandDataTransfer.files;
+//     // chrLenInput.files = chrLenDataTransfer.files;
+//     bandInput.files = bandDataTransfer.files;
 
-    // Update the file lists
-    updateFileList(bandInput);
-}
+//     // Update the file lists
+//     updateFileList(bandInput);
+// }
 
 async function searchAdditionalFiles(selectedGenomes, files, folder) {
     const folderWithSlash = folder.endsWith('/') ? folder : folder + '/';
