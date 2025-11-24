@@ -65,7 +65,7 @@ export function createControlPanel() {
     headerBar.addEventListener('click', (event) => {
         event.preventDefault();
         if(panelContent.style.maxHeight === '0px' || !panelContent.style.maxHeight) {
-            panelContent.style.maxHeight = panelContent.scrollHeight + 'px';
+            // panelContent.style.maxHeight = panelContent.scrollHeight + 'px';
             chevronIcon.className = 'fas fa-chevron-up';
         } else {
             panelContent.style.maxHeight = '0px';
