@@ -1,4 +1,4 @@
 [
-    { "organism": "banana", "url": "https://hpc.cirad.fr/bank/banana/synflow/", "useProxy": true },
-    { "organism": "vitis", "url": "https://hpc.cirad.fr/bank/vitis/Synflow/", "useProxy": true }
+    { "organism": "banana", "url": "https://synflow.southgreen.fr/bank/banana/" },
+    { "organism": "vitis", "url": "https://synflow.southgreen.fr/bank/vitis/" }
 ]

@@ -177,28 +177,12 @@ export function hideForm() {
 }
 
 // Fonction pour récupérer les répertoires Synflow depuis un fichier JSON
-//ATTENTION PROXY APACHE NÉCESSAIRE POUR ACCÉDER AUX RÉPERTOIRES HPC
 async function fetchSynflowDirectories() {
     try {
         const response = await fetch('public/data/config.json');
         if (!response.ok) throw new Error('Erreur lors du chargement du JSON');
-        const configData = await response.json();
-        
-        // Utiliser le domaine actuel comme base du proxy
-        const proxyBase = `${window.location.origin}/hpc-bank/`;
-        
-        // Mapper les URLs en fonction du flag useProxy
-        const adjustedDirs = configData.map(({organism, url, useProxy = false}) => {
-            const adjustedUrl = useProxy 
-                ? url.replace('https://hpc.cirad.fr/bank/', proxyBase)
-                : url;
-            return {
-                organism: organism,
-                url: adjustedUrl
-            };
-        });
-
-        return adjustedDirs;
+        const dirs = await response.json();
+        return dirs;
     } catch (error) {
         console.error('Error fetching Synflow directories:', error);
         return [];
@@ -867,15 +851,10 @@ export function createFTPSection() {
     ftpInput.style.marginBottom = '5px';
     formContainer.appendChild(ftpInput);
 
-    //exemple cliquable
-    const proxyBase = `${window.location.origin}/hpc-bank/`;
-    const url = 'https://hpc.cirad.fr/bank/banana/synflow/';
-    const adjustedUrl = url.replace('https://hpc.cirad.fr/bank/', proxyBase);
-
     const exampleLink = document.createElement('a');
-    exampleLink.setAttribute('href', adjustedUrl);
+    exampleLink.setAttribute('href', 'https://synflow.southgreen.fr/bank/banana/');
     exampleLink.setAttribute('target', '_blank');
-    exampleLink.textContent = `Example: ${adjustedUrl}`;
+    exampleLink.textContent = 'Example: https://synflow.southgreen.fr/bank/banana/';
     exampleLink.style.display = 'block';
     exampleLink.style.marginBottom = '10px';
     exampleLink.style.color = 'grey';
