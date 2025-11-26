@@ -1093,7 +1093,7 @@ export function createFTPSection() {
     helpContainer.style.backgroundColor = '#f8f9fa';
     helpContainer.style.borderRadius = '5px';
     helpContainer.style.border = '1px solid #dee2e6';
-    helpContainer.style.maxHeight = '300px';
+    // helpContainer.style.maxHeight = '300px';
     helpContainer.style.overflowY = 'auto';
 
     helpContainer.innerHTML = `
