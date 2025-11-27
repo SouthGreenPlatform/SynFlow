@@ -1419,7 +1419,7 @@ function reorderFileList(fileListElement, orderedFileNames, fileType) {
             if (fileUploadMode === 'remote') {
                 const chainDiv = document.querySelector('#selected-chain');
                 chainDiv.innerHTML = `<b>Selected chain :</b> <br>${newOrder.join(' &rarr; ')}`;
-                document.querySelector('#submit-remote').click();
+                document.querySelector('#submit-existing').click();
             }else if(fileOrderMode === 'allvsall') {
                 const chainDiv = document.querySelector('#selected-chain');
                 chainDiv.innerHTML = `<b>Selected chain :</b> <br>${newOrder.join(' &rarr; ')}`;

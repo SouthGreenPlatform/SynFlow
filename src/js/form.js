@@ -386,7 +386,7 @@ async function createExistingFilesForm() {
     const loadButton = document.createElement('button');
     loadButton.setAttribute('type', 'button');
     loadButton.classList.add('btn-magic');
-    loadButton.setAttribute('id', 'submit-remote');
+    loadButton.setAttribute('id', 'submit-existing');
     loadButton.textContent = 'Draw';
     loadButton.style.marginTop = '10px';
     existingFormContainer.appendChild(loadButton);
@@ -899,6 +899,7 @@ export function createFTPSection() {
     // Bouton pour lancer la visualisation
     const drawButton = document.createElement('button');
     drawButton.setAttribute('type', 'button');
+    drawButton.setAttribute('id', 'submit-ftp');
     drawButton.classList.add('btn-magic');
     drawButton.textContent = 'Draw';
     drawButton.style.marginTop = '10px';
@@ -1027,7 +1028,7 @@ export function createFTPSection() {
         var target = document.getElementById('spinner');
         spinner.spin(target);
 
-        fileUploadMode = 'remote'; // Mode FTP = remote
+        fileUploadMode = 'FTP';
 
         if (ftpSelectedGenomes.length < 2) {
             chainDiv.innerHTML = '<span style="color:red;">Please select at least 2 genomes to construct a chain.</span>';

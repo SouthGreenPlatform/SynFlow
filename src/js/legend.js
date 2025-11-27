@@ -119,13 +119,6 @@ export function createControlPanel() {
     controlPanel.appendChild(headerBar);
     controlPanel.appendChild(panelContent);
 
-    // // Ajouter un écouteur d'événements à la case à cocher
-    // const stackModeCheckbox = document.getElementById('stack-mode');
-    // const submitButton = document.querySelector('#submit-button');
-    // stackModeCheckbox.addEventListener('change', () => {
-    //     submitButton.click(); // Simuler un clic sur le bouton "Draw"
-    // });
-
     return controlPanel;
 }
 
@@ -206,37 +199,46 @@ function createParametersContent() {
     params.style.marginRight = '20px';
     params.className = 'params-section';
 
-    // Container pour la checkbox
-    const stackDiv = document.createElement('div');
-    stackDiv.style.margin = '10px 0';
 
-    // Label + checkbox
-    const label = document.createElement('label');
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.id = 'stack-mode';
+    //Check box pour passer en mode vertical
 
-    label.appendChild(checkbox);
-    label.appendChild(document.createTextNode(' Stack chromosomes vertically'));
-    stackDiv.appendChild(label);
+    // // Container pour la checkbox
+    // const stackDiv = document.createElement('div');
+    // stackDiv.style.margin = '10px 0';
 
-    // Event listener directement ici si besoin :
-    checkbox.addEventListener('change', () => {
-        //si les fichiers ont ete uploadés
-        if (fileUploadMode == 'local') {
-            // console.log('Stack mode for uploaded files');
-            const submitButton = document.querySelector('#submit-local');
-            // console.log('submitButton', submitButton);
-            if (submitButton) submitButton.click();
-        }
-        //si les fichier proviennent de la base de données
-        if (fileUploadMode == 'remote') {
-            // console.log('Stack mode for remote files');
-            const submitButton = document.querySelector('#submit-remote');
-            // console.log('submitButton', submitButton);
-            if (submitButton) submitButton.click();
-        }
-    });
+    // // Label + checkbox
+    // const label = document.createElement('label');
+    // const checkbox = document.createElement('input');
+    // checkbox.type = 'checkbox';
+    // checkbox.id = 'stack-mode';
+
+    // label.appendChild(checkbox);
+    // label.appendChild(document.createTextNode(' Stack chromosomes vertically'));
+    // stackDiv.appendChild(label);
+
+    // // Event listener directement ici si besoin :
+    // checkbox.addEventListener('change', () => {
+    //     //si les fichiers ont ete uploadés
+    //     if (fileUploadMode == 'local') {
+    //         // console.log('Stack mode for uploaded files');
+    //         const submitButton = document.querySelector('#submit-local');
+    //         // console.log('submitButton', submitButton);
+    //         if (submitButton) submitButton.click();
+    //     }
+    //     //si les fichier proviennent de la base de données
+    //     if (fileUploadMode == 'remote') {
+    //         // console.log('Stack mode for remote files');
+    //         const submitButton = document.querySelector('#submit-existing');
+    //         // console.log('submitButton', submitButton);
+    //         if (submitButton) submitButton.click();
+    //     }
+    //     if (fileUploadMode == 'FTP') {
+    //         // console.log('Stack mode for FTP files');
+    //         const submitButton = document.querySelector('#submit-ftp');
+    //         // console.log('submitButton', submitButton);
+    //         if (submitButton) submitButton.click();
+    //     }
+    // });
 
     // --- Color mode control ---
     const colorModeDiv = document.createElement('div');
@@ -373,7 +375,7 @@ function createParametersContent() {
     uploadDiv.style.margin = '10px 0';
 
     // Ajout au conteneur principal
-    params.appendChild(stackDiv);
+    // params.appendChild(stackDiv);
     params.appendChild(resetButton);
     params.appendChild(jbrowseButton);
     params.appendChild(uploadDiv);
