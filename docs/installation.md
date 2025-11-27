@@ -2,57 +2,45 @@
 
 This document provides instructions to install and run **SynFlow** using Docker.
 
-**Clone the Repository**
+**Requirements**
+
+- [Docker](https://docs.docker.com/get-docker/) version 20.x or higher
+
+
+**Pulling the Docker image**
+
+Before running SynFlow, you must first download the corresponding Docker image from the registry. This is done using the docker pull command. It ensures that you have the latest version of the image locally before launching the container.
 
 ```bash
-git clone https://github.com/SouthGreenPlatform/SynFlow.git
-cd SynFlow
-```
+docker pull ghcr.io/southgreenplatform/synflow:latest
+``` 
 
-**Build the Docker Image**
-
-```bash
-docker build -t synflow .
-```
-
-This command builds a lightweight Nginx-based Docker image containing the full SynFlow web application and some example data files.
-
-**Run the Application**
+**Run the application**
 
 ```bash
-docker run --rm -p 8080:80 synflow
-```
 
+docker run -d --name synflow -p 8080:80 -p 3031:3031  -e SNAKEMAKE_CORES=4  ghcr.io/southgreenplatform/synflow:latest
+
+```
 Then open your browser and navigate to:
 
 ```
 http://localhost:8080
 ```
- 
- When building the Docker image, 5 example files are automatically downloaded to the `/public/data/` directory:
 
-- config.json
-- DH-200-94_C21-464.out 
-- C21-464_C23-A03.out 
-- C23-A03_C45-410.out  
-- C45-410_C5-126-2.out
+**Using your own data**
 
-These allow you to test the interface immediately.
-
-
-**Using Your Own Data**
-
-You can mount your own directory at runtime to replace or extend the `public/data` folder:
-
-```bash
-docker run --rm -p 8080:80 \
-  -v $(pwd)/my_data:/usr/share/nginx/html/public/data \
-  synflow
+If you want to modify the list shown in the Existing file section, you can create a JSON configuration file as illustrated in the example:
+```json
+[
+    { "organism": "Test", "url": "https://hpc.cirad.fr/bank/banana/synflow/" },
+    { "organism": "Grapevine", "url": "https://hpc.cirad.fr/bank/vitis/Synflow/" }
+]
 ```
-
-**Requirements**
-
-- [Docker](https://docs.docker.com/get-docker/) version 20.x or higher
+In the Docker command, you need to add a CONFIG_FILE_PATH environment variable using the -e option and mount the new volume using the -v option.
+```bash
+docker run -d --name synflow  -p 8080:80 -p 3031:3031  -v  $(pwd)/config.json:/data/config.json -e CONFIG_FILE_PATH=/data/config.json  -e SNAKEMAKE_CORES=4  ghcr.io/southgreenplatform/synflow:latest
+```
 
 **Support**
 
