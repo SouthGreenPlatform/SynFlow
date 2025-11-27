@@ -139,17 +139,27 @@ export async function createForm() {
 
     // Afficher le formulaire "existing" par défaut
     // Ajouter la classe active à l'item sélectionné
-    //selectionne la dive "existing" par défaut
+    // Sélectionne le div "existing" par défaut
     const selectedItem = menuColumn.querySelector(`div[data-option="existing"]`);
     selectedItem.style.backgroundColor = 'black';
     selectedItem.style.color = 'white';
-    (async () => { await showForm('existing'); })();
+    
+    // Affiche le formulaire existing après que le formulaire soit ajouté au DOM
+    setTimeout(async () => {
+        console.log("Showing existing form");
+        await showForm('existing');
+    }, 0);
+    
     return form;
 }
 
 // Fonction pour afficher le bon formulaire
 export async function showForm(option) {
     const contentColumn = document.getElementById('dynamic-content');
+    if (!contentColumn) {
+        console.warn('contentColumn not found in DOM yet');
+        return;
+    }
     contentColumn.innerHTML = '';
     switch(option) {
         case 'existing':
