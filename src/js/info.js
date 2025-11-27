@@ -697,6 +697,7 @@ function drawConnection(g, refGene, queryGene, refScale, queryScale, refY, query
         .style('cursor', 'pointer')
         .on('mouseover', function() {
             d3.select(this).attr('opacity', 1);
+            d3.select(this).attr('fill', '#808080'); 
             tooltip.style('visibility', 'visible')
                 .html(`<strong>Orthologs</strong><br>
                     ${refGene.name} ↔ ${queryGene.name}<br>
@@ -708,6 +709,7 @@ function drawConnection(g, refGene, queryGene, refScale, queryScale, refY, query
         })
         .on('mouseout', function() {
             d3.select(this).attr('opacity', 0.5);
+            d3.select(this).attr('fill', '#ccc');
             tooltip.style('visibility', 'hidden');
         });
 }
@@ -720,6 +722,7 @@ function highlightBand(bandId) {
     const band = d3.select(`#${CSS.escape(bandId)}`);
     if (!band.empty()) {
         band
+            .style('fill', '#808080') // Change la couleur pour un highlight plus visible
             .style('opacity', 1)
             .raise(); // Amène la bande au premier plan
     }
@@ -729,6 +732,7 @@ function unhighlightBand(bandId) {
     const band = d3.select(`#${CSS.escape(bandId)}`);
     if (!band.empty()) {
         band
+            .style('fill', '#ccc') // Restaure la couleur d'origine
             .style('opacity', 0.5)
     }
 }
