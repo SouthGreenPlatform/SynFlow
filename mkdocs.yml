@@ -16,6 +16,7 @@ theme:
 nav:
   - Home: README.md
   - Input: input.md
-  - Visualisation: visualisation.md
   - Control: control.md
+  - Block detail: block.md
+  - Visualisation: visualisation.md
   - Installation: installation.md
