@@ -10,3 +10,9 @@ The control panel allows you to:
 ![Filtering](assets/filtering.gif)
 
 ---
+
+## Customized panel
+
+Chromosome and ribbon colors can be customized, and ribbons can be selected and merged based on their distance from one another. 
+
+![Color](assets/change_color.gif)
