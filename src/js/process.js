@@ -110,7 +110,8 @@ function processChunks(lines, isFirstFile) {
         const chunkData = parseSyriData(chunk.join('\n'));
         parsedData = parsedData.concat(chunkData);
 
-        const stackMode = document.getElementById('stack-mode').checked;
+        // const stackMode = document.getElementById('stack-mode').checked;
+        const stackMode = false; // IGNORE
 
         if (offset < lines.length) {
             requestAnimationFrame(processNextChunk);
