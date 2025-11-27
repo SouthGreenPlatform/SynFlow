@@ -1,5 +1,5 @@
 
-## Graph Vizualisation
+## Vizualisation
 
 
 The visualization interface supports:
