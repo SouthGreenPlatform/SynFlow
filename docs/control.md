@@ -1,12 +1,12 @@
-## Control Panel
+## Control panel
 
 The control panel allows you to:
 
-- Filter structural variation bands based on their type and size  
-- Choose how chromosomes are arranged: stacked vertically or aligned horizontally  
+- Filter structural variation bands based on their type and size
+- Change color band
+- Reordering chromosomes 
 - Download the current visualization in SVG format for high-quality export
 
-![Graph Visualization](assets/filter.gif)
+![Filtering](assets/filtering.gif)
 
-
-
+---
