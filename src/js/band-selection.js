@@ -143,10 +143,65 @@ export function createContextMenu(x, y, band) {
     
     // Bouton de mise à jour des infos
     const updateInfoBtn = document.createElement('div');
+    updateInfoBtn.style.cursor = 'pointer';
     updateInfoBtn.className = 'context-menu-item';
     updateInfoBtn.innerHTML = '<i class="fas fa-sync"></i> Update info panel for selected bands';
+    updateInfoBtn.onmouseover = () => {
+        updateInfoBtn.style.backgroundColor = '#f0f0f0';
+    };
+    updateInfoBtn.onmouseout = () => {
+        updateInfoBtn.style.backgroundColor = '';
+    };
     updateInfoBtn.onclick = () => {
         updateInfoForSelectedBands();
+        closeContextMenu();
+    };
+
+    //ajoute un goto vers la section block details et la section synteny view
+    const gotoBlockDetails = document.createElement('div');
+    gotoBlockDetails.style.cursor = 'pointer';
+    gotoBlockDetails.className = 'context-menu-item';
+    gotoBlockDetails.innerHTML = '<i class="fas fa-info-circle"></i> Go to Block Details';
+    gotoBlockDetails.onmouseover = () => {
+        gotoBlockDetails.style.backgroundColor = '#f0f0f0';
+    };
+    gotoBlockDetails.onmouseout = () => {
+        gotoBlockDetails.style.backgroundColor = '';
+    };
+    gotoBlockDetails.onclick = () => {
+        // Try to scroll to the Info panel and activate the "details" tab.
+        const panel = document.getElementById('info-panel') || document.getElementById('info-panel-content') || document.getElementById('info');
+        if (panel) {
+            try { panel.scrollIntoView({ behavior: 'smooth' }); } catch (e) { /* ignore */ }
+            const detailsTab = panel.querySelector('[data-option="details"]');
+            if (detailsTab) detailsTab.click();
+        } else if (typeof showInfoPanel === 'function') {
+            // fallback: try to open the panel (may create it or reveal it)
+            try { showInfoPanel(); } catch (e) { /* noop */ }
+        }
+        closeContextMenu();
+    };
+
+    const gotoSyntenyView = document.createElement('div');
+    gotoSyntenyView.style.cursor = 'pointer';
+    gotoSyntenyView.className = 'context-menu-item';
+    gotoSyntenyView.innerHTML = '<i class="fas fa-project-diagram"></i> Go to Synteny View';
+    gotoSyntenyView.onmouseover = () => {
+        gotoSyntenyView.style.backgroundColor = '#f0f0f0';
+    };
+    gotoSyntenyView.onmouseout = () => {
+        gotoSyntenyView.style.backgroundColor = '';
+    };
+    gotoSyntenyView.onclick = () => {
+        // Scroll to the Info panel and activate the "anchors" (synteny) tab if available.
+        const panel = document.getElementById('info-panel') || document.getElementById('info-panel-content') || document.getElementById('info');
+        if (panel) {
+            try { panel.scrollIntoView({ behavior: 'smooth' }); } catch (e) { /* ignore */ }
+            const anchorsTab = panel.querySelector('[data-option="anchors"]');
+            if (anchorsTab) anchorsTab.click();
+        } else if (typeof showInfoPanel === 'function') {
+            try { showInfoPanel(); } catch (e) { /* noop */ }
+        }
         closeContextMenu();
     };
     
@@ -158,6 +213,8 @@ export function createContextMenu(x, y, band) {
     contextMenu.appendChild(separator);
     contextMenu.appendChild(colorContainer);
     contextMenu.appendChild(updateInfoBtn);
+    contextMenu.appendChild(gotoBlockDetails);
+    contextMenu.appendChild(gotoSyntenyView);
     
     document.body.appendChild(contextMenu);
     
