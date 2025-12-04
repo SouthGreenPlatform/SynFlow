@@ -37,14 +37,14 @@ export function createInfoPanel() {
     contentWrapper.style.cssText = `
         background-color: white;
         overflow: hidden;
-        max-height: 1000px;
+        // max-height: 1000px;
         transition: max-height 0.3s ease-out;
     `;
 
     headerBar.addEventListener('click', (event) => {
         event.preventDefault();
         const isCollapsed = contentWrapper.style.maxHeight === '0px';
-        contentWrapper.style.maxHeight = isCollapsed ? '1000px' : '0px';
+        contentWrapper.style.maxHeight = isCollapsed ? 'unset' : '0px';
         chevronIcon.className = isCollapsed ? 'fas fa-chevron-up' : 'fas fa-chevron-down';
     });
 
