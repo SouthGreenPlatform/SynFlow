@@ -11,12 +11,11 @@ A more descriptive documention of SynFlow is available [https://synflow.readthed
 A Snakemake workflow to detect synteny blocks and identify chromosomal rearrangements [https://gitlab.cirad.fr/agap/cluster/snakemake/synflow](https://gitlab.cirad.fr/agap/cluster/snakemake/synflow)
 
 ## Features
-
-- Upload your own data or explore the database
-- Interactive zoom and pan
-- Filter bands by type and length
-- Stack chromosomes vertically or align them horizontally
-- Download the visualization as an SVG file
+- Use precomputed datasets or run your own analysis  
+- Chain multiple genome comparisons for comprehensive analysis  
+- Drag and drop chromosomes to reorder them  
+- Detailed control panel for customizing visualizations  
+- Download the visualization as an SVG file 
 
 ## Usage
 
@@ -35,17 +34,17 @@ This will create a visualization chain: **A-thaliana → C-rubella → B-rapa �
 #### Four ways to input data:
 ![input data](public/img/input.png)
   - **Existing files**: select from precomputed datasets. The available files come from analyses performed on several organisms using the workflow [See the documentation](https://gitlab.cirad.fr/agap/cluster/snakemake/synflow)
-  - **Run analysis**: run workflow
-  - **Browse FTP**: import files from FTP
+  - **Run analysis**: run workflow using **fasta + gff3 files (optional)**  
+  - **Browse FTP**: import files directly from an FTP server by providing the URL
   - **Upload file**: use the "Browse" button to upload your own files
 
 #### Click the "Draw" button to generate the visualization.
 Use the zoom and pan features to explore the visualization. 
 Chromosome order can be changed by drag and drop.
-![graph](public/img/chrom_switch.gif)
+![graph](public/img/switch_chrom.gif)
 
 #### Filter the bands using the legend and the slider.
-![Controle panel](public/img/filter.gif)
+![Controle panel](public/img/control_panel.gif)
 
 ## License
 
