@@ -21,7 +21,11 @@ document.addEventListener('DOMContentLoaded', () => {
         mainContainer.appendChild(createGraphSection());
         mainContainer.appendChild(createInfoPanel());
 
-        checkToolkitParam(); // Vérifie les paramètres du toolkit dans l'URL
+        //waiting for the form to be created before checking the URL
+        setTimeout(() => {
+            checkToolkitParam(); // Vérifie les paramètres du toolkit dans l'URL
+        }, 500);
+        //  
     });
 
     setupAnalytics();
