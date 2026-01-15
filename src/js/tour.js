@@ -1,3 +1,5 @@
+import { logActivity } from "./main.js";
+
 const driver = window.driver.js.driver;
 
 let driverObj = driver();
@@ -93,6 +95,7 @@ tourButton.style.cursor = 'pointer';
 tourButton.style.zIndex = '1000';
 
 tourButton.addEventListener('click', () => {
+	logActivity('Started SynFlow Tour');
 	driverObj.drive();
 });
 document.body.appendChild(tourButton);

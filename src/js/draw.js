@@ -3,6 +3,7 @@ import { refGenome, queryGenome, genomeColors, bandColorMode, genomeData, scale,
 import { anchorsFiles, bedFiles, jbrowseLinks } from "./form.js";
 import { createContextMenu, createChromContextMenu, selectedBands, updateBandSelection, 
     selectSimilarBands, colorSelectedBands, updateInfoForSelectedBands } from './band-selection.js';
+import { logActivity } from "./main.js";
 
 export let currentYOffset = 0; // Définir globalement
 
@@ -181,6 +182,7 @@ export function createGraphSection() {
 
     // Event listener pour le pliage/dépliage
     headerBar.addEventListener('click', () => {
+        logActivity('Toggled Overview section');
         if(graphContent.style.maxHeight === '0px') {
             graphContent.style.maxHeight = graphContent.scrollHeight + 'px';
             chevronIcon.className = 'fas fa-chevron-up';
@@ -568,6 +570,7 @@ function drawChromPathNoArm(x, y, width, radius, chromNum, chromName, genome, sv
         .style("stroke", initStroke)
         .style('fill', initFill)
         .on('click', function(event, d) {
+            logActivity(`Clicked on chromosome ${chromName} of genome ${genome}`);
             // Ouvrir le menu contextuel spécifique au chromosome
             // console.log('Chromosome path clicked:', { genome, chromName });
             try {
@@ -848,6 +851,7 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
                 tip.hide(event, d); // Masquer le tooltip
             })
             .on('click', async function (event, d) {
+                logActivity(`Clicked on band: Ref ${d.refChr}[${d.refStart}-${d.refEnd}] <-> Query ${d.queryChr}[${d.queryStart}-${d.queryEnd}], Type: ${d.type}`);
                 if (event.ctrlKey || event.metaKey) {
                     // Multi-sélection avec Ctrl/Cmd
                     if (selectedBands.has(this)) {

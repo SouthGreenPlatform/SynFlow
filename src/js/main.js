@@ -4,6 +4,18 @@ import { createGraphSection } from './draw.js';
 import { setupAnalytics } from './analytics.js';
 import { createInfoPanel } from './info.js';
 import * as toolkit from '../../toolkit/toolkit.js';
+import { socket } from '../../toolkit/toolkit.js';
+
+// Fonction utilitaire pour logger et émettre vers le serveur
+export function logActivity(message) {
+    // Console log local
+    console.log(message);
+    
+    // Émettre vers le serveur si socket est connecté
+    if (socket) {
+        socket.emit('logMessage', message);
+    }
+}
 // console.log("syri");
 // Définir le comportement de zoom
 // export const zoom = d3.zoom()
@@ -30,6 +42,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupAnalytics();
 
+    //connection au serveur node pour les logs
+    toolkit.loadSocketIOScript().then(() => {
+        toolkit.initSocketConnection();
+        // Attendre un peu pour que la connexion s'établisse
+        setTimeout(() => {
+            // Envoyer les infos du client au serveur
+            logActivity('Connected.');
+        }, 100);  // Petit délai pour éviter l'erreur
+    }).catch(error => {
+        console.error('Erreur lors du chargement du script Socket.IO :', error);
+    });
 });
 
 function checkToolkitParam() {

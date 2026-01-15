@@ -2,6 +2,7 @@ import { globalMaxChromosomeLengths, allParsedData, genomeColors, bandColorMode,
 import { showInfoPanel, showInfoUpdatedMessage } from './info.js';
 import { getLinesInRange, createAnchorsSection, updateBandColors, drawMiniChromosome } from './draw.js';
 import { createSummarySection, createDetailedTable, createTableBadges, initializeTableFiltering, createZoomedSyntenyView } from './info.js';
+import { logActivity } from './main.js';
 
 // Set pour stocker les bandes sélectionnées
 export let selectedBands = new Set();
@@ -153,6 +154,7 @@ export function createContextMenu(x, y, band) {
         updateInfoBtn.style.backgroundColor = '';
     };
     updateInfoBtn.onclick = () => {
+        logActivity('Updated info panel for selected bands');
         updateInfoForSelectedBands();
         closeContextMenu();
     };
@@ -169,6 +171,7 @@ export function createContextMenu(x, y, band) {
         gotoBlockDetails.style.backgroundColor = '';
     };
     gotoBlockDetails.onclick = () => {
+        logActivity('Navigated to Block Details from context menu');
         // Try to scroll to the Info panel and activate the "details" tab.
         const panel = document.getElementById('info-panel') || document.getElementById('info-panel-content') || document.getElementById('info');
         if (panel) {
@@ -193,6 +196,7 @@ export function createContextMenu(x, y, band) {
         gotoSyntenyView.style.backgroundColor = '';
     };
     gotoSyntenyView.onclick = () => {
+        logActivity('Navigated to Synteny View from context menu');
         // Scroll to the Info panel and activate the "anchors" (synteny) tab if available.
         const panel = document.getElementById('info-panel') || document.getElementById('info-panel-content') || document.getElementById('info');
         if (panel) {
@@ -485,6 +489,7 @@ export function createChromContextMenu(x, y, chromEl) {
 
         // click handler - only update mode
         thumbDiv.addEventListener('click', () => {
+            logActivity(`Changed display mode to "${mode}" for chromosome ${chromNameAttr} of genome ${genome}`);
             const selectedScope = contextMenu.querySelector(`input[name="chrom-scope-${chromKey}"]:checked`).value;
             const modeUpdate = { mode };
             applySettingsWithScope(modeUpdate, genome, chromBase, selectedScope, chromEl);

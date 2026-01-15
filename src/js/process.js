@@ -3,6 +3,7 @@ import { generateBandTypeFilters, createSlider, createLengthChart, updateBandsVi
 import { Spinner } from './spin.js';
 import { zoom } from './draw.js';
 import { fileOrderMode, fileUploadMode, hideForm, setSelectedGenomes } from './form.js';
+import { logActivity } from './main.js';
 
 export let refGenome; // Définir globalement
 export let queryGenome; // Définir globalement
@@ -195,9 +196,11 @@ function updateChromList(globalMaxChromosomeLengths) {
 
         eyeIcon.addEventListener('click', () => {
             if (eyeIcon.classList.contains('fa-eye')) {
+                logActivity(`Hide chromosome ${chromNum}`);
                 eyeIcon.classList.remove('fa-eye');
                 eyeIcon.classList.add('fa-eye-slash');
             } else {
+                logActivity(`Show chromosome ${chromNum}`);
                 eyeIcon.classList.remove('fa-eye-slash');
                 eyeIcon.classList.add('fa-eye');
             }
@@ -213,6 +216,7 @@ function updateChromList(globalMaxChromosomeLengths) {
 
     //     // Ajout du comportement de zoom sur le chromosome
         goto.addEventListener('click', () => {
+            logActivity(`Go to chromosome ${chromNum}`);
             const chromPos = chromPositions[chromNum];
             // console.log("Chromosome position:", chromPos);
 
@@ -351,6 +355,7 @@ function recalculateGlobalMaxChromosomeLengths(newOrder, genomeData) {
 
 // Redraw avec le nouvel ordre des chromosomes
 function updateChromosomesOrder(newOrder, targetGenome = null) {
+    logActivity('Updating chromosome order: ' + newOrder.join(', '));
     // Réorganiser globalMaxChromosomeLengths selon le nouvel ordre
     globalMaxChromosomeLengths = recalculateGlobalMaxChromosomeLengths(newOrder, genomeData);
 
@@ -386,6 +391,7 @@ function updateChromosomesOrder(newOrder, targetGenome = null) {
 
 //Fonction d'animation du swap des chromosomes
 function animateSwap(container) {
+    logActivity('Animating chromosome swap');
     // Sauvegarder les positions initiales (utilise le nom du chromosome comme clé stable)
     const oldCells = Array.from(container.querySelectorAll('[draggable="true"]'));
     const positions = new Map();
@@ -503,6 +509,7 @@ function updateChromControler() {
         });
 
         col.addEventListener('drop', (e) => {
+            logActivity('Chromosome controller : swapping columns ' + e.dataTransfer.getData('col-drag') + ' and ' + i);
             e.preventDefault();
             col.classList.remove('drop-target');
             document.querySelectorAll('.drag-col').forEach(cell => {
@@ -574,6 +581,8 @@ function updateChromControler() {
                     const isVisible = chromCell.dataset.visible === 'true';
                     chromCell.dataset.visible = !isVisible;
                     
+                    logActivity(`${isVisible ? 'Hide' : 'Show'} chromosome ${chrom ? chrom.name : '-'} of genome ${genome}`);
+
                     if (isVisible) {
                         chromCell.style.opacity = '0.5';
                         chromCell.style.backgroundColor = '#f5f5f5';
@@ -615,6 +624,7 @@ function updateChromControler() {
 
             // Dans le drop event (faire le swap et le redraw)
             chromCell.addEventListener('drop', (e) => {
+                logActivity('Chromosome controller : swapping column numbers ' + currentDrag?.pos + ' and ' + i + ' for genome ' + genome);
                 e.preventDefault();
                 chromCell.classList.remove('drop-target');
 
@@ -777,6 +787,7 @@ function allDone() {
     const svgElement = document.getElementById('viz');
 
     downloadSvgButton.addEventListener('click', function(event) {
+        logActivity('Download SVG');
         event.preventDefault();
         downloadSvg(svgElement);
     });

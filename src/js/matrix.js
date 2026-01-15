@@ -1,5 +1,6 @@
 
 import { selectedGenomes, updateChainDiv } from './form.js';
+import { logActivity } from './main.js';
 /**
  * Crée et affiche une matrice des fichiers détectés (version compacte)
  * @param {FileList} files - Liste des fichiers uploadés
@@ -260,6 +261,7 @@ function createFileMatrix(files, containerId = 'file-matrix-container') {
 
         // Event listener pour la sélection de genomes dans la chaîne
         rowHeader.addEventListener('click', () => {
+            logActivity(`Selected genome "${rowGenome}" in matrix`);
             const idx = selectedGenomes.indexOf(rowGenome);
             if (idx !== -1) {
                 selectedGenomes.splice(idx, 1);
@@ -354,6 +356,7 @@ function createFileMatrix(files, containerId = 'file-matrix-container') {
     // Event listener pour le bouton toggle
     let isMatrixVisible = false;
     toggleButton.addEventListener('click', () => {
+        logActivity(isMatrixVisible ? 'Hid File Matrix' : 'Displayed File Matrix');
         isMatrixVisible = !isMatrixVisible;
         matrixContainer.style.display = isMatrixVisible ? 'block' : 'none';
         toggleButton.textContent = isMatrixVisible ? '▲ Hide File Matrix' : '▼ Show File Matrix';

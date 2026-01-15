@@ -1,6 +1,8 @@
 import { typeColors, typeDefs } from "./draw.js";
 import { genomeColors } from "./process.js";
 import { jbrowseLinks } from "./form.js";
+import { logActivity } from "./main.js";
+import { downloadSvg } from "./process.js";
 
 export function createInfoPanel() {
     const container = document.createElement('div');
@@ -42,6 +44,7 @@ export function createInfoPanel() {
     `;
 
     headerBar.addEventListener('click', (event) => {
+        logActivity('Toggled Info panel');
         event.preventDefault();
         const isCollapsed = contentWrapper.style.maxHeight === '0px';
         contentWrapper.style.maxHeight = isCollapsed ? 'unset' : '0px';
@@ -90,6 +93,7 @@ export function createInfoPanel() {
         tab.innerHTML = `<i class="${item.icon}"></i> ${item.text}`;
 
         tab.addEventListener('click', () => {
+            logActivity(`Switched to "${item.text}" tab in Info panel`);
             // Reset tabs
             Object.values(tabs).forEach(t => {
                 t.style.backgroundColor = 'transparent';
@@ -332,7 +336,8 @@ export function initializeTableFiltering() {
             // Basculer l'état actif du badge
             const isActive = badge.dataset.active === 'true';
             badge.dataset.active = !isActive;
-            
+
+            logActivity(isActive ? 'Hide type: ' + badge.dataset.type + ' in detailed table' : 'Show type: ' + badge.dataset.type + ' in detailed table');
             // Récupérer tous les types actifs
             const activeTypes = [...badges]
                 .filter(b => b.dataset.active === 'true')
@@ -609,6 +614,7 @@ export function createZoomedSyntenyView(orthologPairs, refGenome, queryGenome, r
     
     // Ajouter (ou réajouter) l'event listener au bouton
     downloadAnchorSvgButton.onclick = function(event) {
+        logActivity('Downloaded zoomed synteny SVG');
         event.preventDefault();
         downloadSvg(svgElement);
     };

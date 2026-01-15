@@ -1,4 +1,4 @@
-import { fileUploadMode } from "./form.js";
+import { logActivity } from "./main.js";
 import { uniqueGenomes, setBandColorMode } from "./process.js";
 import { jbrowseLinks } from "./form.js";
 import { bandeTypeColors, currentBandTypeColors, updateBandColors, drawMiniChromosome } from "./draw.js";
@@ -307,6 +307,7 @@ function createParametersContent() {
 
     // Selection handling: visual highlight + update global mode
     function selectColorMode(mode) {
+        logActivity('Selected band color mode: ' + mode);
         if (mode === 'type') {
             optionTypeCol.style.boxShadow = '0 0 0 2px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.3)';
             optionChromCol.style.boxShadow = 'none';
@@ -344,6 +345,7 @@ function createParametersContent() {
     resetButton.classList.add('btn-simple');
     
     resetButton.addEventListener('click', () => {
+        logActivity('Resetting band colors to default');
         // Réinitialiser les couleurs
         Object.assign(currentBandTypeColors, bandeTypeColors);
 
@@ -513,6 +515,7 @@ export function createLegendContainer() {
 }
 
 function configJBrowse() {
+    logActivity('Opening JBrowse configuration dialog');
     // console.log("Config jbrowse");
     // console.log(uniqueGenomes);
 
@@ -648,6 +651,7 @@ function configJBrowse() {
 
     //Sauvegarder les modifications
     document.getElementById('saveJbrowseConfig').addEventListener('click', () => {
+        logActivity('Saving JBrowse configuration');
         let hasError = false;
 
         uniqueGenomes.forEach(genome => {
@@ -741,9 +745,12 @@ export function generateBandTypeFilters() {
             if (eyeIcon.classList.contains('fa-eye')) {
                 eyeIcon.classList.remove('fa-eye');
                 eyeIcon.classList.add('fa-eye-slash');
+                logActivity(`Hide bands of type: ${entry.type}`);
+
             } else {
                 eyeIcon.classList.remove('fa-eye-slash');
                 eyeIcon.classList.add('fa-eye');
+                logActivity(`Show bands of type: ${entry.type}`);
             }
             updateBandsVisibility();
         });
@@ -823,9 +830,11 @@ export function generateBandTypeFilters() {
         if (filterInterCheckbox.classList.contains('fa-eye')) {
             filterInterCheckbox.classList.remove('fa-eye');
             filterInterCheckbox.classList.add('fa-eye-slash');
+            logActivity('Hide interchromosomal bands');
         } else {
             filterInterCheckbox.classList.remove('fa-eye-slash');
             filterInterCheckbox.classList.add('fa-eye');
+            logActivity('Show interchromosomal bands');
         }
         updateBandsVisibility();
     });
@@ -855,9 +864,11 @@ export function generateBandTypeFilters() {
         if (filterIntraCheckbox.classList.contains('fa-eye')) {
             filterIntraCheckbox.classList.remove('fa-eye');
             filterIntraCheckbox.classList.add('fa-eye-slash');
+            logActivity('Hide intrachromosomal bands');
         } else {
             filterIntraCheckbox.classList.remove('fa-eye-slash');
             filterIntraCheckbox.classList.add('fa-eye');
+            logActivity('Show intrachromosomal bands');
         }
         updateBandsVisibility();
     });
@@ -1009,6 +1020,7 @@ export function createSlider(minBandSize, maxBandSize) {
         onInput: function(valueSet) {
             sliderMinValue = valueSet[0];
             sliderMaxValue = valueSet[1];
+            logActivity(`Band length filter set to ${sliderMinValue} - ${sliderMaxValue}`);
             updateBandsVisibility();
         },
     });

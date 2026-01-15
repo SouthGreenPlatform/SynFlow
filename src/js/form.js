@@ -2,6 +2,7 @@ import * as toolkit from '../../toolkit/toolkit.js';
 import { zoom } from './draw.js';
 import { handleFileUpload, extractAllGenomes, spinner } from './process.js';
 import { updateFileMatrix } from './matrix.js';
+import { logActivity } from './main.js';
 //mode de chargement des fichiers
 export let fileUploadMode = ''; //  'remote' ou 'local'
 export let fileOrderMode = ''; //'allavsall' ou 'chain'
@@ -55,6 +56,7 @@ export async function createForm() {
 
     // Event listener sur headerBar
     headerBar.addEventListener('click', (event) => {
+        logActivity('Toggling form visibility');
         event.preventDefault();
         if(formContent.style.maxHeight === '0px' || !formContent.style.maxHeight) {
             // formContent.style.maxHeight = formContent.scrollHeight + 'px';
@@ -101,6 +103,7 @@ export async function createForm() {
         menuItem.setAttribute('data-option', item.id);
         
         menuItem.addEventListener('click', async () => {
+            logActivity(`Selected form option: ${item.text}`);
             // Retirer la classe active de tous les items
             menuColumn.querySelectorAll('div').forEach(div => {
                 div.style.backgroundColor = 'transparent';
@@ -383,6 +386,7 @@ async function createExistingFilesForm() {
     clearButton.textContent = 'Clear Selection';
     clearButton.style.marginTop = '10px';
     clearButton.addEventListener('click', () => {
+        logActivity('Clearing selected genomes');
         selectedGenomes = [];
         updateChainDiv();
         fileListDiv.querySelectorAll('.genome-item').forEach(item => {
@@ -402,6 +406,8 @@ async function createExistingFilesForm() {
     existingFormContainer.appendChild(loadButton);
 
     loadButton.addEventListener('click', async () => {
+
+        logActivity('Loading existing files for selected genomes: ' + selectedGenomes.join(', '));
 
         // Lance le spinner
         var target = document.getElementById('spinner');
@@ -736,6 +742,8 @@ function createUploadSection() {
 
     submitButton.addEventListener('click', () => {
 
+        logActivity('Loading uploaded files for selected genomes: ' + selectedGenomes.join(', '));
+
         // Lance le spinner
         var target = document.getElementById('spinner');
         spinner.spin(target); 
@@ -874,6 +882,7 @@ export function createFTPSection() {
     exampleLink.style.fontStyle = 'italic';
     exampleLink.style.textDecoration = 'none';
     exampleLink.addEventListener('click', (event) => {
+        logActivity('Filling FTP input with example link');
         event.preventDefault(); // Empêche le comportement par défaut du lien
         ftpInput.value = exampleLink.href; // Remplit le champ d'URL avec l'exemple
     });
@@ -919,6 +928,9 @@ export function createFTPSection() {
     let ftpSelectedGenomes = [];
 
     fetchButton.addEventListener('click', async () => {
+
+        logActivity('Fetching files from FTP: ' + ftpInput.value.trim());
+
         fileListDiv.innerHTML = '';
         fileListDiv.style.display = 'block';
 
@@ -1034,6 +1046,9 @@ export function createFTPSection() {
 
     // Handler du bouton Draw
     drawButton.addEventListener('click', async () => {
+
+        logActivity('Loading FTP files for selected genomes: ' + ftpSelectedGenomes.join(', '));
+
         // Lance le spinner
         var target = document.getElementById('spinner');
         spinner.spin(target);
@@ -1263,6 +1278,7 @@ export function createToolkitContainer() {
 
             const copyBtn = document.getElementById('copy-link-btn');
             copyBtn.addEventListener('click', (event) => {
+                logActivity('Copying Synflow URL to clipboard');
                 event.preventDefault();
                 navigator.clipboard.writeText(synflowURL)
                     .then(() => {
@@ -1311,6 +1327,7 @@ export function createToolkitContainer() {
 
             // event pour lancer le dessin des fichiers de sortie
             loadOutputButton.addEventListener('click', async (event) => {
+                logActivity('Loading toolkit output file: ' + path);
                 //prevent default
                 event.preventDefault();
                 try {
@@ -1434,6 +1451,7 @@ function populateGenomeList(genomes, listDiv){
         genomeDiv.textContent = genome.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase());
 
         genomeDiv.addEventListener('click', () => {
+            logActivity('Toggling genome selection: ' + genome);
             const idx = selectedGenomes.indexOf(genome);
             if (idx !== -1) {
                 selectedGenomes.splice(idx, 1);

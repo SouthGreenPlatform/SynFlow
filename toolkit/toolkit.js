@@ -1,5 +1,8 @@
+import { logActivity } from "../src/js/main.js";
+
 // Déclarer la variable socket globalement pour qu'elle soit accessible partout dans le script
 let socket = null;
+export { socket };
 let servicesData = {};  // Contiendra les services et databases
 let databasesData = {};  // Stocke les databases séparément
 let serviceName = '';  // Nom du service sélectionné
@@ -70,10 +73,15 @@ export function initToolkit(generateSelect, serviceName) {
 
 
 /**
- * Fonction pour injecter le script Socket.IO dans le document
+ * Fonction pour injecter le script Socket.IO dans le document si ce n'est pas déja fait
  * @return {Promise} Une promesse qui se résout lorsque le script est chargé
  */
 export function loadSocketIOScript() {
+    // Vérifie si Socket.IO est déjà chargé
+    if (typeof io !== 'undefined') {
+        console.log('Socket.IO déjà chargé.');
+        return Promise.resolve();
+    }
     return new Promise((resolve, reject) => {
         const script = document.createElement('script');
 
@@ -99,10 +107,16 @@ const socketURL = isLocalhost ? 'http://localhost:3031' : 'https://wsp1453.south
 
 
 /**
- * Fonction pour initialiser la connexion Socket.IO après le chargement du script
+ * Fonction pour initialiser la connexion Socket.IO après le chargement du script si elle n'était pas déjà établie
  * @return {void} N'a pas de valeur de retour
  */
 export function initSocketConnection() {
+    if (socket) {
+        console.log('Connexion Socket.IO déjà établie.');
+        return;
+    }
+
+    console.log('Initialisation de la connexion Socket.IO...');
     // Créer la connexion Socket.IO
     socket = io(socketURL, { transports: ['websocket'] });
 
@@ -483,6 +497,7 @@ export function generateForm(selectedService) {
         submitButton.id = "submitBtn";
         submitButton.textContent = "Submit";
         submitButton.onclick = (event) => {
+            logActivity('Submitting toolkit form');
             event.preventDefault();
             addToConsole('Sending files...');
             submitForm();
