@@ -1,10 +1,4 @@
 [
-    {
-        "organism": "Banana", 
-        "url": "https://api.allorigins.win/raw?url=https%3A%2F%2Fflavigny.cirad.fr%2Fsynflow%2Fbanana%2F"
-    },
-    {
-        "organism": "Grapevine", 
-        "url": "https://api.allorigins.win/raw?url=https%3A%2F%2Fflavigny.cirad.fr%2Fsynflow%2Fgrape%2F"
-    }
+    { "organism": "Banana", "url": "https://flavigny.cirad.fr/synflow/banana/" },
+    { "organism": "Grapevine", "url": "https://flavigny.cirad.fr/synflow/grape/" }
 ]
