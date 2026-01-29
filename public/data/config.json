@@ -1,4 +1,4 @@
 [
-    { "organism": "Banana", "url": "https://synflow.southgreen.fr/bank/banana/" },
-    { "organism": "Grapevine", "url": "https://synflow.southgreen.fr/bank/vitis/" }
+    { "organism": "Banana", "url": "https://flavigny.cirad.fr/synflow/banana/" },
+    { "organism": "Grapevine", "url": "https://flavigny.cirad.fr/synflow/grape/" }
 ]
