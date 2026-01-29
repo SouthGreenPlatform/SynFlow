@@ -1,5 +1,35 @@
 <img src="public/img/SynFlow_logo.png" alt="SynFlow Logo" width="200"/>
 
+
+### 🚨 **Main Server Temporarily Unavailable**
+
+The main SynFlow server is currently **down due to technical issues**.
+
+##### ✅ **Working Demo Available** 👇
+[**https://southgreenplatform.github.io/SynFlow/**](https://southgreenplatform.github.io/SynFlow/)
+
+***Available features***:
+- ✅ Genome visualization 
+- ✅ Full user interface
+- ✅ Banana / Grapevine datasets
+
+***⚠️ Temporary limitations***:
+- ❌ **Run analysis** require backend server → **unavailable**
+
+### ⏳ Status & Updates
+
+| Service | Status | Details |
+|---------|--------|---------|
+| Web Interface | 🟢 **OK** | [GitHub Pages Demo](https://southgreenplatform.github.io/SynFlow/) |
+| Backend | 🔴 **Down** | Waiting for server recovery|
+| Workflows | ❌ **Blocked** | Backend dependent |
+
+
+**We'll update you as soon as the main server is back online.**
+
+*For questions/paper reviewers: contact [marilyne.summo@cirad.fr]*
+
+
 ## Description
 
 Synflow is a powerful web application for visualizing genome alignments and structural variations using SyRI (Structural Rearrangement Identifier) data. It provides an interactive platform for exploring genomic synteny, inversions, translocations, duplications, and other structural rearrangements between genomes.
