@@ -1,4 +1,4 @@
 [
-    { "organism": "Banana", "url": "https://flavigny.cirad.fr/synflow/banana/" },
+    { "organism": "Banana", "url": "https://corsproxy.io/?https://flavigny.cirad.fr/synflow/banana/" },
     { "organism": "Grapevine", "url": "https://flavigny.cirad.fr/synflow/grape/" }
 ]
