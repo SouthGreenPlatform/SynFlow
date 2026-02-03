@@ -70,7 +70,7 @@ RUN echo 'server {\n\
 \n\
     # Proxy to Node.js API if available\n\
     location /api/ {\n\
-        proxy_pass http://localhost:3000;\n\
+        proxy_pass http://localhost:3031;\n\
         proxy_http_version 1.1;\n\
         proxy_set_header Host $host;\n\
         proxy_set_header X-Real-IP $remote_addr;\n\
