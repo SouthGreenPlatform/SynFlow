@@ -98,7 +98,11 @@ if (process.env.CONFIG_FILE_PATH) {
         }
     } catch (error) {
         // Format chaîne séparée par virgules
-        const urls = configUrlsEnv.split(',').map((entry) => entry.trim()).filter(Boolean);
+		const urls = (configUrlsEnv || "")
+  			.split(',')
+  			.map((entry) => entry.trim())
+  			.filter(Boolean);
+
         if (urls.length > 0) {
             configData = urls.map((url, index) => ({
                 organism: `organism_${index}`,
