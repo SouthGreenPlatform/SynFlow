@@ -1,10 +1,11 @@
-FROM condaforge/mambaforge:latest
+FROM condaforge/mambaforge:24.9.2-0
 
 # Configure timezone and avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=Europe/Paris \
     PATH=/opt/conda/bin:$PATH
-# Install system dependencies
+
+# Install system dependencies + Node.js LTS (20.x)
 RUN apt-get update && apt-get install -y \
     coreutils \
     git \
@@ -13,49 +14,27 @@ RUN apt-get update && apt-get install -y \
     nginx \
     supervisor \
     squashfs-tools \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
-
-# Install Node.js LTS (20.x)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
-    apt-get install -y nodejs && \
-    rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
 
 # Clone SynFlow web application
 RUN git clone https://github.com/SouthGreenPlatform/SynFlow.git /var/www/html/synflow
-
-# Install Node.js dependencies
-WORKDIR /var/www/html/synflow
-RUN npm install && npm cache clean --force
-# Clone Snakemake workflow repository
-RUN git clone --depth 1 --branch docker --single-branch  https://gitlab.cirad.fr/agap/cluster/snakemake/synflow.git /app/workflow
-
-# Create conda environment from YAML
-WORKDIR /app/workflow
-RUN mamba env create -f envs/synflow.yml --yes && \
-    mamba clean -a -y
-
-# Create data directories and download sample data
-RUN mkdir -p /data/comparisons/sample /data/input /data/output /data/uploads && \
-    wget --no-check-certificate -q -O /data/comparisons/sample/m-acuminata-malaccensis.bed \
-        https://hpc.cirad.fr/bank/banana/synflow/m-acuminata-malaccensis.bed && \
-    wget --no-check-certificate -q -O /data/comparisons/sample/m-balbisiana.bed \
-        https://hpc.cirad.fr/bank/banana/synflow/m-balbisiana.bed && \
-    wget --no-check-certificate -q -O /data/comparisons/sample/m-acuminata-malaccensis_m-balbisiana.anchors \
-        https://hpc.cirad.fr/bank/banana/synflow/m-acuminata-malaccensis_m-balbisiana.anchors && \
-    wget --no-check-certificate -q -O /data/comparisons/sample/m-acuminata-malaccensis_m-balbisiana.out \
-        https://hpc.cirad.fr/bank/banana/synflow/m-acuminata-malaccensis_m-balbisiana.out && \
-    wget --no-check-certificate -q -O /data/comparisons/sample/m-balbisiana_m-acuminata-malaccensis.anchors \
-        https://hpc.cirad.fr/bank/banana/synflow/m-balbisiana_m-acuminata-malaccensis.anchors && \
-    wget --no-check-certificate -q -O /data/comparisons/sample/m-balbisiana_m-acuminata-malaccensis.out \
-        https://hpc.cirad.fr/bank/banana/synflow/m-balbisiana_m-acuminata-malaccensis.out
-
-# Create symbolic link for comparisons directory
-RUN mkdir -p /var/www/html/synflow/data && \
-    ln -sf /data/comparisons /var/www/html/synflow/data/comparisons
-
+# Install Node.js deps + clone workflow + create conda env + download sample data + symlink comparisons
+RUN cd /var/www/html/synflow \
+    && npm install \
+    && npm cache clean --force \
+    && git clone --depth 1 --branch docker --single-branch https://gitlab.cirad.fr/agap/cluster/snakemake/synflow.git /app/workflow \
+    && cd /app/workflow \
+    && mamba env create -n synflow -f envs/synflow.yml --yes \
+    && mamba clean -a -y \
+    && mkdir -p /data/comparisons/sample /data/input /data/output /data/uploads \
+    && mkdir -p /var/www/html/synflow/data \
+    && ln -sf /data/comparisons /var/www/html/synflow/data/comparisons
+    
 # Configure Nginx
 RUN echo 'server {\n\
     listen 80;\n\
@@ -138,7 +117,7 @@ RUN echo 'source /opt/conda/etc/profile.d/conda.sh' >> /root/.bashrc && \
     echo 'echo "Conda environment: synflow (activated)"' >> /root/.bashrc
 
 # Expose ports
-EXPOSE 80 3000
+EXPOSE 80 3031
 
 # Define volumes
 VOLUME ["/data/comparisons", "/data/input", "/data/output", "/data/uploads"]
