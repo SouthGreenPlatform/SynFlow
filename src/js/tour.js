@@ -1,6 +1,6 @@
 import { logActivity } from "./main.js";
 
-const driver = window.driver.js.driver;
+const driver = globalThis.driver.js.driver;
 
 let driverObj = driver();
 

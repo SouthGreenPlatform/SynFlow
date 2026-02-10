@@ -66,8 +66,8 @@ function resetGlobals() {
 
     // Clear any per-chrom or per-genome display overrides stored on window to avoid leaking between sessions
     try {
-        if (window.genomeDisplaySettings) delete window.genomeDisplaySettings;
-        if (window.chromDisplaySettings) delete window.chromDisplaySettings;
+        if (globalThis.genomeDisplaySettings) delete globalThis.genomeDisplaySettings;
+        if (globalThis.chromDisplaySettings) delete globalThis.chromDisplaySettings;
     } catch (e) {
         // noop
     }
@@ -133,7 +133,7 @@ function processChunks(lines, isFirstFile) {
             
             drawCorrespondenceBands(parsedData, chromPositions, isFirstFile, scale);
             previousChromosomePositions = chromPositions;
-            // window.fullParsedData = parsedData; // Sauvegarder les données du dernier fichier traité
+            // globalThis.fullParsedData = parsedData; // Sauvegarder les données du dernier fichier traité
             allParsedData.push({ //toutes les données de tous les fichiers
                 refGenome,
                 queryGenome,

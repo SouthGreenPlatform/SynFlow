@@ -1260,9 +1260,9 @@ export function createToolkitContainer() {
             const toolkitID = toolkitPath.split('/')[7];
 
             //genère une URL synflow pour acceder aux resultats
-            const baseURL = window.location.origin;
+            const baseURL = globalThis.location.origin;
             let synflowURL;
-            if (window.location.pathname.startsWith('/synflow')) {
+            if (globalThis.location.pathname.startsWith('/synflow')) {
                 // Sur la dev, il faut ajouter /synflow
                 synflowURL = `${baseURL}/synflow/?id=${toolkitID}`;
             } else {

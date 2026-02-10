@@ -332,19 +332,19 @@ export function createChromContextMenu(x, y, chromEl) {
     contextMenu.appendChild(closeBtn);
 
     // Assurer les objets de settings
-    if (!window.genomeDisplaySettings) window.genomeDisplaySettings = {};
-    if (!window.chromDisplaySettings) window.chromDisplaySettings = {};
-    if (!window.genomeDisplaySettings[genome]) window.genomeDisplaySettings[genome] = { mode: 'filled', color: (genomeColors && genomeColors[genome]) ? genomeColors[genome] : '#000000' };
+    if (!globalThis.genomeDisplaySettings) globalThis.genomeDisplaySettings = {};
+    if (!globalThis.chromDisplaySettings) winglobalThisdow.chromDisplaySettings = {};
+    if (!globalThis.genomeDisplaySettings[genome]) globalThis.genomeDisplaySettings[genome] = { mode: 'filled', color: (genomeColors && genomeColors[genome]) ? genomeColors[genome] : '#000000' };
 
     const chromKey = `${genome}|${chromBase}`;
-    if (!window.chromDisplaySettings[chromKey]) {
-        window.chromDisplaySettings[chromKey] = {
-            mode: window.genomeDisplaySettings[genome].mode || 'filled',
-            color: (window.chromDisplaySettings[chromKey] && window.chromDisplaySettings[chromKey].color) || (window.genomeDisplaySettings[genome].color || ((genomeColors && genomeColors[genome]) ? genomeColors[genome] : '#000000'))
+    if (!globalThis.chromDisplaySettings[chromKey]) {
+        globalThis.chromDisplaySettings[chromKey] = {
+            mode: globalThis.genomeDisplaySettings[genome].mode || 'filled',
+            color: (globalThis.chromDisplaySettings[chromKey] && globalThis.chromDisplaySettings[chromKey].color) || (globalThis.genomeDisplaySettings[genome].color || ((genomeColors && genomeColors[genome]) ? genomeColors[genome] : '#000000'))
         };
     }
 
-    const settings = window.chromDisplaySettings[chromKey];
+    const settings = globalThis.chromDisplaySettings[chromKey];
 
     // Modes disponibles - inclure heatmap seulement si un gradient existe
     const modes = ['outline', 'filled'];
@@ -569,28 +569,28 @@ function applySettingsWithScope(settings, genome, chromBase, scope, chromEl) {
         }
         const chromKeyThis = `${genome}|${base}`;
         // Initialize if needed
-        if (!window.chromDisplaySettings[chromKeyThis]) {
-            window.chromDisplaySettings[chromKeyThis] = {
-                mode: window.genomeDisplaySettings[genome].mode || 'filled',
-                color: window.genomeDisplaySettings[genome].color || '#000000'
+        if (!globalThis.chromDisplaySettings[chromKeyThis]) {
+            globalThis.chromDisplaySettings[chromKeyThis] = {
+                mode: globalThis.genomeDisplaySettings[genome].mode || 'filled',
+                color: globalThis.genomeDisplaySettings[genome].color || '#000000'
             };
         }
         // Update only the specific property (mode or color)
         if ('mode' in settings) {
-            window.chromDisplaySettings[chromKeyThis].mode = settings.mode;
+            globalThis.chromDisplaySettings[chromKeyThis].mode = settings.mode;
         }
         if ('color' in settings) {
-            window.chromDisplaySettings[chromKeyThis].color = settings.color;
+            globalThis.chromDisplaySettings[chromKeyThis].color = settings.color;
         }
         // apply to this chrom instances
-        applyChromosomeDisplaySettings(chromEl, window.chromDisplaySettings[chromKeyThis], genome, base);
+        applyChromosomeDisplaySettings(chromEl, globalThis.chromDisplaySettings[chromKeyThis], genome, base);
     } else if (scope === 'genome') {
         // Update only the specific property in genome settings
         if ('mode' in settings) {
-            window.genomeDisplaySettings[genome].mode = settings.mode;
+            globalThis.genomeDisplaySettings[genome].mode = settings.mode;
         }
         if ('color' in settings) {
-            window.genomeDisplaySettings[genome].color = settings.color;
+            globalThis.genomeDisplaySettings[genome].color = settings.color;
         }
         // apply to all chromosomes of this genome, respecting overrides
         const elems = document.querySelectorAll(`path.chrom[data-genome="${genome}"]`);
@@ -600,7 +600,7 @@ function applySettingsWithScope(settings, genome, chromBase, scope, chromEl) {
             if (!base) return;
             // check for per-chrom override
             const chromKey = `${genome}|${base}`;
-            const chromSettings = window.chromDisplaySettings[chromKey];
+            const chromSettings = globalThis.chromDisplaySettings[chromKey];
             // Apply only the changed property, preserving other settings
             if (chromSettings) {
                 // Chromosome has overrides
@@ -620,7 +620,7 @@ function applySettingsWithScope(settings, genome, chromBase, scope, chromEl) {
         const modeOnlyUpdate = 'mode' in settings && !('color' in settings);
         if (Array.isArray(uniqueGenomes) && uniqueGenomes.length > 0) {
             uniqueGenomes.forEach(g => {
-                window.genomeDisplaySettings[g] = Object.assign({}, settings);
+                globalThis.genomeDisplaySettings[g] = Object.assign({}, settings);
                 const elems = document.querySelectorAll(`path.chrom[data-genome="${g}"]`);
                 elems.forEach(el => {
                     const nameAttr = el.getAttribute('data-chrom-name') || '';
@@ -628,7 +628,7 @@ function applySettingsWithScope(settings, genome, chromBase, scope, chromEl) {
                     if (!base) return;
                     // check for per-chrom override
                     const chromKey = `${g}|${base}`;
-                    const chromSettings = window.chromDisplaySettings[chromKey];
+                    const chromSettings = globalThis.chromDisplaySettings[chromKey];
                     // if this is a mode-only update and we have a per-chrom override, preserve its color
                     if (modeOnlyUpdate && chromSettings && chromSettings.color) {
                         applyChromosomeDisplaySettings(el, { mode: settings.mode, color: chromSettings.color }, g, base);
@@ -644,10 +644,10 @@ function applySettingsWithScope(settings, genome, chromBase, scope, chromEl) {
                 const nameAttr = el.getAttribute('data-chrom-name') || '';
                 const base = nameAttr.split('_ref')[0].split('_query')[0] || nameAttr.replace(/_(ref|query)$/, '');
                 if (!base) return;
-                window.genomeDisplaySettings[g] = Object.assign({}, settings);
+                globalThis.genomeDisplaySettings[g] = Object.assign({}, settings);
                 // check for per-chrom override
                 const chromKey = `${g}|${base}`;
-                const chromSettings = window.chromDisplaySettings[chromKey];
+                const chromSettings = globalThis.chromDisplaySettings[chromKey];
                 // if this is a mode-only update and we have a per-chrom override, preserve its color
                 if (modeOnlyUpdate && chromSettings && chromSettings.color) {
                     applyChromosomeDisplaySettings(el, { mode: settings.mode, color: chromSettings.color }, g, base);
@@ -700,12 +700,12 @@ function applyChromosomeDisplaySettings(chromEl, settings, genome, chromBase) {
         // Update chrom-controler items styles for this genome
         try {
             const perChromKey = `${genome}|${base}`;
-            if (window.chromDisplaySettings && window.chromDisplaySettings[perChromKey]) {
+            if (globalThis.chromDisplaySettings && globalThis.chromDisplaySettings[perChromKey]) {
                 // only update the specific chrom cell in the chrom-controler
                 const id = `${genome}-${base}`;
                 const item = document.querySelector(`#chrom-controler [data-id="${id}"]`);
                 if (item) item.style.border = `2px solid ${color}`;
-            } else if (window.genomeDisplaySettings && window.genomeDisplaySettings[genome]) {
+            } else if (globalThis.genomeDisplaySettings && globalThis.genomeDisplaySettings[genome]) {
                 // genome-level setting: update all items for this genome
                 const controlItems = document.querySelectorAll(`#chrom-controler [data-genome="${genome}"]`);
                 controlItems.forEach(it => { it.style.border = `2px solid ${color}`; });

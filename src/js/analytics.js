@@ -117,7 +117,7 @@ export function setupAnalytics() {
 			const mailtoUrl = `mailto:marilyne.summo@cirad.fr?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 			
 			// Ouvrir le client mail par défaut
-			window.location.href = mailtoUrl;
+			globalThis.location.href = mailtoUrl;
 
 			return true;
 		} catch (error) {

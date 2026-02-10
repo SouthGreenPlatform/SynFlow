@@ -102,7 +102,7 @@ export function loadSocketIOScript() {
 //si url = http://localhost:8080, on utilise localhost:3031
 //sinon on utilise https://wsp1453.southgreen.fr
 
-const isLocalhost = window.location.hostname === 'localhost';
+const isLocalhost = globalThis.location.hostname === 'localhost';
 const socketURL = isLocalhost ? 'http://localhost:3031' : 'https://wsp1453.southgreen.fr';
 
 
@@ -121,7 +121,7 @@ export function initSocketConnection() {
     socket = io(socketURL, { transports: ['websocket'] });
 
     // Envoyer les infos du client au serveur
-    socket.emit('clientInfo', { url: window.location.href });
+    socket.emit('clientInfo', { url: globalThis.location.href });
 
     // Écouter les messages du serveur
     socket.on('consoleMessage', function(message) {
@@ -192,7 +192,7 @@ export function initSocketConnection() {
     //envoie l'url du ftp contenant les fichiers output
     socket.on('toolkitFTP', (toolkitID) => {
         // Détermine si on est en local ou en prod
-        const currentHost = window.location.hostname;
+        const currentHost = globalThis.location.hostname;
         let outputFilesPath;
 
         if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
@@ -286,7 +286,7 @@ const config = {
 
 function getEnvironmentConfig() {
     // Détection de l'environnement basée sur l'URL
-    const isDevelopment = window.location.hostname.includes('dev-');
+    const isDevelopment = globalThis.location.hostname.includes('dev-');
     return isDevelopment ? config.development : config.production;
 }
 

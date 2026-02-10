@@ -59,12 +59,12 @@ function checkToolkitParam() {
     //check si l'url contient un toolkitID exemple :
     // https://synflow.southgreen.fr/?id=toolkit_jD1prpcgQajoO2umAAAV
     // https://dev-visusnp.southgreen.fr/synflow/?id=toolkit_aryvzv9jHAIWUBSVAAZ4
-    const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = new URLSearchParams(globalThis.location.search);
     const toolkitID = urlParams.get('id');
     if (toolkitID) {
         console.log('Toolkit ID trouvé dans l\'URL :', toolkitID);
 
-        const currentHost = window.location.hostname;
+        const currentHost = globalThis.location.hostname;
         let url;
         if (currentHost === 'localhost') {
             // En local → serveur sur port 8080

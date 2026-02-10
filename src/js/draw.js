@@ -236,7 +236,7 @@ export function drawMiniChromosome(genome, svg, options = {}) {
     path += 'Z';
 
     // Determine color/mode to render the mini chrom based on options or genome settings
-    const genomeSetting = (window.genomeDisplaySettings && window.genomeDisplaySettings[genome]) ? window.genomeDisplaySettings[genome] : null;
+    const genomeSetting = (globalThis.genomeDisplaySettings && globalThis.genomeDisplaySettings[genome]) ? globalThis.genomeDisplaySettings[genome] : null;
     const mode = options.mode || (genomeSetting && genomeSetting.mode) || 'filled';
     const color = options.color || (genomeSetting && genomeSetting.color) || genomeColors[genome] || '#000000';
     const gradientId = `gradient-${genome}`;
@@ -517,8 +517,8 @@ function drawChromPathNoArm(x, y, width, radius, chromNum, chromName, genome, sv
     let initFill = null;
     let initStroke = null;
 
-    const override = (window.chromDisplaySettings && window.chromDisplaySettings[chromKey]) ? window.chromDisplaySettings[chromKey] : null;
-    const genomeSetting = (window.genomeDisplaySettings && window.genomeDisplaySettings[genome]) ? window.genomeDisplaySettings[genome] : null;
+    const override = (globalThis.chromDisplaySettings && globalThis.chromDisplaySettings[chromKey]) ? globalThis.chromDisplaySettings[chromKey] : null;
+    const genomeSetting = (globalThis.genomeDisplaySettings && globalThis.genomeDisplaySettings[genome]) ? globalThis.genomeDisplaySettings[genome] : null;
 
     if (override) {
         const mode = override.mode || 'filled';
@@ -1086,8 +1086,8 @@ function isBandVisible(d) {
 
     // Slider - utiliser des valeurs par défaut si non définies
     const bandLength = d.refEnd - d.refStart;
-    const min = window.sliderMinValue ?? 0;
-    const max = window.sliderMaxValue ?? Infinity;
+    const min = globalThis.sliderMinValue ?? 0;
+    const max = globalThis.sliderMaxValue ?? Infinity;
 
     // Numéros de chromosomes
     const refChromNum = Object.values(genomeData[refGenome]).findIndex(item => item && item.name === d.refChr) + 1;
@@ -1120,7 +1120,7 @@ export function updateBandColors() {
         // Only respect per-chrom overrides for band coloring when bandColorMode === 'byChrom'
         let chromOverride = null;
         if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
-            chromOverride = (window.chromDisplaySettings && window.chromDisplaySettings[chromKey] && window.chromDisplaySettings[chromKey].color) ? window.chromDisplaySettings[chromKey].color : null;
+            chromOverride = (globalThis.chromDisplaySettings && globalThis.chromDisplaySettings[chromKey] && globalThis.chromDisplaySettings[chromKey].color) ? globalThis.chromDisplaySettings[chromKey].color : null;
         }
 
         let newColor = null;
@@ -1146,13 +1146,13 @@ export function updateBandColors() {
         const chromEl = d3.select(this);
         const chromNum = chromEl.attr('data-chrom-num');
         const genome = chromEl.attr('data-genome');
-        // Determine base color and mode, but allow per-chrom overrides (window.chromDisplaySettings)
+        // Determine base color and mode, but allow per-chrom overrides (globalThis.chromDisplaySettings)
         const chromNameAttr = chromEl.attr('data-chrom-name') || '';
         const chromBase = chromNameAttr.split('_ref')[0].split('_query')[0];
         const chromKey = `${genome}|${chromBase}`;
 
-        let override = (window.chromDisplaySettings && window.chromDisplaySettings[chromKey]) ? window.chromDisplaySettings[chromKey] : null;
-        let genomeSetting = (window.genomeDisplaySettings && window.genomeDisplaySettings[genome]) ? window.genomeDisplaySettings[genome] : null;
+        let override = (globalThis.chromDisplaySettings && globalThis.chromDisplaySettings[chromKey]) ? globalThis.chromDisplaySettings[chromKey] : null;
+        let genomeSetting = (globalThis.genomeDisplaySettings && globalThis.genomeDisplaySettings[genome]) ? globalThis.genomeDisplaySettings[genome] : null;
 
         if (override) {
             const mode = override.mode || 'filled';

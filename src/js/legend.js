@@ -393,8 +393,8 @@ export function updateChromControlerColors(mode) {
         try {
             const g = item.dataset && item.dataset.genome ? item.dataset.genome : null;
             let color;
-            if (g && window.genomeDisplaySettings && window.genomeDisplaySettings[g] && window.genomeDisplaySettings[g].color) {
-                color = window.genomeDisplaySettings[g].color;
+            if (g && globalThis.genomeDisplaySettings && globalThis.genomeDisplaySettings[g] && globalThis.genomeDisplaySettings[g].color) {
+                color = globalThis.genomeDisplaySettings[g].color;
             } else if (mode === 'byChrom') {
                 color = generateColor(idx);
             } else {
