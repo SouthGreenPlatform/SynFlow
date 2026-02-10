@@ -55,18 +55,18 @@ export function initToolkit(generateSelect, serviceName) {
                 console.log('4Generating select...');
                 // Appeler la fonction populateServiceSelect aprés le chargement
                 populateServiceSelect();
-                toolkitContainer.removeChild(loadingIndicator); // Supprimer le message de chargement
+                loadingIndicator.remove(); // Supprimer le message de chargement
 
             }else{
                 console.log('5Generating form...');
                 generateForm(serviceName);
-                toolkitContainer.removeChild(loadingIndicator); // Supprimer le message de chargement
+                loadingIndicator.remove(); // Supprimer le message de chargement
 
             }
         })
         .catch(error => {
             console.error('Error initializing toolkit:', error);
-            toolkitContainer.removeChild(loadingIndicator); // Supprimer le message de chargement
+            loadingIndicator.remove(); // Supprimer le message de chargement
 
         });
 }
@@ -209,68 +209,6 @@ export function initSocketConnection() {
         const event = new CustomEvent('toolkitFilesFromID', { detail: outputFilesPath });
         document.dispatchEvent(event);
     });
-
-    // //receptionne la liste des fichiers à partie du toolkitID
-    // socket.on('toolkitFiles', (files) => {
-
-    //     //fetch les fichiers resultats de toolkit :
-    //     // exemple : /opt/projects/gemo.southgreen.fr/prod/tmp/toolkit_run/toolkit_jD1prpcgQajoO2umAAAV/
-    //     // toolkitID = toolkit_jD1prpcgQajoO2umAAAV
-    //     const toolkitPath = `https://gemo.southgreen.fr/tmp/toolkit_run/${toolkitID}/`;
-    //     fetch(toolkitPath)
-    //         .then(response => {
-    //             if (!response.ok) {
-    //                 throw new Error('Network response was not ok');
-    //             }
-    //             return response.text();
-    //         })
-    //         .then(async data => {
-    //             // Traiter les données reçues
-    //             console.log('Toolkit data:', data);
-    //             // Afficher les fichiers dans la console
-    //             const consoleDiv = document.getElementById('console');
-    //             consoleDiv.innerHTML = ''; // Vider la console avant d'afficher les nouveaux fichiers
-                
-    //             // Sélectionne et affiche l'onglet 'upload'
-    //             const menuColumn = document.querySelector('[data-option="upload"]');
-
-    //             if (menuColumn) menuColumn.click();
-
-    //             try {
-    //                 const response = await fetch(path);
-    //                 const text = await response.text();
-    //                 const fileName = path.split('/').pop();
-    //                 const bandFile = new File([text], fileName, { type: 'text/plain' });
-                
-                
-    //                 // Creating DataTransfer objects to simulate file upload
-    //                 // const chrLenDataTransfer = new DataTransfer();
-    //                 const bandDataTransfer = new DataTransfer();
-                
-    //                 // Add files to the DataTransfer objects
-    //                 bandDataTransfer.items.add(bandFile);
-                
-    //                 // Set the files to the input fields
-    //                 const bandInput = document.getElementById('band-files');
-                
-    //                 // chrLenInput.files = chrLenDataTransfer.files;
-    //                 bandInput.files = bandDataTransfer.files;
-                
-    //                 // Update the file lists
-    //                 // updateFileList(chrLenInput, document.getElementById('chrlen-file-list'));
-    //                 updateFileList(bandInput, document.getElementById('band-file-list'));
-    //             } catch (error) {
-    //                 console.error('Error fetching the file:', error);
-    //             }
-
-
-    //         })
-    //         .catch(error => {
-    //             console.error('Error fetching toolkit data:', error);
-    //             const consoleDiv = document.getElementById('console');
-    //             consoleDiv.innerHTML = `<div>Error fetching toolkit data: ${error.message}</div>`;
-    //         });
-    // });
 }
 
 const config = {
@@ -581,10 +519,10 @@ function submitForm() {
         try {
             socket.emit('runService', selectedService, serviceData, data);
         } catch (error) {
-            addToConsole('Erreur lors de run service:', error);
+            addToConsole('Erreur lors de run service: ' + error.message);
         }
     }).catch((error) => {
-        addToConsole('Erreur lors de l\'envoi:', error);
+        addToConsole('Erreur lors de l\'envoi: ' + error.message);
     });
 }
 
