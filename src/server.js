@@ -138,6 +138,26 @@ function assignUploadId(req, res, next) {
     next();
 }
 
+function isSafePath(p) {
+  if (typeof p !== 'string') return false;
+  // Pas de retours à la ligne, pas de ;
+  if (/[;\n\r`$]/.test(p)) return false;
+  return true;
+}
+
+function isSafeValue(value) {
+    if (typeof value !== 'string' || value.length === 0 || value.length > 100) return false;
+
+    // Blocage des métacaractères du shell
+    const dangerous = [';', '|', '&', '$', '`', '>', '<', '(', ')', '{', '}', '\\', '"', "'"];
+    if (dangerous.some(ch => value.includes(ch))) return false;
+
+    // Évite les ../ etc.
+    if (value.includes('..')) return false;
+
+    return true;
+}
+
 // .______        ______    __    __  .___________. _______     _______.
 // |   _  \      /  __  \  |  |  |  | |           ||   ____|   /       |
 // |  |_)  |    |  |  |  | |  |  |  | `---|  |----`|  |__     |   (----`
@@ -278,6 +298,7 @@ io.on('connection', socket => {
 
         //Opal = local dans docker
         if(serviceData.service == "opal"){
+
             // Fonction pour construire la commande de lancement Opal
             function buildLaunchCommand(formData, uploadedFiles, params) {
                 const { url, action, arguments: args } = formData;
@@ -302,8 +323,7 @@ io.on('connection', socket => {
                         const matchingFiles = uploadedFiles.filter(file => file.fieldname === input.name);
                         console.log(`Fichiers trouvés pour ${input.name}:`, matchingFiles);
                         matchingFiles.forEach(file => {
-                            if (file && file.path) {
-                                // Ajout du path du fichier
+                            if (file && file.path && isSafePath(file.path)) {
                                 aArgs += ` ${input.flag} ${file.path}`;
                             }
                         });
@@ -324,6 +344,17 @@ io.on('connection', socket => {
                 // Retourner la commande complète avec activation de l'environnement conda
                 return `bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate synflow && python /app/workflow/create_conf.py ${commandArgs.trim()}${uuidArg}"`;
             }
+
+            // nettoie les paramètres pour éviter les injections de commandes
+            Object.keys(params || {}).forEach(key => {
+            const val = params[key];
+            if (!isSafeValue(val)) {
+                console.warn(`Paramètre rejeté (dangereux) ${key}=${val}`);
+                delete params[key];
+            }
+            });
+
+
             // Générer la commande de lancement
             launchCommand = buildLaunchCommand(serviceData, uploadedFiles, params);
             console.log(`Commande générée : ${launchCommand}`);
