@@ -1,8 +1,7 @@
 import { showInfoPanel, showInfoUpdatedMessage, createDetailedTable, initializeTableFiltering, createTableBadges, createSummarySection, createZoomedSyntenyView, createOrthologsTable} from "./info.js";
-import { refGenome, queryGenome, genomeColors, bandColorMode, genomeData, scale, allParsedData, isFirstDraw, downloadSvg, generateColor } from "./process.js";
-import { anchorsFiles, bedFiles, jbrowseLinks } from "./form.js";
-import { createContextMenu, createChromContextMenu, selectedBands, updateBandSelection, 
-    selectSimilarBands, colorSelectedBands, updateInfoForSelectedBands } from './band-selection.js';
+import { refGenome, queryGenome, genomeColors, bandColorMode, genomeData, scale, allParsedData, isFirstDraw, generateColor } from "./process.js";
+import { anchorsFiles, bedFiles } from "./form.js";
+import { createContextMenu, createChromContextMenu, selectedBands, updateBandSelection, updateInfoForSelectedBands } from './band-selection.js';
 import { logActivity } from "./main.js";
 
 export let currentYOffset = 0; // Définir globalement

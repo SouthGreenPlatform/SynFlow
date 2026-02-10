@@ -441,7 +441,7 @@ function createColorPickerDialog(element, currentColor, onColorChange, event) {
                 currentColorChangeCallback(newColor);
                 
                 // Mettre à jour la variable currentBandTypeColors
-                const bandType = element.getAttribute('data-type');
+                const bandType = element.dataset.type;
                 if (bandType) {
                     currentBandTypeColors[bandType] = newColor;
                 }

@@ -80,7 +80,7 @@ export function createInfoPanel() {
 
     menuItems.forEach(item => {
         const tab = document.createElement('div');
-        tab.setAttribute('data-option', item.id);
+        tab.dataset.option = item.id;
         tab.style.cssText = `
             padding: 10px 15px;
             cursor: pointer;

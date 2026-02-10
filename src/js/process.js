@@ -1,7 +1,6 @@
-import { drawChromosomes, drawStackedChromosomes, drawCorrespondenceBands, resetDrawGlobals, drawMiniChromosome } from './draw.js';
-import { generateBandTypeFilters, createSlider, createLengthChart, updateBandsVisibility, showControlPanel, createMergeSlider } from './legend.js';
+import { drawChromosomes, drawStackedChromosomes, drawCorrespondenceBands, resetDrawGlobals, drawMiniChromosome, zoom } from './draw.js';
+import { generateBandTypeFilters, createSlider, createLengthChart, updateBandsVisibility, showControlPanel } from './legend.js';
 import { Spinner } from './spin.js';
-import { zoom } from './draw.js';
 import { fileOrderMode, fileUploadMode, hideForm, setSelectedGenomes } from './form.js';
 import { logActivity } from './main.js';
 
@@ -38,7 +37,6 @@ const opts = {
     left: '50%', shadow: '0 0 1px transparent', zIndex: 2000000000,
     className: 'spinner', position: 'fixed'
 };
-var target = document.getElementById('spinner');
 export var spinner = new Spinner(opts);
 
 function resetGlobals() {
@@ -50,10 +48,11 @@ function resetGlobals() {
     // the same object while removing all keys.
     try {
         for (const k in genomeColors) {
-            if (Object.prototype.hasOwnProperty.call(genomeColors, k)) delete genomeColors[k];
+            if (Object.hasOwn(genomeColors, k)) delete genomeColors[k];
         }
     } catch (e) {
-        // noop
+        //catching
+        console.error("Error resetting genomeColors:", e);
     }
     uniqueGenomes = null;
     orderedFileObjects = [];
@@ -189,8 +188,8 @@ function updateChromList(globalMaxChromosomeLengths) {
         // Create eye icon
         const eyeIcon = document.createElement('i');
         eyeIcon.setAttribute('class', 'fas fa-eye chrom-eye-icon');
-        eyeIcon.setAttribute('data-chrom', chromNum);
-        eyeIcon.setAttribute('data-feature', 'toggle-visibility');
+        eyeIcon.dataset.chrom = chromNum;
+        eyeIcon.dataset.feature = 'toggle-visibility';
         eyeIcon.style.cursor = 'pointer';
         eyeIcon.style.marginRight = '10px';
 
@@ -210,7 +209,7 @@ function updateChromList(globalMaxChromosomeLengths) {
         // Goto icon
         const goto = document.createElement('span');
         goto.setAttribute('class', 'fas fa-crosshairs');
-        goto.setAttribute('data-feature', 'goto-chromosome');
+        goto.dataset.feature = 'goto-chromosome';
         goto.style.cursor = 'pointer';
         goto.style.marginRight = '10px';
 
@@ -631,10 +630,10 @@ function updateChromControler() {
                 try {
                     const dragData = JSON.parse(e.dataTransfer.getData('chrom-drag'));
                     if (dragData.genome === genome) {
-                        const fromPos = parseInt(dragData.pos, 10);
-                        const toPos = parseInt(chromCell.dataset.position, 10);
+                        const fromPos = Number.parseInt(dragData.pos, 10);
+                        const toPos = Number.parseInt(chromCell.dataset.position, 10);
 
-                        if (!isNaN(fromPos) && !isNaN(toPos) && fromPos !== toPos) {
+                        if (!Number.isNaN(fromPos) && !Number.isNaN(toPos) && fromPos !== toPos) {
                             // Swap dans genomeData
                             const temp = genomeData[genome][fromPos];
                             genomeData[genome][fromPos] = genomeData[genome][toPos];
@@ -701,7 +700,7 @@ function allDone() {
     d3.select("#viz").call(zoom);
 
     // Determine min and max band sizes
-    const allBandLengths = d3.selectAll('path.band').nodes().map(path => parseFloat(path.getAttribute('data-length')));
+    const allBandLengths = d3.selectAll('path.band').nodes().map(path => Number.parseFloat(path.dataset.length));
     const minBandSize = d3.min(allBandLengths);
     const maxBandSize = d3.max(allBandLengths);
 
@@ -775,7 +774,7 @@ function allDone() {
     // Remove existing download button if it exists
     const existingDownloadButton = document.getElementById('download-svg');
     if (existingDownloadButton) {
-        formContainer.removeChild(existingDownloadButton);
+        existingDownloadButton.remove();
     }
 
     const downloadSvgButton = document.createElement('button');
@@ -1258,7 +1257,7 @@ async function calculateChromosomeDataFromBandFilesAlphabetical(orderedFileObjec
 
             // Ajouter/refresher les chromosomes ref
             Object.values(refLengths).forEach(ch => {
-                if (!ch || !ch.name) return;
+                if (!ch?.name) return;
                 const existing = genomeChromMap[refGenome][ch.name];
                 if (!existing || (ch.length && ch.length > existing.length)) {
                     genomeChromMap[refGenome][ch.name] = { name: ch.name, length: ch.length };
@@ -1267,14 +1266,14 @@ async function calculateChromosomeDataFromBandFilesAlphabetical(orderedFileObjec
 
             // Ajouter/refresher les chromosomes query
             Object.values(queryLengths).forEach(ch => {
-                if (!ch || !ch.name) return;
+                if (!ch?.name) return;
                 const existing = genomeChromMap[queryGenome][ch.name];
                 if (!existing || (ch.length && ch.length > existing.length)) {
                     genomeChromMap[queryGenome][ch.name] = { name: ch.name, length: ch.length };
                 }
             });
         } catch (err) {
-            console.warn('Erreur lecture fichier band pour', file && file.name, err);
+            console.warn('Erreur lecture fichier band pour', file?.name, err);
         }
     }
 
@@ -1310,7 +1309,6 @@ function readChromosomeLengthsFromBandFile(file) {
             let refIndex = 0;
             let queryIndex = 1;
             let lastRefChromosome = null;
-            let lastQueryChromosome = null;
 
             lines.forEach(line => {
                 const parts = line.split('\t');
@@ -1319,7 +1317,6 @@ function readChromosomeLengthsFromBandFile(file) {
                     const queryChromosome = parts[5];
                     const refStart = +parts[1];
                     const refEnd = +parts[2];
-                    const queryStart = +parts[6];
                     const queryEnd = +parts[7];
                     const alignmentLength = refEnd - refStart;
 
@@ -1403,7 +1400,7 @@ export function downloadSvg(svgElement) {
     link.download = 'SynFlow.svg';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
     URL.revokeObjectURL(url);
 }
 
@@ -1474,7 +1471,7 @@ function reorderFileList(fileListElement, orderedFileNames, fileType) {
                 });
 
                 if (nextSibling) {
-                    fileListElement.insertBefore(draggingItem, nextSibling);
+                    nextSibling.before(draggingItem);
                 } else {
                     fileListElement.appendChild(draggingItem);
                 }

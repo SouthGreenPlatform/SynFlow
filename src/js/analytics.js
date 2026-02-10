@@ -36,7 +36,7 @@ export function setupAnalytics() {
                     <div class="rating">
                         <span>Satisfaction :</span>
                         <div class="stars">
-                            ${Array(5).fill().map((_, i) => 
+                            ${new Array(5).fill().map((_, i) => 
                                 `<i class="far fa-star" data-rating="${i + 1}"></i>`
                             ).join('')}
                         </div>

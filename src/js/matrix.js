@@ -295,7 +295,6 @@ function createFileMatrix(files, containerId = 'file-matrix-container') {
             } else {
                 // Cherche la comparaison
                 const key1 = `${rowGenome}_${colGenome}`;
-                //const key2 = `${colGenome}_${rowGenome}`;
                 const comp = comparisonMatrix[key1]; // || comparisonMatrix[key2];
                 
                 if (comp) {

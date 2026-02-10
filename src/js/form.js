@@ -100,7 +100,7 @@ export async function createForm() {
             transition: all 0.3s ease;
         `;
         menuItem.innerHTML = `<i class="${item.icon}"></i> ${item.text}`;
-        menuItem.setAttribute('data-option', item.id);
+        menuItem.dataset.option = item.id;
         
         menuItem.addEventListener('click', async () => {
             logActivity(`Selected form option: ${item.text}`);
