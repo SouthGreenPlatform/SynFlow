@@ -452,6 +452,17 @@ async function createExistingFilesForm() {
             return;
         }
 
+        // check de sécurité pour éviter les chemins d'accès malveillants
+        const safeFiles = neededFiles.filter(file => {
+            // Autorise alphanum + _ - . / et extensions connues
+            const safe = /^[a-zA-Z0-9_\-\.\/]+\.(out|bed|anchors|txt|json|gz)$/i.test(file);
+            return safe;
+        });
+
+        if (safeFiles.length !== neededFiles.length) {
+            chainDiv.innerHTML = `<span style="color:orange;">Warning: ${neededFiles.length - safeFiles.length} unsafe files skipped</span>`;
+        }
+
         // Télécharge les fichiers nécessaires et crée des objets File
         const files = await Promise.all(neededFiles.map(async file => {
             const filePath = `${folder}${file}`;
@@ -939,9 +950,18 @@ export function createFTPSection() {
         
         // Récupère la valeur brute sans transformation
         const folder = ftpInput.value.trim();
+
+        if (!folder.startsWith('http')) {
+            fileListDiv.innerHTML = '<span style="color:red;">Must start with http:// or https://</span>';
+            return;
+        }
         
-        // console.log('URL saisie:', folder); // Pour vérifier que le port est présent
-        
+        // Bloque les data: et javascript:
+        if (folder.includes('data:') || folder.includes('javascript:')) {
+            fileListDiv.innerHTML = '<span style="color:red;">Invalid URL scheme</span>';
+            return;
+        }
+                
         if (!folder) {
             fileListDiv.innerHTML = '<span style="color:red;">Please enter a valid FTP folder URL.</span>';
             return;
