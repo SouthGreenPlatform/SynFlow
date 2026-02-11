@@ -139,10 +139,15 @@ function assignUploadId(req, res, next) {
 }
 
 function isSafePath(p) {
-  if (typeof p !== 'string') return false;
-  // Pas de retours à la ligne, pas de ;
-  if (/[;\n\r`$]/.test(p)) return false;
-  return true;
+    if (typeof p !== 'string') return false;
+    // Pas de retours à la ligne, pas de ;
+    if (/[;\n\r`$]/.test(p)) return false;
+    // Pas de chemins relatifs dangereux
+    if (p.includes('..')) return false;
+    //check extension
+    const allowedExtensions = ['.txt', '.fasta', '.tsv', '.bed', '.gff', '.out', '.anchors', '.fa', '.fna', '.faa', '.json'];
+    if (!allowedExtensions.some(ext => p.endsWith(ext))) return false;
+    return true;
 }
 
 function isSafeValue(value) {
