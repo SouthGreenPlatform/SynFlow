@@ -103,7 +103,7 @@ export function loadSocketIOScript() {
 //sinon on utilise https://wsp1453.southgreen.fr
 
 const isLocalhost = globalThis.location.hostname === 'localhost';
-const socketURL = isLocalhost ? 'http://localhost:3031' : 'https://wsp1453.southgreen.fr';
+const socketURL = isLocalhost ? 'http://localhost:3031' : 'https://wsp1453.southgreen.fr:1453';
 
 
 /**
@@ -513,16 +513,24 @@ function submitForm() {
         body: formData
     }).then(response => response.json())
     .then(data => {
-        addToConsole('Fichiers et paramètres envoyés avec succès:');
+        if (!response.ok) {
+            // AFFICHE les erreurs upload via Socket.IO
+            if (data.message) {
+                socket.emit('consoleMessage', `UPLOAD: ${data.message}`);
+            }
+            console.error('Cannot upload:', data);
+            return;
+        }
+        addToConsole('Files uploaded successfully:');
         addToConsole(JSON.stringify(data, null, 2));
         // Ensuite, lancer l'exécution du service via Socket.IO ou un autre mécanisme
         try {
             socket.emit('runService', selectedService, serviceData, data);
         } catch (error) {
-            addToConsole('Erreur lors de run service: ' + error.message);
+            addToConsole('Error running service: ' + error.message);
         }
     }).catch((error) => {
-        addToConsole('Erreur lors de l\'envoi: ' + error.message);
+        addToConsole(`Connection error: ${error.message}`);
     });
 }
 

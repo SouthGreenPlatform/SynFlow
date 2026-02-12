@@ -145,7 +145,7 @@ function isSafePath(p) {
     // Pas de chemins relatifs dangereux
     if (p.includes('..')) return false;
     //check extension
-    const allowedExtensions = ['.txt', '.fasta', '.tsv', '.bed', '.gff', '.out', '.anchors', '.fa', '.fna', '.faa', '.json'];
+    const allowedExtensions = ['.txt', '.fasta', '.tsv', '.bed', '.gff', '.gff3', '.out', '.anchors', '.fa', '.fna', '.faa', '.json'];
     if (!allowedExtensions.some(ext => p.endsWith(ext))) return false;
     return true;
 }
@@ -170,24 +170,133 @@ function isSafeValue(value) {
 // |  |\  \----.|  `--'  | |  `--'  |     |  |     |  |____.----)   |   
 // | _| `._____| \______/   \______/      |__|     |_______|_______/    
                                                                      
+// Validation du contenu réel d'un fichier uploadé
+// Vérifie que les premiers octets correspondent au format attendu (par extension)
+function validateFileContent(filePath, originalName) {
+
+    //Vérif originalName
+    if (!originalName || typeof originalName !== 'string') {
+        logToFile(`Rejet: originalName manquant (${originalName})`);
+        return false;
+    }
+    
+    const ext = path.extname(originalName).toLowerCase();
+    
+    let head;
+    try {
+        const fd = fs.openSync(filePath, 'r');
+        const buf = Buffer.alloc(4096);
+        const bytesRead = fs.readSync(fd, buf, 0, 4096, 0);
+        fs.closeSync(fd);
+        head = buf.toString('utf8', 0, bytesRead);
+    } catch (e) {
+        logToFile(`Erreur lecture head ${originalName}: ${e.message}`, uploadId);
+        return false;
+    }
+
+    // Patterns dangereux
+    const dangerousPatterns = /<script|javascript:|eval\s*\(|import\s+|require\s*\(|exec\s*\(/i;
+    if (dangerousPatterns.test(head)) {
+        logToFile(`Rejet malveillant: ${originalName}`, uploadId);
+        return false;
+    }
+
+    const trimmed = head.trim();
+
+    switch (ext) {
+        case '.fasta': case '.fa': case '.fna': case '.faa':
+            if (!/^>/.test(trimmed)) return false;
+            break;
+        case '.gff': case '.gff3':
+            if (!/^(##gff-version|#)/.test(trimmed) && !/^\S+\t\S+\t/.test(trimmed)) return false;
+            break;
+        case '.bed': case '.tsv': case '.txt':
+            {
+                const lines = trimmed.split('\n').filter(l => l.trim() && !l.startsWith('#'));
+                if (lines.length > 0 && !lines[0].includes('\t')) return false;
+            }
+            break;
+        case '.json':
+            try { JSON.parse(fs.readFileSync(filePath, 'utf8')); }
+            catch { return false; }
+            break;
+        case '.anchors': case '.out':
+            break;  // OK par défaut
+    }
+    return true;
+}
+
 // Configuration de multer pour gérer les fichiers
 const multer = require('multer'); //upload des fichiers
+
+const allowedUploadExtensions = [
+    '.txt', '.fasta', '.tsv', '.bed', '.gff', '.gff3',
+    '.out', '.anchors', '.fa', '.fna', '.faa', '.json'
+];
+
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, '/var/www/html/synflow/data/comparisons/');
     },
-    filename: function (req, file, cb) {
-        const prefix = req.uploadId || Date.now();
-        // garde le nom original pour retrouver facilement
-        cb(null, prefix + "_" + file.originalname);
+	filename: function (req, file, cb) {
+		const prefix = req.uploadId || Date.now();
+		
+		// Protection originalname
+		const safeName = (file.originalname || 'unknown')
+			.replace(/[^a-zA-Z0-9._-]/g, '_')
+			.substring(0, 100);
+		
+		cb(null, `${prefix}_${safeName}`);
+	}
+});
+
+const upload = multer({ 
+    storage: storage,
+    limits: {
+        fileSize: 500 * 1024 * 1024,  // 500MB max
+        files: 20,                    // max 20 fichiers
+        fieldSize: 10 * 1024          // 10KB max champ texte
+    },
+    fileFilter: (req, file, cb) => {
+
+		const allowedUploadExtensions = ['.txt', '.fasta', '.tsv', '.bed', '.gff', '.gff3','.out', '.anchors', '.fa', '.fna', '.faa', '.json'];
+
+		const ext = path.extname(file.originalname).toLowerCase();
+		if (!allowedUploadExtensions.includes(ext)) {
+            return cb(new Error(`Extension non autorisée: ${ext}`), false);
+        }
+        // Bloquer les noms de fichier contenant des caractères dangereux
+        if (/[;\n\r`$|&<>(){}\\]/.test(file.originalname)) {
+            return cb(new Error('Nom de fichier invalide'), false);
+        }
+        cb(null, true);
     }
 });
-const upload = multer({ storage: storage });
 
 
 // Route POST pour gérer l'upload de fichiers et les paramètres texte
 app.post('/upload', assignUploadId, upload.any(), (req, res) => {
     console.log('Upload ID:', req.uploadId);
+
+	// Validation du contenu de chaque fichier uploadé
+    const rejected = [];
+    for (const file of req.files) {
+        if (!validateFileContent(file.path, file.originalname)) {
+            rejected.push(file.originalname);
+            // Supprimer le fichier rejeté du disque
+            try { fs.unlinkSync(file.path); } catch { /* ignore */ }
+        }
+    }
+    if (rejected.length > 0) {
+        // Supprimer aussi les fichiers valides de ce lot (tout ou rien)
+        for (const file of req.files) {
+            try { fs.unlinkSync(file.path); } catch { /* already deleted or ignore */ }
+        }
+        return res.status(400).json({
+            error: `Contenu invalide pour : ${rejected.join(', ')}. Formats attendus : FASTA, GFF3, BED, TSV, JSON, etc.`
+        });
+    }
+
     const uploadedFiles = req.files.map(file => ({
         fieldname: file.fieldname,
         originalname: file.originalname, // nom original utile pour mapping
@@ -207,6 +316,53 @@ app.post('/upload', assignUploadId, upload.any(), (req, res) => {
     });
 });
 
+//Error handler Multer + Socket.IO
+uploadRouter.use((error, req, res, next) => {
+    if (!req.uploadId) {
+        req.uploadId = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    }
+    
+    // Multer errors (taille, type, etc.)
+    if (error instanceof multer.MulterError) {
+        const messages = {
+            'LIMIT_FILE_SIZE': 'File too large (max 500MB)',
+            'LIMIT_FILE_COUNT': 'Too many files (max 20)',
+            'LIMIT_FIELD_SIZE': 'Text parameters too long',
+            'LIMIT_UNEXPECTED_FILE': 'Unexpected file type'
+        };
+        
+        const message = messages[error.code] || `Multer error: ${error.code}`;
+        
+        logToFile(`Multer error ${error.code}: ${message}`, req.uploadId);
+        
+        // Note: req.socket n'existe pas, on utilise une approche différente
+        res.status(400).json({
+            error: 'Upload failed',
+            message: message,
+            uploadId: req.uploadId
+        });
+        return;
+    }
+    
+    // Erreurs validateFileContent
+    if (error.message && error.message.includes('Invalid content')) {
+        logToFile(`Invalid content: ${error.message}`, req.uploadId);
+        res.status(400).json({
+            error: 'Invalid content',
+            message: error.message,
+            uploadId: req.uploadId
+        });
+        return;
+    }
+    
+    // Autres erreurs
+    logToFile(`Upload error: ${error.message}`, req.uploadId);
+    res.status(500).json({
+        error: 'Server error',
+        message: error.message,
+        uploadId: req.uploadId
+    });
+});
 
 
 io.on('connection', socket => {
