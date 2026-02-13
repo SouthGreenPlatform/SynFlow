@@ -389,14 +389,7 @@ io.on('connection', socket => {
     const toolkitAnalysisDir = toolkitWorkingPath + 'toolkit_' + socket.id +'/';
     fs.mkdirSync(toolkitAnalysisDir);
 
-    const { exec } = require('child_process');
-    const { spawn } = require('child_process');
     const path = require('path');  // Utilisé pour extraire le nom de fichier
-
-    
-
-
-    
     
     // Récupérer les fichiers de sortie dans le repertoire d'analyse
     // paramètre : toolkitID (ex: toolkit_123456789)
@@ -461,50 +454,44 @@ io.on('connection', socket => {
         if(serviceData.service == "opal"){
 
             // Fonction pour construire la commande de lancement Opal
-            function buildLaunchCommand(formData, uploadedFiles, params) {
-                const { url, action, arguments: args } = formData;
-                const inputs = args.inputs;
-                if (!inputs) {
-                    throw new Error("Les 'inputs' ne sont pas définis pour ce service.");
+    // buildOpalLaunchCommand (code original)
+        function buildOpalLaunchCommand(serviceData, uploadedFiles, params) {
+            const { url, action, arguments: argmts } = serviceData;
+            const inputs = argmts.inputs;
+            if (!inputs) throw new Error("Les 'inputs' ne sont pas définis");
+
+            let aArgs = "";
+            let filePaths = [];
+
+            inputs.forEach(input => {
+                logToFile(`Input: ${input.name} type ${input.type} flag ${input.flag}`, socket.id);
+                if (input.flag) {
+                if (input.type !== "file" && input.type !== "file[]") {
+                    const value = params[input.name];
+                    if (value && value !== "") aArgs += ` ${input.flag} ${value}`;
                 }
-                let commandArgs = ``;
-                let aArgs = "";  // Les arguments pour -a
-                // Parcourir les inputs
-                inputs.forEach(input => {
-                    console.log("Traitement input:", input);
-                    if (input.flag) {
-                        if (input.type !== "file" && input.type !== "file[]") {
-                            const value = params[input.name];
-                            if (value && value !== "") {
-                                aArgs += ` ${input.flag} ${value}`;
-                            }
-                        }
-                    }
-                    if (input.type === "file" || input.type === "file[]") {
-                        const matchingFiles = uploadedFiles.filter(file => file.fieldname === input.name);
-                        console.log(`Fichiers trouvés pour ${input.name}:`, matchingFiles);
-                        matchingFiles.forEach(file => {
-                            if (file && file.path && isSafePath(file.path)) {
-                                aArgs += ` ${input.flag} ${file.path}`;
-                            }
-                        });
+                }
+                if (input.type === "file" || input.type === "file[]") {
+                const matchingFiles = uploadedFiles.filter(file => file.fieldname === input.name);
+                matchingFiles.forEach(file => {
+                    if (file && file.path) {
+                    filePaths.push(file.path);
+                    const fileName = path.basename(file.path);
+                    aArgs += ` ${input.flag} ${fileName}`;
                     }
                 });
-                // Ajout du bloc -a
-                if (aArgs) {
-                    commandArgs += aArgs.trim();
                 }
+            });
 
-                // Extraire l'UUID des noms de fichiers (format: UUID_filename)
-                const uuidMatch = commandArgs.match(/(\d+-\d+)_/);
-                const uuid = uuidMatch ? uuidMatch[1] : '';
+            const args = ['-r', action, '-l', url];
+            if (aArgs.trim()) args.push('-a', aArgs.trim());
+            filePaths.forEach(filePath => args.push('-f', filePath));
 
-                // Ajouter l'UUID à la commande si trouvé (avec un ESPACE avant -u)
-                const uuidArg = uuid ? ` -u ${uuid}` : ''; //ESPACE au début
-
-                // Retourner la commande complète avec activation de l'environnement conda
-                return `bash -c "source /opt/conda/etc/profile.d/conda.sh && conda activate synflow && python /app/workflow/create_conf.py ${commandArgs.trim()}${uuidArg}"`;
-            }
+            return {
+                binary: 'python2',
+                args: ['/opt/OpalPythonClient/opal-py-2.4.1/GenericServiceClient.py', ...args]
+            };
+        }
 
             // nettoie les paramètres pour éviter les injections de commandes
             Object.keys(params || {}).forEach(key => {
@@ -517,7 +504,7 @@ io.on('connection', socket => {
 
 
             // Générer la commande de lancement
-            launchCommand = buildLaunchCommand(serviceData, uploadedFiles, params);
+            launchCommand = buildOpalLaunchCommand(serviceData, uploadedFiles, params);
             console.log(`Commande générée : ${launchCommand}`);
             socket.emit('consoleMessage', launchCommand);
 
@@ -528,7 +515,7 @@ io.on('connection', socket => {
             // |  |____ /  .  \  |  |____ |  `----.
             // |_______/__/ \__\ |_______| \______|                  
             // Exécuter la commande
-            exec(launchCommand, (error, stdout, stderr) => {
+            execFile(launchInfo.binary, launchInfo.args, (error, stdout, stderr) => {
 
                 if (error) {
                     console.error(`Erreur d'exécution : ${error}`);
