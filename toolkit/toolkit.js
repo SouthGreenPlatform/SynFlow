@@ -508,28 +508,32 @@ function submitForm() {
     });
 
     // Envoyer les fichiers et paramètres via fetch
-    fetch(socketURL+'/upload', {
+    fetch(socketURL + '/upload', {
         method: 'POST',
         body: formData
-    }).then(response => response.json())
-    .then(data => {
+    })
+    .then(response => {
         if (!response.ok) {
-            // AFFICHE les erreurs upload via Socket.IO
-            if (data.message) {
-                socket.emit('consoleMessage', `UPLOAD: ${data.message}`);
-            }
-            console.error('Cannot upload:', data);
-            return;
+            return response.json().then(data => {
+                if (data.message) {
+                    socket.emit('consoleMessage', `UPLOAD: ${data.message}`);
+                }
+                console.error('Cannot upload:', data);
+                throw new Error('Upload failed');
+            });
         }
+        return response.json();
+    })
+    .then(data => {
         addToConsole('Files uploaded successfully:');
         addToConsole(JSON.stringify(data, null, 2));
-        // Ensuite, lancer l'exécution du service via Socket.IO ou un autre mécanisme
         try {
             socket.emit('runService', selectedService, serviceData, data);
         } catch (error) {
             addToConsole('Error running service: ' + error.message);
         }
-    }).catch((error) => {
+    })
+    .catch((error) => {
         addToConsole(`Connection error: ${error.message}`);
     });
 }

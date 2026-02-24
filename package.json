@@ -6,7 +6,6 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "serveur": "node src/server.js"
-
   },
   "repository": {
     "type": "git",
@@ -21,8 +20,8 @@
   "homepage": "https://github.com/SouthGreenPlatform/SynFlow#readme",
   "dependencies": {
     "express": "^4.19.2",
-    "socket.io": "^4.7.5",
     "multer": "^2.0.0",
-    "nodemon": "^2.0.22"
+    "nodemon": "^3.1.14",
+    "socket.io": "^4.7.5"
   }
 }
