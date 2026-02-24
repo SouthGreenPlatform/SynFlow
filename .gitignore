@@ -4,4 +4,5 @@ public/data/*
 node_modules/*
 data/*
 bank/*
+tmp/*
 volumes
