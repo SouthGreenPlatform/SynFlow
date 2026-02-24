@@ -1,6 +1,6 @@
 import * as toolkit from '../../toolkit/toolkit.js';
 import { zoom } from './draw.js';
-import { handleFileUpload, extractAllGenomes, spinner } from './process.js';
+import { handleFileUpload, extractAllGenomes, spinner, startRenderTimer } from './process.js';
 import { updateFileMatrix } from './matrix.js';
 import { logActivity } from './main.js';
 //mode de chargement des fichiers
@@ -409,9 +409,15 @@ async function createExistingFilesForm() {
 
         logActivity('Loading existing files for selected genomes: ' + selectedGenomes.join(', '));
 
-        // Lance le spinner
-        var target = document.getElementById('spinner');
-        spinner.spin(target); 
+            // Lance le spinner (et démarre le chronomètre de rendu)
+            var target = document.getElementById('spinner');
+            try {
+                console.info('startRenderTimer called (existing)', selectedGenomes);
+                startRenderTimer({ action: 'draw-click', mode: 'existing', selectedGenomes: selectedGenomes.length });
+            } catch (e) {
+                console.warn('startRenderTimer missing', e);
+            }
+            spinner.spin(target);
 
         fileUploadMode = 'remote'; // Change mode to remote for file upload
 

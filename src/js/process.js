@@ -2,7 +2,7 @@ import { drawChromosomes, drawStackedChromosomes, drawCorrespondenceBands, reset
 import { generateBandTypeFilters, createSlider, createLengthChart, updateBandsVisibility, showControlPanel } from './legend.js';
 import { Spinner } from './spin.js';
 import { fileOrderMode, fileUploadMode, hideForm, setSelectedGenomes } from './form.js';
-import { logActivity } from './main.js';
+import { logActivity, sendMetric } from './main.js';
 
 export let refGenome; // Définir globalement
 export let queryGenome; // Définir globalement
@@ -38,6 +38,76 @@ const opts = {
     className: 'spinner', position: 'fixed'
 };
 export var spinner = new Spinner(opts);
+
+// Render timer for measuring duration between draw click and spinner stop
+let __renderTimerStart = null;
+let __renderTimerStart_context = null;
+export function startRenderTimer(context = {}) {
+    try {
+        __renderTimerStart = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        // store context for later
+        __renderTimerStart_context = context || {};
+        // also save to session so a page reload won't lose it (best-effort)
+        try { sessionStorage.setItem('visusnp_render_start', JSON.stringify({ ts: Date.now(), ctx: __renderTimerStart_context })); } catch (e) {}
+        console.info('Render timer started', __renderTimerStart_context);
+    } catch (e) {
+        console.warn('startRenderTimer failed', e);
+    }
+}
+
+export function stopRenderTimer(extra = {}) {
+    try {
+        const end = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        if (!__renderTimerStart) {
+            // no timer started, still stop spinner
+            try { spinner.stop(); } catch (e) {}
+            return null;
+        }
+        const durationMs = end - __renderTimerStart;
+        const ctx = __renderTimerStart_context || {};
+        // Fusionne tous les contextes (ctx, extra) dans un seul objet
+            // Collecte infos navigateur/environnement dans env
+            let env = {};
+            try {
+                env = {
+                    userAgent: navigator.userAgent || null,
+                    cores: navigator.hardwareConcurrency || null,
+                    deviceMemory: navigator.deviceMemory || null
+                };
+            } catch (e) {}
+            const metric = {
+                ts: Date.now(),
+                durationMs,
+                context: Object.assign({}, ctx, extra),
+                env
+            };
+
+        // persist metric locally
+        try {
+            const stored = JSON.parse(localStorage.getItem('visusnp_render_metrics') || '[]');
+            stored.push(metric);
+            localStorage.setItem('visusnp_render_metrics', JSON.stringify(stored));
+        } catch (e) {
+            // ignore storage errors
+        }
+
+        // stop spinner (actual UI)
+        try { spinner.stop(); } catch (e) { console.warn('spinner.stop failed', e); }
+
+        // clear timer
+        __renderTimerStart = null;
+        __renderTimerStart_context = null;
+
+        console.info('Render metric recorded', metric);
+        logActivity('Render completed in ' + durationMs.toFixed(2) + ' ms', { ...ctx, ...extra, durationMs });
+        sendMetric(metric);
+        return metric;
+    } catch (e) {
+        console.warn('stopRenderTimer failed', e);
+        try { spinner.stop(); } catch (ee) {}
+        return null;
+    }
+}
 
 function resetGlobals() {
     isFirstDraw = true;
@@ -129,7 +199,6 @@ function processChunks(lines, isFirstFile) {
                 chromPositions = drawChromosomes(genomeData, globalMaxChromosomeLengths, refGenome, queryGenome, isFirstFile, scale);
 
             }
-            
             drawCorrespondenceBands(parsedData, chromPositions, isFirstFile, scale);
             previousChromosomePositions = chromPositions;
             // globalThis.fullParsedData = parsedData; // Sauvegarder les données du dernier fichier traité
@@ -155,7 +224,21 @@ function processNextFile() {
         readFileInChunks(currentFile, false);
     } else {
         allDone();
-        spinner.stop();
+        // Récupère les valeurs du dernier contexte si dispo
+        let nbChromosomes = 0, nbBandes = 0;
+
+        const allBand = d3.selectAll('path.band')
+        nbBandes = allBand.size();
+        const allChromosomes = d3.selectAll('path.chrom');
+        nbChromosomes = allChromosomes.size();
+        if (typeof window !== 'undefined' && window.__renderTimerStart_context) {
+            nbChromosomes = window.__renderTimerStart_context.nbChromosomes || 0;
+            nbBandes = window.__renderTimerStart_context.nbBandes || 0;
+        } else if (typeof globalThis !== 'undefined' && globalThis.__renderTimerStart_context) {
+            nbChromosomes = globalThis.__renderTimerStart_context.nbChromosomes || 0;
+            nbBandes = globalThis.__renderTimerStart_context.nbBandes || 0;
+        }
+        stopRenderTimer({ nbChromosomes, nbBandes });
     }
 }
 
@@ -964,7 +1047,7 @@ export function findUniqueGenomes(bandFileNames) {
     let start = Object.keys(counts).find(g => counts[g] === 1 && firsts.includes(g));
     if (!start) {
         alert("Error: Unable to find a unique starting genome. Please check your band files.");
-        spinner.stop();
+        stopRenderTimer();
         return null;
     }
     // Reconstitue la chaîne
@@ -1001,7 +1084,7 @@ function handleFileUpload(bandFiles, bedFiles) {
     // Vérifier si tous les fichiers de bandes nécessaires sont présents
     if (!uniqueGenomes || uniqueGenomes.length < 2) {
         alert('Some band files are missing. Please ensure all necessary files are uploaded.');
-        spinner.stop();
+        stopRenderTimer();
         return;
     }
 
@@ -1019,7 +1102,7 @@ function handleFileUpload(bandFiles, bedFiles) {
     // Vérifier si tous les fichiers de bandes nécessaires sont présents et dans l'ordre
     if (orderedFiles.length !== bandFileNames.length) {
         alert('Some band files are missing. Please ensure all necessary files are uploaded.');
-        spinner.stop();
+        stopRenderTimer();
         return;
     }
 

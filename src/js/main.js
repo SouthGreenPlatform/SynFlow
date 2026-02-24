@@ -16,6 +16,16 @@ export function logActivity(message) {
         socket.emit('logMessage', message);
     }
 }
+
+export function sendMetric(metric) {
+    // Console log local
+    console.info('Sending metric to server:', metric);
+    
+    // Émettre vers le serveur si socket est connecté
+    if (socket) {
+        socket.emit('metric', metric);
+    }
+}
 // console.log("syri");
 // Définir le comportement de zoom
 // export const zoom = d3.zoom()
