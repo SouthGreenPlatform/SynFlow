@@ -1046,7 +1046,6 @@ function handleFileUpload(bandFiles, bedFiles) {
             
             // Ajuster le scale en fonction de l'ordre de grandeur
             const scale = orderOfMagnitude / 100;
-            // console.log(scale);
             return scale;
         }
         
@@ -1167,7 +1166,6 @@ async function calculateChromosomeDataFromBandFiles(orderedFileObjects, uniqueGe
         });
     }
 
-    // console.log("genomeData mis à jour :");
     console.log(genomeData);
     return genomeData;
 }
@@ -1222,7 +1220,6 @@ async function calculateChromosomeDataFromBandFilesAlphabetical(orderedFileObjec
         });
     });
 
-    // console.log('genomeData (alphabetical) mis à jour :', genomeData);
     return genomeData;
 }
 
@@ -1347,10 +1344,6 @@ function reorderFileList(fileListElement, orderedFileNames, fileType) {
     //exemple: chargement depuis l'onglet existing files
     if (!fileListElement) return;
 
-    // console.log(fileListElement);
-    // console.log(orderedFileNames);
-    // console.log(fileType);
-
     // Ajoute le listener dragend UNE SEULE FOIS
     if (!fileListElement.dataset.dragendListener) {
         fileListElement.addEventListener('dragend', () => {
@@ -1358,7 +1351,6 @@ function reorderFileList(fileListElement, orderedFileNames, fileType) {
                 item.dataset.fileName.replace(`.${fileType}`, '')
             );
             setSelectedGenomes(newOrder);
-            // console.log('Nouvel ordre:', newOrder);
             uniqueGenomes = newOrder;
             if (fileUploadMode === 'remote') {
                 const chainDiv = document.querySelector('#selected-chain');
@@ -1451,7 +1443,6 @@ function orderFilesByGenomes(files, genomes) {
 }
 
 function calculateGlobalMaxChromosomeLengths(genomeData) {
-    // console.log("Calculating global max chromosome lengths from genome data:");
     const globalMaxLengths = {};
 
     for (const genome in genomeData) {
@@ -1462,16 +1453,12 @@ function calculateGlobalMaxChromosomeLengths(genomeData) {
             const len = (chrData && typeof chrData.length === 'number') ? chrData.length : 0;
             if (chrData === undefined) {
                 console.warn(`Genome: ${genome}, Chromosome Index: ${index} is undefined - treating length as 0`);
-            } else {
-                // console.log(`Genome: ${genome}, Chromosome Index: ${index}, Data: `, chrData);
             }
-
             if (globalMaxLengths[index] === undefined || len > globalMaxLengths[index]) {
                 globalMaxLengths[index] = len;
             }
         }
     }
-    // console.log(globalMaxLengths);
     return globalMaxLengths;
 }
 
@@ -1497,7 +1484,6 @@ function parseSyriData(data) {
 // parse la liste des fichiers syri all vs all et renvoie la liste des génomes
 export function extractAllGenomes(bandFileNames) {
     const fragmentCounts = {};
-    // console.log("Extracting all genomes from band files: ", bandFileNames);
     bandFileNames = bandFileNames
         .filter(name => name.endsWith('.out'))
         .map(name => name.trim());

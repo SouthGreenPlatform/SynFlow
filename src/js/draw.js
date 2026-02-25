@@ -210,7 +210,7 @@ export function drawMiniChromosome(genome, svg, options = {}) {
         });
         svg.attr('data-genome', genome);
     } catch (e) {
-        warn('Failed to set attributes on svg with d3 selection, trying fallback', e);
+        console.warn('Failed to set attributes on svg with d3 selection, trying fallback', e);
     }
     try {
         const node = svg.node ? svg.node() : svg;
@@ -219,7 +219,7 @@ export function drawMiniChromosome(genome, svg, options = {}) {
             node.dataset.genome = genome;
         }
     } catch (error_) {
-        warn('Failed to set attributes on svg with direct DOM manipulation', error_);
+        console.warn('Failed to set attributes on svg with direct DOM manipulation', error_);
     }
 
     // build path for mini chromosome with rounded ends
@@ -255,7 +255,7 @@ export function drawMiniChromosome(genome, svg, options = {}) {
             p.attr('fill', color).attr('stroke', color);
         }
     } catch (e) {
-        warn('Failed to draw mini chromosome with d3 selection, trying fallback', e);
+        console.warn('Failed to draw mini chromosome with d3 selection, trying fallback', e);
         // fallback if svg is not a d3 selection
         try {
             const node = svg.node ? svg.node() : svg;
@@ -284,7 +284,7 @@ export function drawMiniChromosome(genome, svg, options = {}) {
             }
             node.appendChild(pathEl);
         } catch (error) {
-            warn('Failed to draw mini chromosome with direct DOM manipulation', error);
+            console.warn('Failed to draw mini chromosome with direct DOM manipulation', error);
         }
     }
 }
@@ -410,8 +410,6 @@ export function drawStackedChromosomes(genomeData, maxLengths, fileIndex, totalG
     const margin = { top: 30, bottom: 30, left: 50, right: 50 };
     const spaceBetween = 100;
     const totalSpaceBetween = totalGenomes * 100;
-    const maxLength = Math.max(...Object.values(maxLengths));
-    const totalWidth = (maxLength / scale) + margin.left + margin.right;
 
     const radius = 5;
 
@@ -513,12 +511,12 @@ function drawChromPathNoArm(x, y, width, radius, chromNum, chromName, genome, sv
     let initFill = null;
     let initStroke = null;
 
-    const override = (globalThis.chromDisplaySettings && globalThis.chromDisplaySettings[chromKey]) ? globalThis.chromDisplaySettings[chromKey] : null;
-    const genomeSetting = (globalThis.genomeDisplaySettings && globalThis.genomeDisplaySettings[genome]) ? globalThis.genomeDisplaySettings[genome] : null;
+    const override = (globalThis.chromDisplaySettings?.[chromKey]) ? globalThis.chromDisplaySettings[chromKey] : null;
+    const genomeSetting = (globalThis.genomeDisplaySettings?.[genome]) ? globalThis.genomeDisplaySettings[genome] : null;
 
     if (override) {
         const mode = override.mode || 'filled';
-        const color = override.color || (genomeColors && genomeColors[genome]) || chromColor;
+        const color = override.color || (genomeColors?.[genome]) || chromColor;
         const gId = `gradient-${genome}-${chromBase}`;
         if (mode === 'outline') {
             initFill = 'none';
@@ -571,10 +569,10 @@ function drawChromPathNoArm(x, y, width, radius, chromNum, chromName, genome, sv
             // console.log('Chromosome path clicked:', { genome, chromName });
             try {
                 event.preventDefault();
-                if (typeof createChromContextMenu !== 'function') {
-                    console.error('createChromContextMenu is not a function (import may be undefined due to circular imports)');
-                } else {
+                if (typeof createChromContextMenu === 'function') {
                     createChromContextMenu(event.clientX, event.clientY, this);
+                } else {
+                    console.error('createChromContextMenu is not a function (import may be undefined due to circular imports)');
                 }
             } catch (e) {
                 console.warn('Failed to open chromosome context menu', e);
@@ -596,14 +594,7 @@ function drawSNPDensityHeatmap(snpDensity, refLengths, chromPositions, binSize =
 
     for (const chr in snpDensity) {
         const chrDensity = snpDensity[chr];
-        const chrLength = refLengths[chr];
         const numBins = chrDensity.length;
-
-        const x = chromPositions[chr].refX;
-        const y = chromPositions[chr].refY;
-        const width = chrLength / scale; // Same scaling as chromosomes
-        const binWidth = width / numBins;
-        const height = 10; // Height of the heatmap bar
 
         // Créer le gradient linéaire
         const gradientId = `grad-${chr}`;
@@ -619,21 +610,13 @@ function drawSNPDensityHeatmap(snpDensity, refLengths, chromPositions, binSize =
                 .attr('offset', `${(i + 1) * (100 / numBins)}%`)
                 .attr('stop-color', colorScale(density));
         });
-
-        // // Appliquer le gradient au chromosome
-        // svgGroup.append('rect')
-        //     .attr('x', x)
-        //     .attr('y', y) // Position au-dessus du chromosome
-        //     .attr('width', width)
-        //     .attr('height', height)
-        //     .attr('fill', `url(#${gradientId})`);
         
         //attribut le gradient au chromosome
         const monChromColor = d3.selectAll("#" + chr + "_ref.chrom");
         // Déterminer la couleur selon le mode
         let chromColor;
-        if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
-            const chromIndex = parseInt(chr, 10) - 1;
+        if (bandColorMode !== undefined && bandColorMode === 'byChrom') {
+            const chromIndex = Number.parseInt(chr, 10) - 1;
             chromColor = generateColor(chromIndex >= 0 ? chromIndex : 0);
         } else {
             chromColor = genomeColors[refGenome];
@@ -644,18 +627,17 @@ function drawSNPDensityHeatmap(snpDensity, refLengths, chromPositions, binSize =
 }
 
 export function drawCorrespondenceBands(data, chromPositions, isFirstFile, scale, mergeThreshold = 500000) {
-    // console.log("Draw correspondence bands");
-    // console.log(mergeThreshold);
+
     const svgGroup = d3.select('#zoomGroup');
 
     // Types à merger
-    const mergeTypes = ['INVTR', 'TRANS'];
+    const mergeTypes = new Set(['INVTR', 'TRANS']);
     // Types à dessiner normalement
-    const normalTypes = ['SYN', 'INV', 'DUP'];
+    const normalTypes = new Set(['SYN', 'INV', 'DUP']);
 
     // Sépare les bandes à merger et les autres
-    const bandsToMerge = data.filter(d => mergeTypes.includes(d.type));
-    const bandsNormal = data.filter(d => normalTypes.includes(d.type));
+    const bandsToMerge = data.filter(d => mergeTypes.has(d.type));
+    const bandsNormal = data.filter(d => normalTypes.has(d.type));
 
    // Fusionne les bandes à merger en tenant compte des autres bandes
     const mergedBands = mergeBands(bandsToMerge, bandsNormal, mergeThreshold);
@@ -717,7 +699,6 @@ function mergeBands(bandsToMerge, otherBands, threshold) {
         merged.push(current);
     }
 
-    // console.log(`Merged ${bandsToMerge.length} INVTR bands into ${merged.length} bands`);
     return merged;
 }
 
@@ -734,7 +715,6 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
     //Si c'est un redraw alors on vérifie les filtres de bandes
     if(!isFirstDraw){
         if (!isBandVisible(d)) {
-            // console.log(`Band of type ${d.type} between ${d.refChr} and ${d.queryChr} is hidden by filter.`);
             display = 'none';
         }
     }
@@ -745,7 +725,7 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
     const queryX = chromPositions[[queryChromNum]]?.queryX;
 
     let color;
-    if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
+    if (bandColorMode !== undefined && bandColorMode === 'byChrom') {
         // Utilise le numéro de chromosome de référence (refChromNum) pour choisir la couleur
         // refChromNum est 1-based ; generateColor attend un index, on met refChromNum-1
         // Si refChromNum est invalide, on retombe sur la couleur par type
@@ -791,10 +771,8 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
         const refEndX = refX + (d.refEnd / scale);
         let queryStartX = queryX + (d.queryStart / scale);
         let queryEndX = queryX + (d.queryEnd / scale);
-        // const color = currentBandTypeColors[d.type] || '#ccc'; // Utiliser la couleur définie ou gris clair par défaut
 
         const refY = chromPositions[[refChromNum]]?.refY + 10; // Ajuster pour aligner sur le chromosome de référence
-        // const queryY = chromPositions[d.queryChr]?.queryY; // Ajuster pour aligner sur le chromosome de requête
         const queryY = chromPositions[[queryChromNum]]?.queryY; // Ajuster pour aligner sur le chromosome de requête
 
         // Inverser les positions queryStart et queryEnd pour les types d'inversion
@@ -806,7 +784,6 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
         const bandLength = d.refEnd - d.refStart;
 
         // Déterminer le type de bande (inter ou intra)
-        // const bandPos = d.refChr === d.queryChr ? 'intra' : 'inter';
         const bandPos = refChromNum === queryChromNum ? 'intra' : 'inter';
 
         // Dessiner une bande courbée pour la correspondance
@@ -883,9 +860,6 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
                     showInfoUpdatedMessage()
                     const linesInRange = getLinesInRange(parsedSet.data, d.refChr, d.queryChr, d.refStart, d.refEnd, d.queryStart, d.queryEnd);
                     
-                    // const tableHtml = await convertLinesToTableHtml(linesInRange, d.refStart, d.refEnd, d.queryStart, d.queryEnd, refGenome, queryGenome);               
-                    // d3.select('#info').html(`${tableHtml}`);
-                    
                     const summary = createSummarySection(linesInRange, d.refStart, d.refEnd, d.queryStart, d.queryEnd, refGenome, queryGenome);
                     d3.select('#summary').html(`<div class="summary-section"><h4>Summary</h4>${summary}</div>`);
 
@@ -919,14 +893,12 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
 
 
 export function getLinesInRange(parsedData, refChr, queryChr, refStart, refEnd, queryStart, queryEnd) {
-    // console.log("getLinesInRange", refChr, queryChr, refStart, refEnd, queryStart, queryEnd);
     return parsedData.filter(d => d.refChr === refChr && d.queryChr === queryChr && d.refStart >= refStart && d.refEnd <= refEnd && d.queryStart >= queryStart && d.queryEnd <= queryEnd);
 }
 
 
 export async function createAnchorsSection(lines, refStart, refEnd, queryStart, queryEnd, refGenome, queryGenome) {
     const refChr = lines[0].refChr;
-    const queryChr = lines[0].queryChr;
 
     try {
         // Récupère les data du fichier anchors correspondant aux coordonnées choisies
@@ -963,8 +935,8 @@ export async function createAnchorsSection(lines, refStart, refEnd, queryStart, 
         // Filtre les gènes du BED ref dans la région d'intérêt
         const refGenesInRegion = refBedLines.filter(line => {
             const [chr, start, end] = line.split('\t');
-            const geneStart = parseInt(start);
-            const geneEnd = parseInt(end);
+            const geneStart = Number.parseInt(start);
+            const geneEnd = Number.parseInt(end);
             
             // Vérifie si le gène est dans la région spécifiée
             return chr === refChr && 
@@ -975,7 +947,7 @@ export async function createAnchorsSection(lines, refStart, refEnd, queryStart, 
         // Pour chaque gène du bed ref, cherche son orthologue dans le fichier anchors
         const orthologPairs = [];
         refGenesInRegion.forEach(refBedLine => {
-            const [refChr, refStart, refEnd, refGeneName, refScore, refStrand] = refBedLine.split('\t');
+            const [refChr, refStart, refEnd, refGeneName,, refStrand] = refBedLine.split('\t');
             
             // Filtre les anchors pour ce gène
             const foundAnchors = anchorLines.filter(line => 
@@ -983,44 +955,39 @@ export async function createAnchorsSection(lines, refStart, refEnd, queryStart, 
             );
 
             foundAnchors.forEach(anchorLine => {
-                const [refAnchor, queryAnchor, score, score2] = anchorLine.split('\t');
+                const [refAnchor, queryAnchor, score] = anchorLine.split('\t');
                 // Trouve les coordonnées du gène query correspondant
                 const queryBedLine = queryBedLines.find(line => {
                     const bedQueryGeneName = line.split('\t')[3];
-                    const cleanQueryAnchor = queryAnchor.trim().replace(/[\r\n]+/g, '');
+                    const cleanQueryAnchor = queryAnchor.trim().replaceAll(/[\r\n]+/g, '');
                     return bedQueryGeneName === cleanQueryAnchor || bedQueryGeneName === queryAnchor;
                 });
                 
                 if (queryBedLine) {
-                    const [queryChr, queryStart, queryEnd, queryName, queryScore, queryStrand] = queryBedLine.split('\t');
+                    const [queryChr, queryStart, queryEnd, queryName,, queryStrand] = queryBedLine.split('\t');
                     orthologPairs.push({
                         ref: {
                             name: refGeneName,
                             chr: refChr,
-                            start: parseInt(refStart),
-                            end: parseInt(refEnd),
+                            start: Number.parseInt(refStart),
+                            end: Number.parseInt(refEnd),
                             strand: refStrand || '+'
                         },
                         query: {
                             name: queryName,
                             chr: queryChr,
-                            start: parseInt(queryStart),
-                            end: parseInt(queryEnd),
+                            start: Number.parseInt(queryStart),
+                            end: Number.parseInt(queryEnd),
                             strand: queryStrand || '+'
                         },
-                        score: parseFloat(score) || 0,
+                        score: Number.parseFloat(score) || 0,
                         anchorRef: refAnchor,
                         anchorQuery: queryAnchor
                     });
                 }
             });
         });
-
-        // console.log('Paires orthologues trouvées:', orthologPairs);
-
         const orthologsHtml = createOrthologsTable(orthologPairs, refGenome, queryGenome );
-
-
         const anchorsHtml = `
             <div class="anchors-refquery">
                 <h4 style="margin-bottom:10px;">Orthologs found: (${orthologPairs.length})</h4>
@@ -1050,7 +1017,7 @@ function isBandVisible(d) {
     if (typeIcons.length > 0) {
         selectedTypes = Array.from(typeIcons)
             .filter(icon => !icon.classList.contains('fa-eye-slash'))
-            .map(icon => icon.getAttribute('data-type'));
+            .map(icon => icon.dataset.type);
     }
 
     // Dépendances de types
@@ -1068,7 +1035,7 @@ function isBandVisible(d) {
     if (chromEyeIcons.length > 0) {
         visibleChromosomes = Array.from(chromEyeIcons)
             .filter(icon => icon.classList.contains('fa-eye'))
-            .map(icon => icon.getAttribute('data-chrom'));
+            .map(icon => icon.dataset.chrom);
     } else {
         // Si pas d'icônes, considérer tous les chromosomes comme visibles
         visibleChromosomes = Object.keys(genomeData[refGenome]).map(String);
@@ -1107,7 +1074,7 @@ export function updateBandColors() {
     d3.selectAll('path.band').each(function() {
         const bandEl = d3.select(this);
         const type = bandEl.attr('data-type');
-        const refNum = parseInt(bandEl.attr('data-ref-num'), 10);
+        const refNum = Number.parseInt(bandEl.attr('data-ref-num'), 10);
         const refGenomeAttr = bandEl.attr('data-ref-genome') || refGenome;
         const refChrAttr = bandEl.attr('data-ref') || '';
         const chromKey = `${refGenomeAttr}|${refChrAttr}`;
@@ -1115,15 +1082,15 @@ export function updateBandColors() {
         // Prefer per-chrom override if present
         // Only respect per-chrom overrides for band coloring when bandColorMode === 'byChrom'
         let chromOverride = null;
-        if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
+        if (bandColorMode !== undefined && bandColorMode === 'byChrom') {
             chromOverride = (globalThis.chromDisplaySettings && globalThis.chromDisplaySettings[chromKey] && globalThis.chromDisplaySettings[chromKey].color) ? globalThis.chromDisplaySettings[chromKey].color : null;
         }
 
         let newColor = null;
         if (chromOverride) {
             newColor = chromOverride;
-        } else if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
-            if (!isNaN(refNum) && refNum > 0) {
+        } else if (bandColorMode !== undefined && bandColorMode === 'byChrom') {
+            if (!Number.isNaN(refNum) && refNum > 0) {
                 newColor = generateColor(refNum - 1);
             } else {
                 newColor = currentBandTypeColors[type] || '#ccc';
@@ -1189,8 +1156,8 @@ export function updateBandColors() {
             }
         } else {
             let chromColor;
-            if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
-                const chromIndex = parseInt(chromNum, 10) - 1;
+            if (bandColorMode !== undefined && bandColorMode === 'byChrom') {
+                const chromIndex = Number.parseInt(chromNum, 10) - 1;
                 chromColor = generateColor(chromIndex >= 0 ? chromIndex : 0);
             } else {
                 chromColor = genomeColors[genome];
@@ -1206,9 +1173,9 @@ export function updateBandColors() {
         // On suppose que l'id contient le numéro du chromosome
         const match = gradId && gradId.match(/grad-(\d+)/);
         if (match) {
-            const chromIndex = parseInt(match[1], 10) - 1;
+            const chromIndex = Number.parseInt(match[1], 10) - 1;
             let chromColor;
-            if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
+            if (bandColorMode !== undefined && bandColorMode === 'byChrom') {
                 chromColor = generateColor(chromIndex >= 0 ? chromIndex : 0);
             } else {
                 chromColor = genomeColors[refGenome];
@@ -1226,7 +1193,7 @@ export function updateBandColors() {
     const chromItems = document.querySelectorAll('#chrom-controler .chrom-item');
     chromItems.forEach((item, idx) => {
         let color;
-        if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
+        if (bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
             color = generateColor(idx);
         } else {
             color = genomeColors[refGenome];

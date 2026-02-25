@@ -318,7 +318,7 @@ app.post('/upload', assignUploadId, upload.any(), (req, res) => {
 });
 
 //Error handler Multer + Socket.IO
-uploadRouter.use((error, req, res, next) => {
+app.use((error, req, res, next) => {
     if (!req.uploadId) {
         req.uploadId = Date.now() + '-' + Math.round(Math.random() * 1E9);
     }
@@ -465,7 +465,7 @@ io.on('connection', socket => {
             let filePaths = [];
 
             inputs.forEach(input => {
-                logToFile(`Input: ${input.name} type ${input.type} flag ${input.flag}`, socket.id);
+                //logToFile(`Input: ${input.name} type ${input.type} flag ${input.flag}`, socket.id);
                 if (input.flag) {
                 if (input.type !== "file" && input.type !== "file[]") {
                     const value = params[input.name];

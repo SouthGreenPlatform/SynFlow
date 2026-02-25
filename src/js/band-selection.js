@@ -1,7 +1,6 @@
-import { globalMaxChromosomeLengths, allParsedData, genomeColors, bandColorMode, uniqueGenomes } from './process.js';
-import { showInfoPanel, showInfoUpdatedMessage } from './info.js';
-import { getLinesInRange, createAnchorsSection, updateBandColors, drawMiniChromosome } from './draw.js';
-import { createSummarySection, createDetailedTable, createTableBadges, initializeTableFiltering, createZoomedSyntenyView } from './info.js';
+import { globalMaxChromosomeLengths, allParsedData, genomeColors, uniqueGenomes } from './process.js';
+import { showInfoPanel, showInfoUpdatedMessage, createSummarySection, createDetailedTable, createTableBadges, initializeTableFiltering, createZoomedSyntenyView } from './info.js';
+import { getLinesInRange, createAnchorsSection, drawMiniChromosome } from './draw.js';
 import { logActivity } from './main.js';
 
 // Set pour stocker les bandes sélectionnées
@@ -65,8 +64,8 @@ export function createContextMenu(x, y, band) {
 
     dragHandle.addEventListener('mousedown', (e) => {
         isDragging = true;
-        initialX = e.clientX - parseFloat(contextMenu.style.left);
-        initialY = e.clientY - parseFloat(contextMenu.style.top);
+        initialX = e.clientX - Number.parseFloat(contextMenu.style.left);
+        initialY = e.clientY - Number.parseFloat(contextMenu.style.top);
         dragHandle.style.cursor = 'grabbing';
     });
 
@@ -110,14 +109,14 @@ export function createContextMenu(x, y, band) {
     slider.type = 'range';
     slider.min = '0';
 	//max = taille du chromosome
-	slider.max = globalMaxChromosomeLengths[band.getAttribute('data-ref-num')] || '10000000';
+	slider.max = globalMaxChromosomeLengths[band.dataset.refNum] || '10000000';
     slider.value = '100000';
     slider.style.width = '100%';
     
     const sliderValue = document.createElement('div');
     sliderValue.textContent = 'Distance: 100kb';
     slider.oninput = () => {
-        const val = parseInt(slider.value);
+        const val = Number.parseInt(slider.value);
         sliderValue.textContent = `Distance: ${val >= 1000000 ? (val/1000000).toFixed(1) + 'Mb' : (val/1000).toFixed(0) + 'kb'}`;
         selectSimilarBands(band, val);
     };
@@ -175,12 +174,12 @@ export function createContextMenu(x, y, band) {
         // Try to scroll to the Info panel and activate the "details" tab.
         const panel = document.getElementById('info-panel') || document.getElementById('info-panel-content') || document.getElementById('info');
         if (panel) {
-            try { panel.scrollIntoView({ behavior: 'smooth' }); } catch (e) { /* ignore */ }
+            try { panel.scrollIntoView({ behavior: 'smooth' }); } catch (e) { console.warn('scrollIntoView failed', e); }
             const detailsTab = panel.querySelector('[data-option="details"]');
             if (detailsTab) detailsTab.click();
         } else if (typeof showInfoPanel === 'function') {
             // fallback: try to open the panel (may create it or reveal it)
-            try { showInfoPanel(); } catch (e) { /* noop */ }
+            try { showInfoPanel(); } catch (e) { console.warn('showInfoPanel failed', e); }
         }
         closeContextMenu();
     };
@@ -200,11 +199,11 @@ export function createContextMenu(x, y, band) {
         // Scroll to the Info panel and activate the "anchors" (synteny) tab if available.
         const panel = document.getElementById('info-panel') || document.getElementById('info-panel-content') || document.getElementById('info');
         if (panel) {
-            try { panel.scrollIntoView({ behavior: 'smooth' }); } catch (e) { /* ignore */ }
+            try { panel.scrollIntoView({ behavior: 'smooth' }); } catch (e) { console.warn('scrollIntoView failed', e); }
             const anchorsTab = panel.querySelector('[data-option="anchors"]');
             if (anchorsTab) anchorsTab.click();
         } else if (typeof showInfoPanel === 'function') {
-            try { showInfoPanel(); } catch (e) { /* noop */ }
+            try { showInfoPanel(); } catch (e) { console.warn('showInfoPanel failed', e); }
         }
         closeContextMenu();
     };
@@ -238,7 +237,6 @@ export function createContextMenu(x, y, band) {
 
 // Créer et afficher le menu contextuel pour un chromosome
 export function createChromContextMenu(x, y, chromEl) {
-    // console.log('createChromContextMenu called', { x, y, chromEl });
 
     // Réutiliser le même mécanisme de fermeture
     if (contextMenu) {
@@ -282,8 +280,8 @@ export function createChromContextMenu(x, y, chromEl) {
 
     dragHandle.addEventListener('mousedown', (e) => {
         isDragging = true;
-        initialX = e.clientX - parseFloat(contextMenu.style.left);
-        initialY = e.clientY - parseFloat(contextMenu.style.top);
+        initialX = e.clientX - Number.parseFloat(contextMenu.style.left);
+        initialY = e.clientY - Number.parseFloat(contextMenu.style.top);
         dragHandle.style.cursor = 'grabbing';
     });
 
@@ -303,8 +301,8 @@ export function createChromContextMenu(x, y, chromEl) {
 
     contextMenu.appendChild(dragHandle);
 
-    const genome = chromEl.getAttribute('data-genome');
-    const chromNameAttr = chromEl.getAttribute('data-chrom-name') || '';
+    const genome = chromEl.dataset.genome;
+    const chromNameAttr = chromEl.dataset.chromName || '';
     const chromBase = chromNameAttr.split('_ref')[0].split('_query')[0];
 
 	// Ajouter le titre
@@ -333,14 +331,14 @@ export function createChromContextMenu(x, y, chromEl) {
 
     // Assurer les objets de settings
     if (!globalThis.genomeDisplaySettings) globalThis.genomeDisplaySettings = {};
-    if (!globalThis.chromDisplaySettings) winglobalThisdow.chromDisplaySettings = {};
-    if (!globalThis.genomeDisplaySettings[genome]) globalThis.genomeDisplaySettings[genome] = { mode: 'filled', color: (genomeColors && genomeColors[genome]) ? genomeColors[genome] : '#000000' };
+    if (!globalThis.chromDisplaySettings) globalThis.chromDisplaySettings = {};
+    if (!globalThis.genomeDisplaySettings[genome]) globalThis.genomeDisplaySettings[genome] = { mode: 'filled', color: (genomeColors?.[genome]) ? genomeColors[genome] : '#000000' };
 
     const chromKey = `${genome}|${chromBase}`;
     if (!globalThis.chromDisplaySettings[chromKey]) {
         globalThis.chromDisplaySettings[chromKey] = {
             mode: globalThis.genomeDisplaySettings[genome].mode || 'filled',
-            color: (globalThis.chromDisplaySettings[chromKey] && globalThis.chromDisplaySettings[chromKey].color) || (globalThis.genomeDisplaySettings[genome].color || ((genomeColors && genomeColors[genome]) ? genomeColors[genome] : '#000000'))
+            color: (globalThis.chromDisplaySettings[chromKey]?.color) || (globalThis.genomeDisplaySettings[genome].color || ((genomeColors?.[genome]) ? genomeColors[genome] : '#000000'))
         };
     }
 
@@ -379,7 +377,8 @@ export function createChromContextMenu(x, y, chromEl) {
         r.value = opt;
         r.checked = opt === 'this';
         lbl.appendChild(r);
-        lbl.appendChild(document.createTextNode(` ${opt === 'this' ? 'This chromosome' : (opt === 'genome' ? 'All chromosomes of this genome' : 'All chromosomes of all genomes')}`));
+        const scopeText = opt === 'this' ? 'This chromosome' : (opt === 'genome' ? 'All chromosomes of this genome' : 'All chromosomes of all genomes');
+        lbl.appendChild(document.createTextNode(` ${scopeText}`));
         scopeContainer.appendChild(lbl);
     });
     contextMenu.appendChild(scopeContainer);
@@ -400,7 +399,7 @@ export function createChromContextMenu(x, y, chromEl) {
     // Helper to update visual selection on thumbnails
     function updateThumbSelectionUI() {
         Array.from(thumbsContainer.querySelectorAll('.mode-thumb')).forEach(t => {
-            if (t.getAttribute('data-mode') === settings.mode) {
+            if (t.dataset.mode === settings.mode) {
                 t.style.outline = '2px solid black';
                 t.style.borderRadius = '4px';
             } else {
@@ -412,7 +411,7 @@ export function createChromContextMenu(x, y, chromEl) {
     modes.forEach(mode => {
         const thumbDiv = document.createElement('div');
         thumbDiv.className = 'mode-thumb';
-        thumbDiv.setAttribute('data-mode', mode);
+        thumbDiv.dataset.mode = mode;
         thumbDiv.style.cursor = 'pointer';
         thumbDiv.style.padding = '4px';
         thumbDiv.style.display = 'flex';
@@ -463,7 +462,7 @@ export function createChromContextMenu(x, y, chromEl) {
             const pathEl = svg.querySelector('path') || svg.querySelector('rect');
             const gradientIdLocal = `gradient-${genome}-${chromBase}`;
             if (!pathEl) return;
-            const color = settings.color || ((genomeColors && genomeColors[genome]) ? genomeColors[genome] : '#000');
+            const color = settings.color || ((genomeColors?.[genome]) ? genomeColors[genome] : '#000');
             // Always apply the specific mode's visualization, only update color
             if (mode === 'outline') {
                 pathEl.setAttribute('fill', 'none');
@@ -529,7 +528,7 @@ export function createChromContextMenu(x, y, chromEl) {
             const thumbs = contextMenu.querySelectorAll('.mode-thumb');
             thumbs.forEach(t => { if (t._adjustPreview) t._adjustPreview(); });
         } catch (err) {
-            // noop
+            console.warn('Failed to update thumbnail previews after color change', err);
         }
     });
     colorContainer.appendChild(colorLabel);
@@ -554,11 +553,10 @@ export function createChromContextMenu(x, y, chromEl) {
 
 // Apply settings according to scope
 function applySettingsWithScope(settings, genome, chromBase, scope, chromEl) {
-    const chromKeyLocal = `${genome}|${chromBase}`;
     if (scope === 'this') {
         // compute a robust chrom base (avoid empty base which would match everything)
         let base = chromBase || '';
-        const fullName = (chromEl && chromEl.getAttribute) ? chromEl.getAttribute('data-chrom-name') || '' : '';
+        const fullName = (chromEl && chromEl.dataset) ? chromEl.dataset.chromName || '' : '';
         if (!base) {
             // strip common suffixes
             base = fullName.replace(/_(ref|query)$/, '') || fullName;
@@ -595,7 +593,7 @@ function applySettingsWithScope(settings, genome, chromBase, scope, chromEl) {
         // apply to all chromosomes of this genome, respecting overrides
         const elems = document.querySelectorAll(`path.chrom[data-genome="${genome}"]`);
         elems.forEach(el => {
-            const nameAttr = el.getAttribute('data-chrom-name') || '';
+            const nameAttr = el.dataset.chromName || '';
             const base = nameAttr.split('_ref')[0].split('_query')[0] || nameAttr.replace(/_(ref|query)$/, '');
             if (!base) return;
             // check for per-chrom override
@@ -620,17 +618,17 @@ function applySettingsWithScope(settings, genome, chromBase, scope, chromEl) {
         const modeOnlyUpdate = 'mode' in settings && !('color' in settings);
         if (Array.isArray(uniqueGenomes) && uniqueGenomes.length > 0) {
             uniqueGenomes.forEach(g => {
-                globalThis.genomeDisplaySettings[g] = Object.assign({}, settings);
+                globalThis.genomeDisplaySettings[g] = { ...settings};
                 const elems = document.querySelectorAll(`path.chrom[data-genome="${g}"]`);
                 elems.forEach(el => {
-                    const nameAttr = el.getAttribute('data-chrom-name') || '';
+                    const nameAttr = el.dataset.chromName || '';
                     const base = nameAttr.split('_ref')[0].split('_query')[0] || nameAttr.replace(/_(ref|query)$/, '');
                     if (!base) return;
                     // check for per-chrom override
                     const chromKey = `${g}|${base}`;
                     const chromSettings = globalThis.chromDisplaySettings[chromKey];
                     // if this is a mode-only update and we have a per-chrom override, preserve its color
-                    if (modeOnlyUpdate && chromSettings && chromSettings.color) {
+                    if (modeOnlyUpdate && chromSettings?.color) {
                         applyChromosomeDisplaySettings(el, { mode: settings.mode, color: chromSettings.color }, g, base);
                     } else {
                         applyChromosomeDisplaySettings(el, settings, g, base);
@@ -640,16 +638,16 @@ function applySettingsWithScope(settings, genome, chromBase, scope, chromEl) {
         } else {
             // fallback: apply to all path.chrom
             document.querySelectorAll('path.chrom').forEach(el => {
-                const g = el.getAttribute('data-genome');
-                const nameAttr = el.getAttribute('data-chrom-name') || '';
+                const g = el.dataset.genome;
+                const nameAttr = el.dataset.chromName || '';
                 const base = nameAttr.split('_ref')[0].split('_query')[0] || nameAttr.replace(/_(ref|query)$/, '');
                 if (!base) return;
-                globalThis.genomeDisplaySettings[g] = Object.assign({}, settings);
+                globalThis.genomeDisplaySettings[g] = { ...settings };
                 // check for per-chrom override
                 const chromKey = `${g}|${base}`;
                 const chromSettings = globalThis.chromDisplaySettings[chromKey];
                 // if this is a mode-only update and we have a per-chrom override, preserve its color
-                if (modeOnlyUpdate && chromSettings && chromSettings.color) {
+                if (modeOnlyUpdate && chromSettings?.color) {
                     applyChromosomeDisplaySettings(el, { mode: settings.mode, color: chromSettings.color }, g, base);
                 } else {
                     applyChromosomeDisplaySettings(el, settings, g, base);
@@ -666,7 +664,7 @@ function applyChromosomeDisplaySettings(chromEl, settings, genome, chromBase) {
         // Ensure chromBase is robust; fall back to chromEl attribute if needed
         let base = chromBase || '';
         if (!base) {
-            const nameAttr = chromEl.getAttribute && chromEl.getAttribute('data-chrom-name') ? chromEl.getAttribute('data-chrom-name') : '';
+            const nameAttr = chromEl.dataset.chromName || '';
             base = nameAttr.split('_ref')[0].split('_query')[0] || nameAttr.replace(/_(ref|query)$/, '');
         }
         if (!base) {
@@ -674,7 +672,7 @@ function applyChromosomeDisplaySettings(chromEl, settings, genome, chromBase) {
             return;
         }
         const mode = settings.mode || 'filled';
-        const color = settings.color || ((genomeColors && genomeColors[genome]) ? genomeColors[genome] : '#000000');
+        const color = settings.color || ((genomeColors?.[genome]) ? genomeColors[genome] : '#000000');
         const gradientId = `gradient-${genome}-${base}`;
 
         // Apply to all matching chromosome path elements (ref and query variants)
@@ -700,12 +698,12 @@ function applyChromosomeDisplaySettings(chromEl, settings, genome, chromBase) {
         // Update chrom-controler items styles for this genome
         try {
             const perChromKey = `${genome}|${base}`;
-            if (globalThis.chromDisplaySettings && globalThis.chromDisplaySettings[perChromKey]) {
+            if (globalThis.chromDisplaySettings?.[perChromKey]) {
                 // only update the specific chrom cell in the chrom-controler
                 const id = `${genome}-${base}`;
                 const item = document.querySelector(`#chrom-controler [data-id="${id}"]`);
                 if (item) item.style.border = `2px solid ${color}`;
-            } else if (globalThis.genomeDisplaySettings && globalThis.genomeDisplaySettings[genome]) {
+            } else if (globalThis.genomeDisplaySettings?.[genome]) {
                 // genome-level setting: update all items for this genome
                 const controlItems = document.querySelectorAll(`#chrom-controler [data-genome="${genome}"]`);
                 controlItems.forEach(it => { it.style.border = `2px solid ${color}`; });
@@ -716,7 +714,7 @@ function applyChromosomeDisplaySettings(chromEl, settings, genome, chromBase) {
                 if (item) item.style.border = `2px solid ${color}`;
             }
         } catch (e) {
-            // noop
+            console.warn('Failed to update chrom-controler item styles', e);
         }
     } catch (e) {
         console.warn('applyChromosomeDisplaySettings failed', e);
@@ -725,11 +723,11 @@ function applyChromosomeDisplaySettings(chromEl, settings, genome, chromBase) {
 
 // Sélectionner les bandes similaires dans un rayon donné
 export function selectSimilarBands(sourceBand, distance) {
-    const sourceType = sourceBand.getAttribute('data-type');
-    const sourceRefNum = sourceBand.getAttribute('data-ref-num');
-    const sourceQueryNum = sourceBand.getAttribute('data-query-num');
-	const sourceRefGenome = sourceBand.getAttribute('data-ref-genome');
-	const sourceQueryGenome = sourceBand.getAttribute('data-query-genome');
+    const sourceType = sourceBand.dataset.type;
+    const sourceRefNum = sourceBand.dataset.refNum;
+    const sourceQueryNum = sourceBand.dataset.queryNum;
+	const sourceRefGenome = sourceBand.dataset.refGenome;
+	const sourceQueryGenome = sourceBand.dataset.queryGenome;
     
     selectedBands.clear();
     selectedBands.add(sourceBand);
@@ -737,11 +735,11 @@ export function selectSimilarBands(sourceBand, distance) {
     document.querySelectorAll('.band').forEach(band => {
         if (band === sourceBand) return;
         
-        if (band.getAttribute('data-type') === sourceType &&
-            band.getAttribute('data-ref-num') === sourceRefNum &&
-            band.getAttribute('data-query-num') === sourceQueryNum &&
-            band.getAttribute('data-ref-genome') === sourceRefGenome &&
-            band.getAttribute('data-query-genome') === sourceQueryGenome) {
+        if (band.dataset.type === sourceType &&
+            band.dataset.refNum === sourceRefNum &&
+            band.dataset.queryNum === sourceQueryNum &&
+            band.dataset.refGenome === sourceRefGenome &&
+            band.dataset.queryGenome === sourceQueryGenome) {
 
             // Vérifier la distance
             const sourceBandData = getBandData(sourceBand);
@@ -760,10 +758,10 @@ export function selectSimilarBands(sourceBand, distance) {
 // Extraire les données d'une bande
 function getBandData(band) {
     return {
-        refStart: parseInt(band.getAttribute('data-ref-start')),
-        refEnd: parseInt(band.getAttribute('data-ref-end')),
-        queryStart: parseInt(band.getAttribute('data-query-start')),
-        queryEnd: parseInt(band.getAttribute('data-query-end'))
+        refStart: Number.parseInt(band.dataset.refStart),
+        refEnd: Number.parseInt(band.dataset.refEnd),
+        queryStart: Number.parseInt(band.dataset.queryStart),
+        queryEnd: Number.parseInt(band.dataset.queryEnd)
     };
 }
 
@@ -802,7 +800,7 @@ export function colorSelectedBands(color) {
             band.style.fill = color;
             // also set the attribute for compatibility
             band.setAttribute('fill', color);
-            const t = band.getAttribute('data-type');
+            const t = band.dataset.type;
             if (t) types.add(t);
         } catch (e) {
             console.warn('Failed to color band', band, e);
@@ -830,10 +828,10 @@ export function updateInfoForSelectedBands() {
     
     // Mettre à jour la visualisation avec les nouvelles coordonnées
     const firstBand = selectedBands.values().next().value;
-    const refGenome = firstBand.getAttribute('data-ref-genome');
-    const queryGenome = firstBand.getAttribute('data-query-genome');
-    const refChr = firstBand.getAttribute('data-ref');
-    const queryChr = firstBand.getAttribute('data-query');
+    const refGenome = firstBand.dataset.refGenome;
+    const queryGenome = firstBand.dataset.queryGenome;
+    const refChr = firstBand.dataset.ref;
+    const queryChr = firstBand.dataset.query;
     
     // Créer un objet similaire à celui attendu par les fonctions existantes
     const mergedBand = {
@@ -843,7 +841,7 @@ export function updateInfoForSelectedBands() {
         refEnd: maxRefEnd,
         queryStart: minQueryStart,
         queryEnd: maxQueryEnd,
-        type: firstBand.getAttribute('data-type')
+        type: firstBand.dataset.type
     };
     
     showInfoPanel();
