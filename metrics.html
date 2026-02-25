@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>SynFlow metrics dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: Arial; margin: 20px; }
+        body { font-family: Arial, sans-serif; margin: 20px; }
         .chart-container { width: 48%; height: 400px; display: inline-block; margin: 1%; }
         .filters { margin: 20px 0; }
         select, input { margin: 5px; padding: 5px; }
@@ -143,14 +143,14 @@
     // 3. Filtre CORRIGÉ (par défaut tout accepte)
 	function filterData() {
 		const mode = document.getElementById('modeFilter').value;
-		const minGenomes = parseInt(document.getElementById('genomesMin').value) || 1;
-		const maxGenomes = parseInt(document.getElementById('genomesMax').value) || Infinity;
-		const maxChrom = parseInt(document.getElementById('chromMax').value) || Infinity;
-		const maxBands = parseInt(document.getElementById('bandsMax').value) || Infinity;
+		const minGenomes = Number.parseInt(document.getElementById('genomesMin').value) || 1;
+		const maxGenomes = Number.parseInt(document.getElementById('genomesMax').value) || Infinity;
+		const maxChrom = Number.parseInt(document.getElementById('chromMax').value) || Infinity;
+		const maxBands = Number.parseInt(document.getElementById('bandsMax').value) || Infinity;
 		
 		// NOUVEAUX FILTRES MACHINE
-		const minCores = parseInt(document.getElementById('coresMin').value) || 1;
-		const maxCores = parseInt(document.getElementById('coresMax').value) || Infinity;
+		const minCores = Number.parseInt(document.getElementById('coresMin').value) || 1;
+		const maxCores = Number.parseInt(document.getElementById('coresMax').value) || Infinity;
 		const ramFilter = document.getElementById('ramFilter').value;
 		
 		return allData.filter(d => {
