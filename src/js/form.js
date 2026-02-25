@@ -755,13 +755,13 @@ function createUploadSection() {
 
             // Nettoie les espaces autour des noms de fichiers
             const files = document.getElementById('band-files').files;
-            const allFilesTrimmed = Array.from(files).map(f => f.name.trim());
+            const allFilesTrimmed = new Set(Array.from(files).map(f => f.name.trim()));
             // Construit la liste des fichiers nécessaires pour la chaîne
             const neededFiles = [];
             let missingFiles = [];
             for (let i = 0; i < selectedGenomes.length - 1; i++) {
                 const fileName = `${selectedGenomes[i]}_${selectedGenomes[i+1]}.out`;
-                if (allFilesTrimmed.includes(fileName)) {
+                if (allFilesTrimmed.has(fileName)) {
                     neededFiles.push(fileName);
                 } else {
                     missingFiles.push(fileName);
@@ -802,7 +802,6 @@ function createUploadSection() {
      // Boutons
     const buttonContainer = document.createElement('div');
     buttonContainer.style.marginTop = '20px';
-    // buttonContainer.appendChild(loadTestButton);
     buttonContainer.appendChild(submitButton);
 
     // Assemblage final
@@ -1017,18 +1016,18 @@ export function createFTPSection() {
             genomeDiv.style.transition = 'background 0.2s';
             genomeDiv.classList.add('genome-item');
             genomeDiv.dataset.fileName = genome;
-            genomeDiv.textContent = genome.replace(/-/g, ' ');
+            genomeDiv.textContent = genome.replaceAll('-', ' ');
 
             genomeDiv.addEventListener('click', () => {
                 const idx = selectedGenomes.indexOf(genome);
-                if (idx !== -1) {
-                    selectedGenomes.splice(idx, 1);
-                    genomeDiv.style.background = '';
-                    genomeDiv.style.color = '';
-                } else {
+                if (idx === -1) {
                     selectedGenomes.push(genome);
                     genomeDiv.style.background = 'grey';
                     genomeDiv.style.color = '#fff';
+                } else {
+                    selectedGenomes.splice(idx, 1);
+                    genomeDiv.style.background = '';
+                    genomeDiv.style.color = '';
                 }
                 updateChainDivFTP(chainDiv, selectedGenomes);
             });
@@ -1043,7 +1042,7 @@ export function createFTPSection() {
         logActivity('Loading FTP files for selected genomes: ' + ftpSelectedGenomes.join(', '));
 
         // Lance le spinner
-        var target = document.getElementById('spinner');
+        const target = document.getElementById('spinner');
         spinner.spin(target);
 
         fileUploadMode = 'FTP';
@@ -1056,7 +1055,7 @@ export function createFTPSection() {
         const folder = ftpInput.value.trim();
         const allFiles = await fetchRemoteOutFileList(folder);
         //nettoie les espaces autour des noms de fichiers
-        const allFilesTrimmed = allFiles.map(f => f.trim());
+        const allFilesTrimmed = new Set(allFiles.map(f => f.trim()));
 
         // Construit la liste des fichiers nécessaires pour la chaîne
         const neededFiles = [];
@@ -1065,7 +1064,7 @@ export function createFTPSection() {
             const fileName = `${ftpSelectedGenomes[i]}_${ftpSelectedGenomes[i+1]}.out`;
             //nettoie les espaces autour des noms de fichiers
             const fileNameTrimmed = fileName.trim();
-            if (allFilesTrimmed.includes(fileNameTrimmed)) {
+            if (allFilesTrimmed.has(fileNameTrimmed)) {
                 neededFiles.push(fileNameTrimmed);
             } else {
                 missingFiles.push(fileNameTrimmed);
@@ -1112,7 +1111,6 @@ export function createFTPSection() {
     helpContainer.style.backgroundColor = '#f8f9fa';
     helpContainer.style.borderRadius = '5px';
     helpContainer.style.border = '1px solid #dee2e6';
-    // helpContainer.style.maxHeight = '300px';
     helpContainer.style.overflowY = 'auto';
 
     helpContainer.innerHTML = `
@@ -1207,18 +1205,12 @@ export function createToolkitContainer() {
     toolkitCSS.href = "../../toolkit/toolkit.css";
     document.head.appendChild(toolkitCSS);
 
-    // // Bouton pour lancer le calcul
-    // const runCalculationButton = document.getElementById('runCalculation');
-
-    // // Event listener pour envoyer l'événement de calcul au serveur
-    // runCalculationButton.addEventListener('click', () => {
 
         toolkitContainer.style.display = "block"; // Afficher le container
         closeButton.style.display = "block"; // Afficher le bouton de fermeture
 
         // Option pour générer le selecteur de service ou appeler un service spécifique
         const generateSelect = false;
-        // const serviceName = 'synflow-galaxy';
         const serviceName = 'synflow';
 
         //init toolkit
@@ -1309,10 +1301,6 @@ export function createToolkitContainer() {
             loadOutputButton.style.marginTop = '10px';
             loadOutputButton.style.display = 'block';
             const consoleDiv = document.getElementById('console');
-         
-           //ENLEVE LE BOUTON DRAW
-            // MAINTENANT IL Y A LE LIEN
-            // consoleDiv.appendChild(loadOutputButton);
 
             //scroll jusqu'en bas de la console    
             consoleDiv.scrollTop = consoleDiv.scrollHeight;
@@ -1336,7 +1324,6 @@ export function createToolkitContainer() {
                 
                 
                     // Creating DataTransfer objects to simulate file upload
-                    // const chrLenDataTransfer = new DataTransfer();
                     const bandDataTransfer = new DataTransfer();
                 
                     // Add files to the DataTransfer objects
@@ -1344,8 +1331,6 @@ export function createToolkitContainer() {
                 
                     // Set the files to the input fields
                     const bandInput = document.getElementById('band-files');
-                
-                    // chrLenInput.files = chrLenDataTransfer.files;
                     bandInput.files = bandDataTransfer.files;
                 
                     // Update the file lists
@@ -1370,16 +1355,6 @@ export function updateFileList(inputElement) {
 
     const files = inputElement.files;
     const outFiles = Array.from(files).filter(file => file.name.endsWith('.out'));
-    const anchorsFiles = Array.from(files).filter(file => file.name.endsWith('.anchors'));
-    const bedFiles = Array.from(files).filter(file => file.name.endsWith('.bed'));
-    const jsonFiles = Array.from(files).filter(file => file.name.endsWith('.json'));
-
-    // fileListElement.innerHTML = ''; // Clear the previous file list
-    // for (let i = 0; i < outFiles.length; i++) {
-    //     const listItem = document.createElement('div');
-    //     listItem.textContent = outFiles[i].name;
-    //     fileListElement.appendChild(listItem);
-    // }
 
     //detecte le all vs all
     const genomes = extractAllGenomes(outFiles.map(file => file.name));
@@ -1414,9 +1389,7 @@ export function updateFileList(inputElement) {
         inputElement.parentNode.appendChild(allvsAllMessage);
         inputElement.parentNode.appendChild(fileListDiv);
 
-
         populateGenomeList(genomes, fileListDiv);
-
         
     } else {
         // Mode chaîne
@@ -1441,19 +1414,19 @@ function populateGenomeList(genomes, listDiv){
         genomeDiv.dataset.fileName = genome; // vrai nom de fichier
 
         //affiche le nom sans tiret et avec une majuscule en première lettre
-        genomeDiv.textContent = genome.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase());
+        genomeDiv.textContent = genome.replaceAll('-', ' ').replace(/^\w/, c => c.toUpperCase());
 
         genomeDiv.addEventListener('click', () => {
             logActivity('Toggling genome selection: ' + genome);
             const idx = selectedGenomes.indexOf(genome);
-            if (idx !== -1) {
-                selectedGenomes.splice(idx, 1);
-                genomeDiv.style.background = '';
-                genomeDiv.style.color = '';
-            } else {
+            if (idx === -1) {
                 selectedGenomes.push(genome);
                 genomeDiv.style.background = 'grey';
                 genomeDiv.style.color = '#fff';
+            } else {
+                selectedGenomes.splice(idx, 1);
+                genomeDiv.style.background = '';
+                genomeDiv.style.color = '';
             }
             updateChainDiv();
         });
@@ -1465,23 +1438,21 @@ function populateGenomeList(genomes, listDiv){
 
 
 
-function readChromosomeLengths(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const lengths = {};
-            const lines = event.target.result.split('\n');
-            lines.forEach(line => {
-                const parts = line.split('\t');
-                if (parts.length === 2) {
-                    lengths[parts[0]] = +parts[1];
-                }
-            });
-            resolve(lengths);
-        };
-        reader.onerror = (error) => reject(error);
-        reader.readAsText(file);
-    });
+async function readChromosomeLengths(file) {
+    try {
+        const text = await file.text();
+        const lengths = {};
+        const lines = text.split('\n');
+        lines.forEach(line => {
+            const parts = line.split('\t');
+            if (parts.length === 2) {
+                lengths[parts[0]] = +parts[1];
+            }
+        });
+        return lengths;
+    } catch (error) {
+        throw new Error(error);
+    }
 }
 
 export let genomeLengths = {};
@@ -1495,38 +1466,6 @@ export function loadAllChromosomeLengths(files) {
     });
     return Promise.all(lengthPromises);
 }
-
-// async function loadTestData() {
-//     // Define paths to your test files
-//     const testBandFiles = [
-//         'public/data/C21-464_C23-A03.out',
-//         'public/data/C23-A03_C45-410.out',
-//         'public/data/C45-410_C5-126-2.out',
-//         'public/data/DH-200-94_C21-464.out'
-//     ];
-
-//     const bandFiles = await Promise.all(testBandFiles.map(async path => {
-//         const response = await fetch(path);
-//         const text = await response.text();
-//         const fileName = path.split('/').pop();
-//         return new File([text], fileName, { type: 'text/plain' });
-//     }));
-
-//     // Creating DataTransfer objects to simulate file upload
-//     const bandDataTransfer = new DataTransfer();
-
-//     // Add files to the DataTransfer objects
-//     bandFiles.forEach(file => bandDataTransfer.items.add(file));
-
-//     // Set the files to the input fields
-//     const bandInput = document.getElementById('band-files');
-
-//     // chrLenInput.files = chrLenDataTransfer.files;
-//     bandInput.files = bandDataTransfer.files;
-
-//     // Update the file lists
-//     updateFileList(bandInput);
-// }
 
 async function searchAdditionalFiles(selectedGenomes, files, folder) {
     const folderWithSlash = folder.endsWith('/') ? folder : folder + '/';
@@ -1572,10 +1511,9 @@ async function searchAdditionalFiles(selectedGenomes, files, folder) {
         const jbrowseResponse = await fetch(jbrowseFilePath);
         if (jbrowseResponse.ok) {
             jbrowseLinks = await jbrowseResponse.json();   
-            // console.log(jbrowseLinks);         
         }
     } catch (error) {
-        console.log("No jbrowse links");
+        console.log("Error fetching jbrowse links:", error);
     }
 }
 

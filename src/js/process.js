@@ -286,7 +286,6 @@ function updateChromList(globalMaxChromosomeLengths) {
                 const svg = d3.select('#viz');
                 const svgNode = svg.node();
                 const svgRect = svgNode.getBoundingClientRect();
-                const svgWidth = svgRect.width;
                 const svgHeight = svgRect.height;
 
                 // Calculer l'échelle pour que le chromosome occupe la largeur disponible moins les marges
@@ -333,8 +332,8 @@ function updateChromList(globalMaxChromosomeLengths) {
         listItem.appendChild(goto);
         
         const text = document.createElement('span');
-        const chromObj = genomeData[refGenome] && genomeData[refGenome][chromNum];
-        const chromName = (chromObj && chromObj.name) ? chromObj.name : '-';
+        const chromObj = genomeData[refGenome]?.[chromNum];
+        const chromName = (chromObj?.name) ? chromObj.name : '-';
         text.textContent = chromName;
 
         listItem.appendChild(text);
@@ -369,7 +368,7 @@ function updateChromList(globalMaxChromosomeLengths) {
         }
 
         if (insertBefore) {
-            chromListDiv.insertBefore(draggingItem, insertBefore);
+            insertBefore.before(draggingItem);
         } else {
             chromListDiv.appendChild(draggingItem);
         }
@@ -378,8 +377,6 @@ function updateChromList(globalMaxChromosomeLengths) {
     chromListDiv.addEventListener('dragend', () => {
         const newOrder = [...chromListDiv.querySelectorAll('[draggable]')]
             .map(item => item.dataset.chromNum);
-        // console.log('Nouvel ordre des chromosomes:', newOrder);
-
         updateChromosomesOrder(newOrder);
 
     });
@@ -521,7 +518,6 @@ function updateChromControler() {
     const headerRow = document.createElement('div');
     headerRow.style.display = 'contents';
     const genomeHeader = document.createElement('div');
-    // genomeHeader.textContent = 'Genome';
     genomeHeader.style.fontWeight = 'bold';
     genomeHeader.style.textAlign = 'center';
     headerRow.appendChild(genomeHeader);
@@ -572,7 +568,7 @@ function updateChromControler() {
                 cell.classList.remove('drag-col');
             });
 
-            const fromPos = parseInt(e.dataTransfer.getData('col-drag'));
+            const fromPos = Number.parseInt(e.dataTransfer.getData('col-drag'));
             const toPos = i;
             if (fromPos === toPos) return;
 
@@ -581,11 +577,10 @@ function updateChromControler() {
                 genomeData[genome][fromPos] = genomeData[genome][toPos];
                 genomeData[genome][toPos] = temp;
             }
-            // updateChromControler();
             const chromControlerDiv = document.getElementById('chrom-controler');
             animateSwap(chromControlerDiv);
             // Lance le spinner
-            var target = document.getElementById('spinner');
+            const target = document.getElementById('spinner');
             spinner.spin(target); 
             // Redraw complet
             resetDrawGlobals();
@@ -673,8 +668,7 @@ function updateChromControler() {
 
             // Dans le dragend event (juste le nettoyage)
             chromCell.addEventListener('dragend', () => {
-                chromCell.classList.remove('dragging');
-                chromCell.classList.remove('drop-target');
+                chromCell.classList.remove('dragging', 'drop-target');
                 currentDrag = null;
             });
 
@@ -701,7 +695,7 @@ function updateChromControler() {
                             animateSwap(chromControlerDiv);
 
                             // Lance le spinner
-                            var target = document.getElementById('spinner');
+                            const target = document.getElementById('spinner');
                             spinner.spin(target); 
                             
                             // Redraw complet
@@ -747,9 +741,6 @@ function allDone() {
     const graphBounds = zoomGroup.node().getBBox();
     const width = graphBounds.width;
     const height = graphBounds.height;
-
-    // console.log("*************"+width, height);
-
     // Mettre à jour les limites de translation du zoom
     // Ajoute une marge (par exemple 200px) à droite et en bas
     const margin = 200;
@@ -777,54 +768,6 @@ function allDone() {
     showControlPanel();   
     //cache le formulaire
     hideForm();
-
-    // // Remove existing chromlist container
-    // const vizContainer = document.getElementById('viz-container')
-    // const existingchromListContainer = document.getElementById('chrom-list-container');
-    // if (existingchromListContainer) {
-    //     vizContainer.removeChild(existingchromListContainer);
-    // }
-
-    // // Container for chromosomes list
-    // const chromListContainer = document.createElement('div');
-    // chromListContainer.setAttribute('id', 'chrom-list-container');
-    // chromListContainer.style.marginRight = '20px';
-
-    // // Toggle button
-    // const toggleButton = document.createElement('div');
-    // toggleButton.setAttribute('id', 'toggle-button');
-    // toggleButton.style.position = 'absolute';
-    // toggleButton.style.top = '0px';
-    // toggleButton.style.left = '0px';
-    // toggleButton.style.cursor = 'pointer';
-    // toggleButton.style.zIndex = '20';
-    // toggleButton.innerHTML = '&#x25C0;'; // Flèche gauche
-
-    // const chromListDiv = document.createElement('div');
-    // chromListDiv.setAttribute('id', 'chrom-list');
-    // chromListContainer.appendChild(toggleButton); 
-    // chromListContainer.appendChild(chromListDiv);
-
-    // // Append legend and chromosomes list container to viz container
-    // const viz = document.getElementById('viz')
-    // vizContainer.insertBefore(chromListContainer, viz);
-
-    // // Toggle button event listener
-    // let isListVisible = true;
-    // toggleButton.addEventListener('click', () => {
-    //     if (isListVisible) {
-    //         chromListDiv.style.display = 'none';
-    //         toggleButton.innerHTML = '&#x25B6;'; // Flèche droite
-    //     } else {
-    //         chromListDiv.style.display = 'flex'; // Réappliquer flex pour garder l'affichage en ligne
-    //         toggleButton.innerHTML = '&#x25C0;'; // Flèche gauche
-    //     }
-    //     isListVisible = !isListVisible;
-    // });
-
-
-    // updateChromList(globalMaxChromosomeLengths);
-    
     // Add download buttons
     const formContainer = document.getElementById('file-upload');
 
@@ -859,7 +802,7 @@ function calculateSNPDensity(data, refLengths, binSize = 100000) {
     for (const chr in refLengths) {
         const chrLength = refLengths[chr];
         const numBins = Math.ceil(chrLength / binSize);
-        snpDensity[chr] = Array(numBins).fill(0);
+        snpDensity[chr] = new Array(numBins).fill(0);
     }
 
     // Compter les SNP dans chaque segment
@@ -877,12 +820,11 @@ function calculateSNPDensity(data, refLengths, binSize = 100000) {
 //chromosome    start	end	name	strand
 //Macmad_h1_01	16953	25284	Macmad_h1_01g000010	+
 export function calculateAnnotationDensity(data, genomeName, binSize = 20000) {
-    // console.log("Calculating annotation density for genome:", genomeName);
     const annotationDensity = {};
 
     // Compter les annotations par bin
     data.split('\n').forEach(d => {
-        const [chr, start, end, name, strand] = d.split('\t');
+        const [chr, start] = d.split('\t');
         if (!chr || !start) return; // Ignorer les lignes vides ou incorrectes
         const binIndex = Math.floor(+start / binSize);
         if (!annotationDensity[chr]) {
@@ -932,68 +874,12 @@ export function calculateAnnotationDensity(data, genomeName, binSize = 20000) {
                 .attr('stop-color', colorScale(density));
         }
     }
-    return annotationDensity;
 }
 
 // Extraire les noms des génomes à partir des fichiers .chrlen
 function extractGenomeNames(chrlenFileNames) {
     return chrlenFileNames.map(fileName => fileName.replace('.chrlen', ''));
 }
-
-// Trouver les génomes uniques à partir des fichiers de bandes
-// export function findUniqueGenomes(bandFileNames) {
-//     console.log("Finding unique genomes from :", bandFileNames);
-//     const fileCount = bandFileNames.length;
-//     const uniqueNamesToFind = fileCount + 1;
-//     numGenomes = uniqueNamesToFind;
-//     let possibleNames = new Set();
-
-//     // Extraire les noms de génomes directement à partir des noms de fichiers de bandes
-//     bandFileNames.forEach(file => {
-//         const baseName = file.replace('.out', '');
-//         const parts = baseName.split('_');
-//         for (let i = 1; i < parts.length; i++) {
-//             possibleNames.add(parts.slice(0, i).join('_'));
-//             possibleNames.add(parts.slice(i).join('_'));
-//         }
-//     });
-
-//     possibleNames = Array.from(possibleNames);
-
-//     function findCombination(currentCombination, depth) {
-//         // console.log("Current combination:", currentCombination, "Depth:", depth);
-//         if (depth === uniqueNamesToFind) {
-//             const genomeSet = new Set(currentCombination);
-//             if (genomeSet.size === uniqueNamesToFind) {
-//                 const generatedFiles = [];
-//                 for (let i = 0; i < currentCombination.length - 1; i++) {
-//                     generatedFiles.push(`${currentCombination[i]}_${currentCombination[i + 1]}.out`);
-//                 }
-//                 const match = generatedFiles.every(f => bandFileNames.includes(f));
-//                 if (match) {
-//                     return Array.from(genomeSet);
-//                 }
-//             }
-//             return null;
-//         }
-
-//         for (let i = 0; i < possibleNames.length; i++) {
-//             if (!currentCombination.includes(possibleNames[i])) {
-//                 currentCombination.push(possibleNames[i]);
-//                 const result = findCombination(currentCombination, depth + 1);
-//                 if (result) {
-//                     return result;
-//                 }
-//                 currentCombination.pop();
-//             }
-//         }
-
-//         return null;
-//     }
-
-//     return findCombination([], 0);
-// }
-
 
 //version avec nommage simple des fichiers de bandes
 // exemple genome-1_genome-2.out
@@ -1015,10 +901,10 @@ export function findUniqueGenomes(bandFileNames) {
     });
 
     // Liste des génomes qui apparaissent en début de fichier
-    const firsts = pairs.map(([a, b]) => a);
+    const firsts = new Set(pairs.map(([a, b]) => a));
 
     // Trouve une extrémité : n'apparaît qu'une fois ET est en début de fichier
-    let start = Object.keys(counts).find(g => counts[g] === 1 && firsts.includes(g));
+    let start = Object.keys(counts).find(g => counts[g] === 1 && firsts.has(g));
     if (!start) {
         alert("Error: Unable to find a unique starting genome. Please check your band files.");
         stopRenderTimer();
@@ -1044,16 +930,11 @@ function handleFileUpload(bandFiles, bedFiles) {
     resetGlobals(); // Réinitialiser les variables globales
     // spinner.spin(target);
 
-    // console.log('Chromosome Length Files:', chrlenFiles);
-    // console.log('Band Files:', bandFiles);
-
     // Extraire les noms de fichiers des objets File
     const bandFileNames = Array.from(bandFiles).map(file => file.name);
-    // console.log(bandFileNames);
     
     // Trouver et ordonne les génomes à partir des noms de fichiers de bandes
     uniqueGenomes = findUniqueGenomes(bandFileNames);
-    // console.log(uniqueGenomes);
 
     // Vérifier si tous les fichiers de bandes nécessaires sont présents
     if (!uniqueGenomes || uniqueGenomes.length < 2) {
@@ -1062,8 +943,6 @@ function handleFileUpload(bandFiles, bedFiles) {
         return;
     }
 
-    // console.log("Unique Genomes: ", uniqueGenomes);
-
     // Attribuer des couleurs aux génomes
     uniqueGenomes.forEach((genome, index) => {
         genomeColors[genome] = generateColor(index);
@@ -1071,7 +950,6 @@ function handleFileUpload(bandFiles, bedFiles) {
 
     //retrouve l'ordre des fichier 
     const orderedFiles = orderFilesByGenomes(bandFileNames, uniqueGenomes);
-    // console.log("Ordered Files: ", orderedFiles);
 
     // Vérifier si tous les fichiers de bandes nécessaires sont présents et dans l'ordre
     if (orderedFiles.length !== bandFileNames.length) {
@@ -1108,7 +986,7 @@ function handleFileUpload(bandFiles, bedFiles) {
             if (!bedFile) return;
             const text = await bedFile.text();
             const genomeName = bedFile.name.replace('.bed', ''); // Enlève l'extension .bed pour obtenir le nom du génome
-            const density = calculateAnnotationDensity(text, genomeName);
+            calculateAnnotationDensity(text, genomeName);
         });
     }
 
@@ -1120,7 +998,7 @@ function handleFileUpload(bandFiles, bedFiles) {
         scale = calculateScale(globalMaxChromosomeLengths);
         // console.log("Global Max Chromosome Lengths: ", globalMaxChromosomeLengths);
         //traite les fichiers
-        readFileInChunks(currentFile, true, refGenome, queryGenome);
+        readFileInChunks(currentFile, true);
     });
 }
 

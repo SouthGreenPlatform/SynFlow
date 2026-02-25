@@ -97,7 +97,7 @@ if (process.env.CONFIG_FILE_PATH) {
             }
         }
     } catch (error) {
-        console.warn('CONFIG_URLS is not a valid JSON array, trying comma-separated format.');
+        console.warn('CONFIG_URLS is not a valid JSON array, trying comma-separated format.', error);
         // Format chaîne séparée par virgules
 		const urls = (configUrlsEnv || "")
   			.split(',')
