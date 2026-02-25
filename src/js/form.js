@@ -59,7 +59,6 @@ export async function createForm() {
         logActivity('Toggling form visibility');
         event.preventDefault();
         if(formContent.style.maxHeight === '0px' || !formContent.style.maxHeight) {
-            // formContent.style.maxHeight = formContent.scrollHeight + 'px';
             formContent.style.maxHeight = 'unset'; // Pour une animation fluide
             chevronIcon.className = 'fas fa-chevron-up';
         } else {
@@ -212,8 +211,6 @@ function fetchRemoteOutFileList(folder) {
         url += '/';
     }
     
-    // console.log('Fetching out files from:', url);
-    
     return fetch(url, {
         method: 'GET',
         headers: {
@@ -243,8 +240,6 @@ function fetchRemoteOutFileList(folder) {
                     return null;
                 })
                 .filter(name => name !== null);
-            
-            // console.log('Fichiers .out trouvés:', files);
             return files;
         });
 }
@@ -255,10 +250,7 @@ function fetchRemoteAllFileList(folder) {
     let url = folder.trim();
     if (!url.endsWith('/')) {
         url += '/';
-    }
-    
-    // console.log('Fetching all files from:', url);
-    
+    }    
     return fetch(url, {
         method: 'GET',
         headers: {
@@ -287,7 +279,6 @@ function fetchRemoteAllFileList(folder) {
                 })
                 .filter(name => name !== null);
             
-            // console.log('Fichiers trouvés:', files);
             return files;
         });
 }
@@ -410,7 +401,7 @@ async function createExistingFilesForm() {
         logActivity('Loading existing files for selected genomes: ' + selectedGenomes.join(', '));
 
             // Lance le spinner (et démarre le chronomètre de rendu)
-            var target = document.getElementById('spinner');
+            const target = document.getElementById('spinner');
             try {
                 console.info('startRenderTimer called (existing)', selectedGenomes);
                 startRenderTimer({ action: 'draw-click', mode: 'existing', selectedGenomes: selectedGenomes.length });
@@ -438,14 +429,14 @@ async function createExistingFilesForm() {
         const folder = folderSelect.value;
         const allFiles = await fetchRemoteOutFileList(folder);
         // Nettoie les espaces autour des noms de fichiers
-        const allFilesTrimmed = allFiles.map(f => f.trim());
+        const allFilesTrimmed = new Set(allFiles.map(f => f.trim()));
 
         // Construit la liste des fichiers nécessaires pour la chaîne
         const neededFiles = [];
         let missingFiles = [];
         for (let i = 0; i < selectedGenomes.length - 1; i++) {
             const fileName = `${selectedGenomes[i]}_${selectedGenomes[i+1]}.out`;
-            if (allFilesTrimmed.includes(fileName)) {
+            if (allFilesTrimmed.has(fileName)) {
                 neededFiles.push(fileName);
             } else {
                 missingFiles.push(fileName);
@@ -652,7 +643,7 @@ function createUploadSection() {
     });
     
     // Mettre à jour le label quand des fichiers sont sélectionnés
-    bandInput.addEventListener('change', () => {
+    bandInput.addEventListener('change', async () => {
         if (bandInput.files.length > 0) {
             //compte chaque type de fichier
             const fileCounts = {
@@ -680,26 +671,18 @@ function createUploadSection() {
             // Chercher le fichier .json
             const jbrowseFile = Array.from(bandInput.files).find(file => file.name.endsWith('.json'));
             if (jbrowseFile) {
-                // console.log('jbrowse_link.json found, reading...');
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    try {
-                        jbrowseLinks = JSON.parse(event.target.result);
-                        // console.log('Found jbrowse links:', jbrowseLinks);
-                    } catch (error) {
-                        console.log('Error parsing jbrowse_link.json:', error);
-                    }
-                };
-                reader.readAsText(jbrowseFile);
+                try {
+                    const text = await jbrowseFile.text();
+                    jbrowseLinks = JSON.parse(text);
+                } catch (error) {
+                    console.log('Error parsing jbrowse_link.json:', error);
+                }
             }
 
             //met les fichiers .anchors dans anchorsFiles
             anchorsFiles = Array.from(bandInput.files).filter(file => file.name.endsWith('.anchors'));
             //met les fichiers .bed dans bedFiles
             bedFiles = Array.from(bandInput.files).filter(file => file.name.endsWith('.bed'));
-            // console.log('Anchors files:', anchorsFiles);
-            // console.log('Bed files:', bedFiles);
-
 
             //////////////////
             //matrix
@@ -716,16 +699,11 @@ function createUploadSection() {
         }
     });
 
-    // const bandFileList = document.createElement('div');
-    // bandFileList.setAttribute('id', 'band-file-list');
-    // bandFileList.classList.add('file-list');
-
     bandContainer.appendChild(bandH5);
     bandContainer.appendChild(document.createElement('br'));
     bandContainer.appendChild(bandInput);
     bandContainer.appendChild(customButton);
     bandContainer.appendChild(fileLabel);
-    // bandContainer.appendChild(bandFileList);
 
     // Append containers to input container
     inputContainer.appendChild(bandContainer);
@@ -736,17 +714,6 @@ function createUploadSection() {
     chainDiv.style.marginTop = '15px';
     chainDiv.style.fontSize = '0.95em';
     chainDiv.style.color = '#333';
-
-
-    // Button to load test dataset
-    // const loadTestButton = document.createElement('button');
-    // loadTestButton.setAttribute('type', 'button');
-    // loadTestButton.classList.add('btn-simple');
-    // loadTestButton.setAttribute('id', 'load-test');
-    // loadTestButton.textContent = 'Load Test Data';
-
-    // // Event listener for the load test button
-    // loadTestButton.addEventListener('click', loadTestData);
 
     // Submit button
     const submitButton = document.createElement('button');
@@ -762,7 +729,7 @@ function createUploadSection() {
         logActivity('Loading uploaded files for selected genomes: ' + selectedGenomes.join(', '));
 
         // Lance le spinner
-        var target = document.getElementById('spinner');
+        const target = document.getElementById('spinner');
         spinner.spin(target); 
 
         fileUploadMode = 'local'; // Change mode to local for file upload

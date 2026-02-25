@@ -97,6 +97,7 @@ if (process.env.CONFIG_FILE_PATH) {
             }
         }
     } catch (error) {
+        console.warn('CONFIG_URLS is not a valid JSON array, trying comma-separated format.');
         // Format chaîne séparée par virgules
 		const urls = (configUrlsEnv || "")
   			.split(',')
@@ -205,7 +206,7 @@ function validateFileContent(filePath, originalName) {
 
     switch (ext) {
         case '.fasta': case '.fa': case '.fna': case '.faa':
-            if (!/^>/.test(trimmed)) return false;
+            if (!trimmed.startsWith(">")) return false;
             break;
         case '.gff': case '.gff3':
             if (!/^(##gff-version|#)/.test(trimmed) && !/^\S+\t\S+\t/.test(trimmed)) return false;
@@ -243,7 +244,7 @@ const storage = multer.diskStorage({
 		
 		// Protection originalname
 		const safeName = (file.originalname || 'unknown')
-			.replace(/[^a-zA-Z0-9._-]/g, '_')
+			.replaceAll(/[^a-zA-Z0-9._-]/g, '_')
 			.substring(0, 100);
 		
 		cb(null, `${prefix}_${safeName}`);
@@ -345,7 +346,7 @@ uploadRouter.use((error, req, res, next) => {
     }
     
     // Erreurs validateFileContent
-    if (error.message && error.message.includes('Invalid content')) {
+    if (error.message?.includes('Invalid content')) {
         logToFile(`Invalid content: ${error.message}`, req.uploadId);
         res.status(400).json({
             error: 'Invalid content',
@@ -474,7 +475,7 @@ io.on('connection', socket => {
                 if (input.type === "file" || input.type === "file[]") {
                 const matchingFiles = uploadedFiles.filter(file => file.fieldname === input.name);
                 matchingFiles.forEach(file => {
-                    if (file && file.path) {
+                    if (file?.path) {
                     filePaths.push(file.path);
                     const fileName = path.basename(file.path);
                     aArgs += ` ${input.flag} ${fileName}`;
@@ -528,11 +529,8 @@ io.on('connection', socket => {
                 socket.emit('consoleMessage', `Sortie :\n ${stdout}`);
 
                 //verifie le fichier de log pour récupérer les sortie quand elle sont disponibles.
-                function getUuidFromCommand(launchCommand) {
-                    const match = launchCommand.match(/-u\s+([a-f0-9-]+)/i);
-                    return match ? match[1] : null;
-                }
-                const uuid = getUuidFromCommand(launchCommand);
+                const match = new RegExp(/-u\s+([a-f0-9-]+)/i).exec(launchCommand); 
+                const uuid = match ? match[1] : null;
                 console.log('UUID:', uuid);
 
                 const logPath = path.join(toolkitWorkingPath, uuid, 'stdout.txt');
@@ -683,9 +681,9 @@ io.on('connection', socket => {
 
             if (fs.existsSync(dir_path)) {
                 fs.readdirSync(dir_path).forEach(function(entry) {
-                    var entry_path = path.join(dir_path, entry);
-                    var stats = fs.lstatSync(entry_path);
-                    var mtime = stats.mtime.getTime();
+                    const entry_path = path.join(dir_path, entry);
+                    const stats = fs.lstatSync(entry_path);
+                    const mtime = stats.mtime.getTime();
 
                     if ((now - mtime) > TEN_DAYS_MS) {
                         if (stats.isDirectory()) {
@@ -696,7 +694,7 @@ io.on('connection', socket => {
                     }
                 });
                 // Supprime le dossier si lui-même est vieux de plus de 10 jours et vide
-                var dirStats = fs.lstatSync(dir_path);
+                const dirStats = fs.lstatSync(dir_path);
                 if ((now - dirStats.mtime.getTime()) > TEN_DAYS_MS && fs.readdirSync(dir_path).length === 0) {
                     fs.rmdirSync(dir_path);
                     console.log("cleaning " + dir_path);

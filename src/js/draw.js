@@ -156,8 +156,6 @@ export function createGraphSection() {
     zoom = d3.zoom()
         .scaleExtent([0.5, 15]) // Définir les niveaux de zoom minimum et maximum
         .on("zoom", (event) => {
-            // console.log("Zoom event triggered");
-            // console.log(event.transform);
             d3.select('#zoomGroup').attr("transform", event.transform);
     });
     
@@ -200,7 +198,6 @@ export function createGraphSection() {
 
 export function drawMiniChromosome(genome, svg, options = {}) {
     const width = 40;
-    const height = 10;
     const radius = 2;
 
     // build path below
@@ -213,15 +210,16 @@ export function drawMiniChromosome(genome, svg, options = {}) {
         });
         svg.attr('data-genome', genome);
     } catch (e) {
-        try {
-            const node = svg.node ? svg.node() : svg;
-            if (node && node.setAttribute) {
-                node.setAttribute('class', (node.getAttribute('class') || '') + ' mini-chrom');
-                node.setAttribute('data-genome', genome);
-            }
-        } catch (ee) {
-            // noop
+        warn('Failed to set attributes on svg with d3 selection, trying fallback', e);
+    }
+    try {
+        const node = svg.node ? svg.node() : svg;
+        if (node?.setAttribute) {
+            node.setAttribute('class', (node.getAttribute('class') || '') + ' mini-chrom');
+            node.dataset.genome = genome;
         }
+    } catch (error_) {
+        warn('Failed to set attributes on svg with direct DOM manipulation', error_);
     }
 
     // build path for mini chromosome with rounded ends
@@ -235,9 +233,9 @@ export function drawMiniChromosome(genome, svg, options = {}) {
     path += 'Z';
 
     // Determine color/mode to render the mini chrom based on options or genome settings
-    const genomeSetting = (globalThis.genomeDisplaySettings && globalThis.genomeDisplaySettings[genome]) ? globalThis.genomeDisplaySettings[genome] : null;
-    const mode = options.mode || (genomeSetting && genomeSetting.mode) || 'filled';
-    const color = options.color || (genomeSetting && genomeSetting.color) || genomeColors[genome] || '#000000';
+    const genomeSetting = (globalThis.genomeDisplaySettings?.[genome]) ? globalThis.genomeDisplaySettings[genome] : null;
+    const mode = options.mode || (genomeSetting?.mode) || 'filled';
+    const color = options.color || (genomeSetting?.color) || genomeColors[genome] || '#000000';
     const gradientId = `gradient-${genome}`;
 
     // Append path and apply styles according to mode
@@ -257,6 +255,7 @@ export function drawMiniChromosome(genome, svg, options = {}) {
             p.attr('fill', color).attr('stroke', color);
         }
     } catch (e) {
+        warn('Failed to draw mini chromosome with d3 selection, trying fallback', e);
         // fallback if svg is not a d3 selection
         try {
             const node = svg.node ? svg.node() : svg;
@@ -284,14 +283,13 @@ export function drawMiniChromosome(genome, svg, options = {}) {
                 pathEl.setAttribute('stroke', color);
             }
             node.appendChild(pathEl);
-        } catch (ee) {
-            // noop
+        } catch (error) {
+            warn('Failed to draw mini chromosome with direct DOM manipulation', error);
         }
     }
 }
 
 export function drawChromosomes(genomeData, maxLengths, refGenome, queryGenome, isFirstFile, scale) {
-    // console.log("Draw chromosomes"); 
     const svgGroup = d3.select('#zoomGroup');
     const height = 300;
     
@@ -318,7 +316,7 @@ export function drawChromosomes(genomeData, maxLengths, refGenome, queryGenome, 
             const refData = genomeData[refGenome][chrom] || { length: 0, name: '-' };
             const refLen = (typeof refData.length === 'number') ? refData.length : 0;
             const refWidth = refLen / scale;
-            const chromLen = (maxLengths[chrom] !== undefined) ? maxLengths[chrom] : refLen;
+            const chromLen = (maxLengths[chrom] === undefined) ? refLen : maxLengths[chrom];
             const chromWidth = chromLen / scale;
 
             //si premier chromosome, affiche le nom du génome sur le coté gauche
@@ -334,7 +332,7 @@ export function drawChromosomes(genomeData, maxLengths, refGenome, queryGenome, 
                     .text(refGenome);
             }
 
-            if (!isNaN(chromWidth) && chromWidth > 0 && refWidth > 0) {
+            if (!Number.isNaN(chromWidth) && chromWidth > 0 && refWidth > 0) {
                 drawChromPathNoArm(currentX, yRefPosition, refWidth, radius, chrom,
                     (refData.name || '-') + "_ref", refGenome, svgGroup, scale);
                 
@@ -370,7 +368,7 @@ export function drawChromosomes(genomeData, maxLengths, refGenome, queryGenome, 
         const queryData = genomeData[queryGenome][chrom] || { length: 0, name: '-' };
         const queryLen = (typeof queryData.length === 'number') ? queryData.length : 0;
         const queryWidth = queryLen / scale;
-        const chromLenForWidth = (maxLengths[chrom] !== undefined) ? maxLengths[chrom] : queryLen;
+        const chromLenForWidth = (maxLengths[chrom] === undefined) ? queryLen : maxLengths[chrom];
         const chromWidth = chromLenForWidth / scale || queryWidth;
 
         //si premier chromosome, affiche le nom du génome sur le coté gauche
@@ -385,7 +383,7 @@ export function drawChromosomes(genomeData, maxLengths, refGenome, queryGenome, 
                 .attr("data-chrom-num", chrom)
                 .text(queryGenome);
         }
-        if (!isNaN(chromWidth) && chromWidth > 0 && queryWidth > 0) {
+        if (!Number.isNaN(chromWidth) && chromWidth > 0 && queryWidth > 0) {
             drawChromPathNoArm(currentX, yQueryPosition, queryWidth, radius, chrom,
                 (queryData.name || '-') + "_query", queryGenome, svgGroup, scale);
 
@@ -408,7 +406,6 @@ export function drawChromosomes(genomeData, maxLengths, refGenome, queryGenome, 
 }
 
 export function drawStackedChromosomes(genomeData, maxLengths, fileIndex, totalGenomes, scale) {
-    // console.log("Draw stacked chromosomes"); 
     const svgGroup = d3.select('#zoomGroup');
     const margin = { top: 30, bottom: 30, left: 50, right: 50 };
     const spaceBetween = 100;
@@ -430,9 +427,9 @@ export function drawStackedChromosomes(genomeData, maxLengths, fileIndex, totalG
         const queryLength = (typeof queryData.length === 'number') ? queryData.length : 0;
         const refWidth = refLength / scale;
         const queryWidth = queryLength / scale;
-        const chromWidth = (maxLengths[chrom] !== undefined ? maxLengths[chrom] : Math.max(refLength, queryLength)) / scale;
+        const chromWidth = (maxLengths[chrom] === undefined ? Math.max(refLength, queryLength) : maxLengths[chrom]) / scale;
 
-        if (!isNaN(chromWidth) && chromWidth > 0) {
+        if (!Number.isNaN(chromWidth) && chromWidth > 0) {
             if (fileIndex === 0) {
                 // Dessin chromosome référence
                 drawChromPathNoArm(currentX, currentY, refWidth, radius, chrom, (refData.name || '-') + "_ref", refGenome, svgGroup, scale);
@@ -469,9 +466,9 @@ export function drawStackedChromosomes(genomeData, maxLengths, fileIndex, totalG
 //dessin d'un chromosome sans bras
 function drawChromPathNoArm(x, y, width, radius, chromNum, chromName, genome, svg, scale) {
     // Inclus la taille du radius dans le chromosome
-    x = parseInt(x + radius);
+    x = Number.parseInt(x + radius);
     // Longueur des bras sans les radius
-    width = parseInt(width - radius - radius);
+    width = Number.parseInt(width - radius - radius);
 
     // Chemin premier bras
     let path = "M" + x + "," + y; // Déplacer vers
@@ -500,9 +497,9 @@ function drawChromPathNoArm(x, y, width, radius, chromNum, chromName, genome, sv
 
     // Déterminer la couleur selon le mode
     let chromColor;
-    if (typeof bandColorMode !== 'undefined' && bandColorMode === 'byChrom') {
+    if (bandColorMode !== undefined && bandColorMode === 'byChrom') {
         // Utilise l'index du chromosome pour la couleur
-        const chromIndex = parseInt(chromNum, 10) - 1;
+        const chromIndex = Number.parseInt(chromNum, 10) - 1;
         chromColor = generateColor(chromIndex >= 0 ? chromIndex : 0);
     } else {
         chromColor = genomeColors[genome];

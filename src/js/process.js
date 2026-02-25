@@ -37,7 +37,7 @@ const opts = {
     left: '50%', shadow: '0 0 1px transparent', zIndex: 2000000000,
     className: 'spinner', position: 'fixed'
 };
-export var spinner = new Spinner(opts);
+export const spinner = new Spinner(opts);
 
 // Render timer for measuring duration between draw click and spinner stop
 let __renderTimerStart = null;
@@ -48,7 +48,7 @@ export function startRenderTimer(context = {}) {
         // store context for later
         __renderTimerStart_context = context || {};
         // also save to session so a page reload won't lose it (best-effort)
-        try { sessionStorage.setItem('visusnp_render_start', JSON.stringify({ ts: Date.now(), ctx: __renderTimerStart_context })); } catch (e) {}
+        try { sessionStorage.setItem('visusnp_render_start', JSON.stringify({ ts: Date.now(), ctx: __renderTimerStart_context })); } catch (e) { console.warn('Failed to save render start to sessionStorage', e); }
         console.info('Render timer started', __renderTimerStart_context);
     } catch (e) {
         console.warn('startRenderTimer failed', e);
@@ -60,7 +60,7 @@ export function stopRenderTimer(extra = {}) {
         const end = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
         if (!__renderTimerStart) {
             // no timer started, still stop spinner
-            try { spinner.stop(); } catch (e) {}
+            try { spinner.stop(); } catch (e) { console.warn('Failed to stop spinner', e); }
             return null;
         }
         const durationMs = end - __renderTimerStart;
@@ -74,11 +74,11 @@ export function stopRenderTimer(extra = {}) {
                     cores: navigator.hardwareConcurrency || null,
                     deviceMemory: navigator.deviceMemory || null
                 };
-            } catch (e) {}
+            } catch (e) {console.warn('Failed to collect environment info', e); }
             const metric = {
                 ts: Date.now(),
                 durationMs,
-                context: Object.assign({}, ctx, extra),
+                context: { ...ctx, ...extra},
                 env
             };
 
@@ -88,11 +88,11 @@ export function stopRenderTimer(extra = {}) {
             stored.push(metric);
             localStorage.setItem('visusnp_render_metrics', JSON.stringify(stored));
         } catch (e) {
-            // ignore storage errors
+            console.warn('Failed to store render metric in localStorage', e);
         }
 
         // stop spinner (actual UI)
-        try { spinner.stop(); } catch (e) { console.warn('spinner.stop failed', e); }
+        try { spinner.stop(); } catch (e) { console.warn('Failed to stop spinner', e); }
 
         // clear timer
         __renderTimerStart = null;
@@ -104,7 +104,7 @@ export function stopRenderTimer(extra = {}) {
         return metric;
     } catch (e) {
         console.warn('stopRenderTimer failed', e);
-        try { spinner.stop(); } catch (ee) {}
+        try { spinner.stop(); } catch (error) { console.warn('Failed to stop spinner in error handling', error); }
         return null;
     }
 }
@@ -138,7 +138,7 @@ function resetGlobals() {
         if (globalThis.genomeDisplaySettings) delete globalThis.genomeDisplaySettings;
         if (globalThis.chromDisplaySettings) delete globalThis.chromDisplaySettings;
     } catch (e) {
-        // noop
+        console.error("Error resetting global display settings:", e);
     }
 
 }
@@ -152,24 +152,15 @@ export function generateColor(index) {
 }
 
 function readFileInChunks(file, isFirstFile) {
-    const reader = new FileReader();
-
-    reader.onload = function(event) {
-        const data = event.target.result;
-        // console.log("File read successfully: " + file.name);
+    file.text().then(data => {
         const lines = data.split('\n');
         processChunks(lines, isFirstFile);
-    };
-
-    reader.onerror = function(event) {
-        console.error('Erreur lors de la lecture du fichier:', event.target.error);
-    };
-
-    reader.readAsText(file);
+    }).catch(error => {
+        console.error('Erreur lors de la lecture du fichier:', error);
+    });
 }
 
 function processChunks(lines, isFirstFile) {
-    // console.log(isFirstFile, refGenome, queryGenome);
     let offset = 0;
     let parsedData = [];
 
@@ -180,17 +171,11 @@ function processChunks(lines, isFirstFile) {
         const chunkData = parseSyriData(chunk.join('\n'));
         parsedData = parsedData.concat(chunkData);
 
-        // const stackMode = document.getElementById('stack-mode').checked;
         const stackMode = false; // IGNORE
 
         if (offset < lines.length) {
             requestAnimationFrame(processNextChunk);
         } else {
-            // const refChromosomeLengths = genomeLengths[refGenome];
-            // const queryChromosomeLengths = genomeLengths[queryGenome];
-            // console.log(refChromosomeLengths);
-            // console.log(queryChromosomeLengths);
-
             let chromPositions;
             if(stackMode){
                 const fileIndex = orderedFileObjects.indexOf(currentFile);
@@ -201,7 +186,6 @@ function processChunks(lines, isFirstFile) {
             }
             drawCorrespondenceBands(parsedData, chromPositions, isFirstFile, scale);
             previousChromosomePositions = chromPositions;
-            // globalThis.fullParsedData = parsedData; // Sauvegarder les données du dernier fichier traité
             allParsedData.push({ //toutes les données de tous les fichiers
                 refGenome,
                 queryGenome,
@@ -218,7 +202,6 @@ function processNextFile() {
     const fileIndex = orderedFileObjects.indexOf(currentFile);
     if (fileIndex < orderedFileObjects.length - 1) {
         currentFile = orderedFileObjects[fileIndex + 1];
-        // console.log("Current file: " + currentFile.name);
         refGenome = uniqueGenomes[fileIndex + 1];
         queryGenome = uniqueGenomes[fileIndex + 2];
         readFileInChunks(currentFile, false);
@@ -231,10 +214,7 @@ function processNextFile() {
         nbBandes = allBand.size();
         const allChromosomes = d3.selectAll('path.chrom');
         nbChromosomes = allChromosomes.size();
-        if (typeof window !== 'undefined' && window.__renderTimerStart_context) {
-            nbChromosomes = window.__renderTimerStart_context.nbChromosomes || 0;
-            nbBandes = window.__renderTimerStart_context.nbBandes || 0;
-        } else if (typeof globalThis !== 'undefined' && globalThis.__renderTimerStart_context) {
+        if (typeof globalThis !== 'undefined' && globalThis.__renderTimerStart_context) {
             nbChromosomes = globalThis.__renderTimerStart_context.nbChromosomes || 0;
             nbBandes = globalThis.__renderTimerStart_context.nbBandes || 0;
         }
@@ -295,12 +275,11 @@ function updateChromList(globalMaxChromosomeLengths) {
         goto.dataset.feature = 'goto-chromosome';
         goto.style.cursor = 'pointer';
         goto.style.marginRight = '10px';
-
-    //     // Ajout du comportement de zoom sur le chromosome
+        
+        // Ajout du comportement de zoom sur le chromosome
         goto.addEventListener('click', () => {
             logActivity(`Go to chromosome ${chromNum}`);
             const chromPos = chromPositions[chromNum];
-            // console.log("Chromosome position:", chromPos);
 
             if (chromPos) {
                 const margin = 100;
@@ -311,14 +290,11 @@ function updateChromList(globalMaxChromosomeLengths) {
                 const svgHeight = svgRect.height;
 
                 // Calculer l'échelle pour que le chromosome occupe la largeur disponible moins les marges
-                const availableWidth = svgWidth - (2 * margin);
                 const scale = 10;
                 
                 // Calculer la translation pour centrer le chromosome
                 const translateX = margin - (scale * chromPos.refX);
                 const translateY = margin - (scale * chromPos.refY) - svgHeight + 50;
-
-                // console.log("Translate X: ", translateX, "Translate Y: ", translateY);
 
                 // Animer le zoom
                 svg.transition()
@@ -356,12 +332,10 @@ function updateChromList(globalMaxChromosomeLengths) {
         listItem.appendChild(eyeIcon);
         listItem.appendChild(goto);
         
-        // const text = document.createElement('span');
-        // text.textContent = chromNum;
-    const text = document.createElement('span');
-    const chromObj = genomeData[refGenome] && genomeData[refGenome][chromNum];
-    const chromName = (chromObj && chromObj.name) ? chromObj.name : '-';
-    text.textContent = chromName;
+        const text = document.createElement('span');
+        const chromObj = genomeData[refGenome] && genomeData[refGenome][chromNum];
+        const chromName = (chromObj && chromObj.name) ? chromObj.name : '-';
+        text.textContent = chromName;
 
         listItem.appendChild(text);
         
