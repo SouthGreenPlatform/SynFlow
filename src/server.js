@@ -4,7 +4,10 @@ const https = require('https');
 const path = require('path');
 const express = require('express');
 const { Server } = require('socket.io');
+const { execFile } = require('child_process');
+
 const app = express();
+
 
 const publicDir = path.resolve(__dirname, '..', 'public');
 app.use(express.static(publicDir));
@@ -177,7 +180,7 @@ function validateFileContent(filePath, originalName) {
 
     //Vérif originalName
     if (!originalName || typeof originalName !== 'string') {
-        logToFile(`Rejet: originalName manquant (${originalName})`);
+        console.log(`Rejet: originalName manquant (${originalName})`);
         return false;
     }
     
@@ -191,14 +194,14 @@ function validateFileContent(filePath, originalName) {
         fs.closeSync(fd);
         head = buf.toString('utf8', 0, bytesRead);
     } catch (e) {
-        logToFile(`Erreur lecture head ${originalName}: ${e.message}`, uploadId);
+        console.log(`Erreur lecture head ${originalName}: ${e.message}`);
         return false;
     }
 
     // Patterns dangereux
     const dangerousPatterns = /<script|javascript:|eval\s*\(|import\s+|require\s*\(|exec\s*\(/i;
     if (dangerousPatterns.test(head)) {
-        logToFile(`Rejet malveillant: ${originalName}`, uploadId);
+        console.log(`Rejet malveillant: ${originalName}`);
         return false;
     }
 
@@ -334,7 +337,7 @@ app.use((error, req, res, next) => {
         
         const message = messages[error.code] || `Multer error: ${error.code}`;
         
-        logToFile(`Multer error ${error.code}: ${message}`, req.uploadId);
+        console.log(`Multer error ${error.code}: ${message}`, req.uploadId);
         
         // Note: req.socket n'existe pas, on utilise une approche différente
         res.status(400).json({
@@ -347,7 +350,7 @@ app.use((error, req, res, next) => {
     
     // Erreurs validateFileContent
     if (error.message?.includes('Invalid content')) {
-        logToFile(`Invalid content: ${error.message}`, req.uploadId);
+        console.log(`Invalid content: ${error.message}`, req.uploadId);
         res.status(400).json({
             error: 'Invalid content',
             message: error.message,
@@ -357,7 +360,7 @@ app.use((error, req, res, next) => {
     }
     
     // Autres erreurs
-    logToFile(`Upload error: ${error.message}`, req.uploadId);
+    console.log(`Upload error: ${error.message}`, req.uploadId);
     res.status(500).json({
         error: 'Server error',
         message: error.message,
@@ -465,7 +468,7 @@ io.on('connection', socket => {
             let filePaths = [];
 
             inputs.forEach(input => {
-                //logToFile(`Input: ${input.name} type ${input.type} flag ${input.flag}`, socket.id);
+                //console.log(`Input: ${input.name} type ${input.type} flag ${input.flag}`, socket.id);
                 if (input.flag) {
                 if (input.type !== "file" && input.type !== "file[]") {
                     const value = params[input.name];
@@ -516,11 +519,11 @@ io.on('connection', socket => {
             // |  |____ /  .  \  |  |____ |  `----.
             // |_______/__/ \__\ |_______| \______|                  
             // Exécuter la commande
-            execFile(launchInfo.binary, launchInfo.args, (error, stdout, stderr) => {
+            execFile(launchCommand.binary, launchCommand.args, (error, stdout, stderr) => {
 
                 if (error) {
-                    console.error(`Erreur d'exécution : ${error}`);
-                    socket.emit('consoleMessage', `Erreur : ${error}`);
+                    console.warn(`Erreur d'exécution : ${error.message}`);
+                    socket.emit('consoleMessage', `Erreur : ${error.message}`);
                     return;
                 }
 
@@ -529,8 +532,8 @@ io.on('connection', socket => {
                 socket.emit('consoleMessage', `Sortie :\n ${stdout}`);
 
                 //verifie le fichier de log pour récupérer les sortie quand elle sont disponibles.
-                const match = new RegExp(/-u\s+([a-f0-9-]+)/i).exec(launchCommand); 
-                const uuid = match ? match[1] : null;
+                const match = launchCommand.args.find(arg => /^[a-f0-9-]{36}$/.test(arg));
+                const uuid = match || null;
                 console.log('UUID:', uuid);
 
                 const logPath = path.join(toolkitWorkingPath, uuid, 'stdout.txt');
