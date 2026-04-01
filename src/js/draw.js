@@ -454,7 +454,6 @@ export function drawStackedChromosomes(genomeData, maxLengths, fileIndex, totalG
             console.error(`Invalid chromosome width for ${chrom}: ${chromWidth}`);
         }
     }
-
     return chromPositions;
 }
 

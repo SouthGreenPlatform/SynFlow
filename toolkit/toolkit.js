@@ -103,7 +103,9 @@ export function loadSocketIOScript() {
 //sinon on utilise https://wsp1453.southgreen.fr
 
 const isLocalhost = globalThis.location.hostname === 'localhost';
-const socketURL = isLocalhost ? 'http://localhost:3031' : 'https://wsp1453.southgreen.fr:1453';
+//J'ai enlevé le :1453 à l'ouverture du server
+const socketURL = isLocalhost ? 'http://localhost:3031' : 'https://wsp1453.southgreen.fr';
+
 
 
 /**

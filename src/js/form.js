@@ -205,6 +205,7 @@ async function fetchSynflowDirectories() {
 
 // Fonction pour récupérer la liste des fichiers .out depuis un dossier distant
 function fetchRemoteOutFileList(folder) {
+    console.log('Fetching file list from FTP folder:', folder);
     // Normalise l'URL pour s'assurer qu'elle se termine par un /
     let url = folder.trim();
     if (!url.endsWith('/')) {
@@ -246,6 +247,7 @@ function fetchRemoteOutFileList(folder) {
 
 // Fonction pour récupérer la liste de tous les fichiers depuis un dossier distant
 function fetchRemoteAllFileList(folder) {
+    console.log('Fetching all files from remote folder:', folder);
     // Normalise l'URL pour s'assurer qu'elle se termine par un /
     let url = folder.trim();
     if (!url.endsWith('/')) {
@@ -400,15 +402,15 @@ async function createExistingFilesForm() {
 
         logActivity('Loading existing files for selected genomes: ' + selectedGenomes.join(', '));
 
-            // Lance le spinner (et démarre le chronomètre de rendu)
-            const target = document.getElementById('spinner');
-            try {
-                console.info('startRenderTimer called (existing)', selectedGenomes);
-                startRenderTimer({ action: 'draw-click', mode: 'existing', selectedGenomes: selectedGenomes.length });
-            } catch (e) {
-                console.warn('startRenderTimer missing', e);
-            }
-            spinner.spin(target);
+        // Lance le spinner (et démarre le chronomètre de rendu)
+        const target = document.getElementById('spinner');
+        try {
+            console.info('startRenderTimer called (existing)', selectedGenomes);
+            startRenderTimer({ action: 'draw-click', mode: 'existing', selectedGenomes: selectedGenomes.length });
+        } catch (e) {
+            console.warn('startRenderTimer missing', e);
+        }
+        spinner.spin(target);
 
         fileUploadMode = 'remote'; // Change mode to remote for file upload
 
@@ -427,7 +429,16 @@ async function createExistingFilesForm() {
 
         // Récupère la liste des fichiers disponibles dans le dossier sélectionné
         const folder = folderSelect.value;
-        const allFiles = await fetchRemoteOutFileList(folder);
+        //fetch et catch les erreurs de fetch pour éviter que l'application plante si le dossier est inaccessible
+        let allFiles;
+        try {
+            allFiles = await fetchRemoteOutFileList(folder);
+            console.log('Files fetched from remote folder:', allFiles);
+        } catch (error) {
+            console.error('Error fetching remote file list:', error);
+            chainDiv.innerHTML = '<span style="color:red;">Error fetching file list from remote folder.</span>';
+            return;
+        }
         // Nettoie les espaces autour des noms de fichiers
         const allFilesTrimmed = new Set(allFiles.map(f => f.trim()));
 
@@ -471,7 +482,6 @@ async function createExistingFilesForm() {
 
         //cherche les fichiers anchors, bed et jbrowse associés
         await searchAdditionalFiles(selectedGenomes, files, folder);
-
         // Simule un input file multiple pour handleFileUpload
         const dataTransfer = new DataTransfer();
         files.forEach(file => dataTransfer.items.add(file));

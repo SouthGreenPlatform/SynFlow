@@ -209,7 +209,6 @@ function processNextFile() {
         allDone();
         // Récupère les valeurs du dernier contexte si dispo
         let nbChromosomes = 0, nbBandes = 0;
-
         const allBand = d3.selectAll('path.band')
         nbBandes = allBand.size();
         const allChromosomes = d3.selectAll('path.chrom');
