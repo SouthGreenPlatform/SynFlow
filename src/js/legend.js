@@ -1008,11 +1008,14 @@ export function createSlider(minBandSize, maxBandSize) {
         filterSection.appendChild(sliderContainer);
     }
 
+    console.log('Initializing range slider with min:', minBandSize - 10000, 'max:', maxBandSize + 10000);
+    const minSlider = minBandSize - 10000 >= 0 ? minBandSize - 10000 : 0;
+    const maxSlider = maxBandSize + 10000;
     rangeSlider(sliderElement, {
-        min: minBandSize - 10000,
-        max: maxBandSize + 10000,
+        min: minSlider,
+        max: maxSlider,
         step: 50000,
-        value: [minBandSize - 10000, maxBandSize + 10000],
+        value: [minSlider, maxSlider],
         disabled: false,
         rangeSlideDisabled: false,
         thumbsDisabled: [false, false],
