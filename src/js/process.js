@@ -906,6 +906,8 @@ export function findUniqueGenomes(bandFileNames) {
     let start = Object.keys(counts).find(g => counts[g] === 1 && firsts.has(g));
     if (!start) {
         alert("Error: Unable to find a unique starting genome. Please check your band files.");
+        console.log("Counts:", counts);
+        console.log("Firsts:", firsts);
         stopRenderTimer();
         return null;
     }
@@ -932,8 +934,15 @@ function handleFileUpload(bandFiles, bedFiles) {
     // Extraire les noms de fichiers des objets File
     const bandFileNames = Array.from(bandFiles).map(file => file.name);
     
+    const outFiles = bandFileNames.filter(name => name.endsWith('.out'));
+    if (outFiles.length === 0) {
+        alert('No valid band files (.out) found. Please upload the correct files.');
+        stopRenderTimer();
+        return;
+    }
+
     // Trouver et ordonne les génomes à partir des noms de fichiers de bandes
-    uniqueGenomes = findUniqueGenomes(bandFileNames);
+    uniqueGenomes = findUniqueGenomes(outFiles);
 
     // Vérifier si tous les fichiers de bandes nécessaires sont présents
     if (!uniqueGenomes || uniqueGenomes.length < 2) {
@@ -948,10 +957,11 @@ function handleFileUpload(bandFiles, bedFiles) {
     });
 
     //retrouve l'ordre des fichier 
-    const orderedFiles = orderFilesByGenomes(bandFileNames, uniqueGenomes);
+    // const orderedFiles = orderFilesByGenomes(bandFileNames, uniqueGenomes);
+    const orderedFiles = orderFilesByGenomes(outFiles, uniqueGenomes);
 
     // Vérifier si tous les fichiers de bandes nécessaires sont présents et dans l'ordre
-    if (orderedFiles.length !== bandFileNames.length) {
+    if (orderedFiles.length !== outFiles.length) {
         alert('Some band files are missing. Please ensure all necessary files are uploaded.');
         stopRenderTimer();
         return;
