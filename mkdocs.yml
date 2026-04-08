@@ -19,4 +19,5 @@ nav:
   - Control: control.md
   - Block detail: block.md
   - Visualisation: visualisation.md
+  - Workflow: workflow.md
   - Installation: installation.md
