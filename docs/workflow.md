@@ -217,7 +217,7 @@ genome2: "path/to/genome2.gff3"
 ## Workflow steps
 
 
-![SynFlow workflow](images/workflow.png)
+![SynFlow workflow](assets/workflow.png)
 
 
 The workflow is organized as follows:
