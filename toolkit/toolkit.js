@@ -486,6 +486,15 @@ export function generateForm(selectedService) {
             formContainer.appendChild(input);
             formContainer.appendChild(document.createElement("br"));
 
+            //if field is required, add a star after the label
+            if (field.required) {
+                const star = document.createElement("span");
+                star.textContent = " *";
+                star.style.color = "black";
+                labelContainer.appendChild(star);
+            }
+
+
             if (workflowField && field.name === workflowField.name) {
                 workflowSelect = input;
                 workflowSelect.addEventListener("change", () => {
@@ -530,6 +539,16 @@ export function generateForm(selectedService) {
         submitButton.onclick = (event) => {
             logActivity('Submitting toolkit form');
             event.preventDefault();
+
+            //check if all required fields are filled
+            const requiredFields = formContainer.querySelectorAll("input[required], select[required]");
+            for (const field of requiredFields) {
+                if ((field.type === "file" && field.files.length === 0) || (field.type !== "file" && !field.value)) {
+                    alert(`Please fill the required field: ${field.name}`);
+                    return;
+                }
+            }
+
             addToConsole('Sending files...');
             submitForm();
             console.log("Bouton cliqué !");
