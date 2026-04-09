@@ -68,6 +68,13 @@
 						"flag": "-m",
 						"optionsSource": "SyriWorkflows",
 						"required": true
+					},
+					{
+						"name": "email",
+						"label": "Email",
+						"tooltip": "Email address to receive notification when the job is finished",
+						"type": "text",
+						"required": false
 					}
 				]
 			}
@@ -122,10 +129,98 @@
 			"banana/Genomes/OtherDB/ExampleDB.fna",
 			"banana/Genomes/ExampleDB2/AnotherDB.fna"
 		],
-		"SyriWorkflows": [
-			"Nucmer",
-			"Minimap2"
-		],
+		"SyriWorkflows": {
+			"nucmer": {
+				"advanced": [
+				{
+					"name": "min_length_cluster",
+					"label": "Minimum cluster length",
+					"tooltip": "Minimum length of a cluster of matches to be considered as a synteny block",
+					"type": "text",
+					"flag": "--min_length_cluster",
+					"default": "500",
+					"required": false
+				},
+				{
+					"name": "min_distance_extension",
+					"label": "Minimum distance extension",
+					"tooltip": "Minimum distance to extend a cluster of matches to be considered as a synteny block",
+					"type": "text",
+					"flag": "--min_distance_extension",
+					"default": "500",
+					"required": false
+				},
+				{
+					"name": "min_length_match",
+					"label": "Minimum match length",
+					"tooltip": "Minimum length of a match to be considered in the analysis",
+					"type": "text",
+					"flag": "--min_length_match",
+					"default": "100",
+					"required": false
+				},
+				{
+					"name": "min_alignment_identity",
+					"label": "Minimum alignment identity",
+					"tooltip": "Minimum percentage of identity for an alignment to be considered in the analysis",
+					"type": "text",
+					"flag": "--min_alignment_identity",
+					"default": "90",
+					"required": false
+				},
+				{
+					"name": "min_alignment_length",
+					"label": "Minimum alignment length",
+					"tooltip": "Minimum length of an alignment to be considered in the analysis",
+					"type": "text",
+					"flag": "--min_alignment_length",
+					"default": "5000",
+					"required": false
+				}
+				]
+			},
+			"minimap2": {
+				"advanced":[
+					{
+						"name": "preset",
+						"label": "Preset",
+						"tooltip": "Preset for minimap2, choose asm5 for closely related genomes, asm10 for more distantly related genomes and asm6 for very closely related genomes",
+						"type": "select",
+						"flag": "-p",
+						"options": [
+							{"label": "asm5", "value": "asm5"},
+							{"label": "asm10", "value": "asm10"},
+							{"label": "asm6", "value": "asm6"}
+						],
+						"default": "asm5",
+						"required": false	
+					},
+					{
+						"name": "secondary",
+						"label": "Secondary alignments",
+						"tooltip": "Include secondary alignments in the analysis",
+						"type": "select",
+						"flag": "-s",
+						"options": [
+							{"label": "yes", "value": "yes"},
+							{"label": "no", "value": "no"}
+						],
+						"default": "no",
+						"required": false	
+					},
+					{
+						"name": "bandwidth",
+						"label": "Bandwidth for chaining and base alignment",
+						"tooltip": "Bandwidth for chaining and base alignment (default 2k) for initial chaining and alignment extension",
+						"type": "text",
+						"flag": "--bandwidth",
+						"default": "2000",
+						"required": false	
+					}
+				]
+			}
+		},
+			
 		"anotherServiceDBs": [
 			"path/to/db1.fna",
 			"path/to/db2.fna"

@@ -81,6 +81,42 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Réduction de l'ombre à l'activation */
 }
 
+.advanced-toggle {
+  margin-top: 12px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #007BFF;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.advanced-toggle:hover {
+  color: #0056b3;
+  text-decoration: none;
+}
+
+.advanced-toggle.open {
+  color: #003a7a;
+}
+
+.advanced-container {
+  display: none;
+  margin-top: 12px;
+  padding: 18px;
+  border: 1px solid #c8d8ff;
+  border-radius: 10px;
+  background-color: #f3f8ff;
+}
+
+.advanced-container p {
+  margin: 0;
+  color: #4a5568;
+}
+
 /* Style pour la console */
 #console {
   border: 1px solid #000;

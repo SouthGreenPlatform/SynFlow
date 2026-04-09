@@ -230,6 +230,138 @@ function getEnvironmentConfig() {
     return isDevelopment ? config.development : config.production;
 }
 
+function getSelectOptions(field) {
+    if (field.options) {
+        return field.options;
+    }
+    if (field.optionsSource) {
+        return databasesData[field.optionsSource] || [];
+    }
+    return [];
+}
+
+function createFieldElements(field) {
+    const labelContainer = document.createElement("div");
+    labelContainer.style.display = "flex";
+    labelContainer.style.alignItems = "center";
+    labelContainer.style.gap = "5px";
+
+    const label = document.createElement("label");
+    label.textContent = field.label;
+    label.htmlFor = field.name;
+    labelContainer.appendChild(label);
+
+    if (field.tooltip) {
+        const tooltipIcon = document.createElement("span");
+        tooltipIcon.innerHTML = "?";
+        tooltipIcon.style.cursor = "help";
+        tooltipIcon.style.backgroundColor = "#f0f0f0";
+        tooltipIcon.style.borderRadius = "50%";
+        tooltipIcon.style.width = "16px";
+        tooltipIcon.style.height = "16px";
+        tooltipIcon.style.display = "inline-flex";
+        tooltipIcon.style.justifyContent = "center";
+        tooltipIcon.style.alignItems = "center";
+        tooltipIcon.style.fontSize = "12px";
+        tooltipIcon.style.position = "relative";
+
+        const tooltipText = document.createElement("div");
+        tooltipText.textContent = field.tooltip;
+        tooltipText.style.visibility = "hidden";
+        tooltipText.style.backgroundColor = "black";
+        tooltipText.style.color = "white";
+        tooltipText.style.padding = "5px 10px";
+        tooltipText.style.borderRadius = "6px";
+        tooltipText.style.position = "absolute";
+        tooltipText.style.zIndex = "1";
+        tooltipText.style.width = "200px";
+        tooltipText.style.left = "25px";
+        tooltipText.style.top = "-5px";
+        tooltipText.style.fontSize = "12px";
+
+        const showTooltip = () => tooltipText.style.visibility = "visible";
+        const hideTooltip = () => tooltipText.style.visibility = "hidden";
+
+        tooltipIcon.addEventListener("mouseover", showTooltip);
+        tooltipIcon.addEventListener("mouseout", hideTooltip);
+        tooltipIcon.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (tooltipText.style.visibility === "visible") {
+                hideTooltip();
+            } else {
+                showTooltip();
+            }
+        });
+
+        document.addEventListener("click", hideTooltip);
+
+        tooltipIcon.appendChild(tooltipText);
+        labelContainer.appendChild(tooltipIcon);
+    }
+
+    let input;
+    if (field.type === "select") {
+        input = document.createElement("select");
+        input.name = field.name;
+
+        const options = getSelectOptions(field);
+        if (Array.isArray(options)) {
+            options.forEach(optionValue => {
+                const option = document.createElement("option");
+                if (typeof optionValue === "string") {
+                    option.value = optionValue;
+                    option.textContent = optionValue;
+                } else if (typeof optionValue === "object" && optionValue !== null) {
+                    option.value = optionValue.value;
+                    option.textContent = optionValue.label || optionValue.value;
+                }
+                input.appendChild(option);
+            });
+        } else if (options && typeof options === "object") {
+            Object.keys(options).forEach(optionKey => {
+                const option = document.createElement("option");
+                option.value = optionKey;
+                option.textContent = optionKey;
+                input.appendChild(option);
+            });
+        }
+
+        if (field.default) {
+            input.value = field.default;
+        }
+    } else if (field.type === "text") {
+        input = document.createElement("input");
+        input.type = "text";
+        input.name = field.name;
+        input.value = field.default || "";
+    } else if (field.type === "boolean") {
+        input = document.createElement("input");
+        input.type = "checkbox";
+        input.name = field.name;
+        input.checked = field.default === true || field.default === "true";
+    } else if (field.type === "file") {
+        input = document.createElement("input");
+        input.type = "file";
+        input.name = field.name;
+    } else if (field.type === "file[]") {
+        input = document.createElement("input");
+        input.type = "file";
+        input.name = field.name;
+        input.multiple = true;
+    } else {
+        input = document.createElement("input");
+        input.type = "text";
+        input.name = field.name;
+        input.value = field.default || "";
+    }
+
+    if (field.required) {
+        input.required = true;
+    }
+
+    return { labelContainer, input };
+}
+
 /**
  * Loads the services and databases from the specified JSON file.
  * @return {Promise<void>} A promise that resolves when the services and databases are loaded.
@@ -325,112 +457,71 @@ export function generateForm(selectedService) {
     if (selectedService && servicesData[selectedService]) {
         const service = servicesData[selectedService];
         const fields = service.arguments.inputs;
+        const workflowField = fields.find(field => field.optionsSource && databasesData[field.optionsSource] && !Array.isArray(databasesData[field.optionsSource]));
+        const advancedDefinitions = workflowField ? databasesData[workflowField.optionsSource] : null;
+        let workflowSelect = null;
+
+        const renderAdvanced = (workflowName, advancedContainer) => {
+            advancedContainer.innerHTML = "";
+            if (!advancedDefinitions || !workflowName || !advancedDefinitions[workflowName] || !Array.isArray(advancedDefinitions[workflowName].advanced)) {
+                const noAdvanced = document.createElement("p");
+                noAdvanced.textContent = "Aucun paramètre avancé pour ce workflow.";
+                noAdvanced.style.margin = "0";
+                advancedContainer.appendChild(noAdvanced);
+                return;
+            }
+
+            advancedDefinitions[workflowName].advanced.forEach(field => {
+                const { labelContainer, input } = createFieldElements(field);
+                advancedContainer.appendChild(labelContainer);
+                advancedContainer.appendChild(input);
+                advancedContainer.appendChild(document.createElement("br"));
+            });
+        };
 
         // Générer les champs dynamiquement
         fields.forEach(field => {
-            const labelContainer = document.createElement("div");
-            labelContainer.style.display = "flex";
-            labelContainer.style.alignItems = "center";
-            labelContainer.style.gap = "5px";
-
-            const label = document.createElement("label");
-            label.textContent = field.label;
-            label.htmlFor = field.name;
-            labelContainer.appendChild(label);
-
-            // Ajouter le tooltip s'il existe
-            if (field.tooltip) {
-                const tooltipIcon = document.createElement("span");
-                tooltipIcon.innerHTML = "?";
-                tooltipIcon.style.cursor = "help";
-                tooltipIcon.style.backgroundColor = "#f0f0f0";
-                tooltipIcon.style.borderRadius = "50%";
-                tooltipIcon.style.width = "16px";
-                tooltipIcon.style.height = "16px";
-                tooltipIcon.style.display = "inline-flex";
-                tooltipIcon.style.justifyContent = "center";
-                tooltipIcon.style.alignItems = "center";
-                tooltipIcon.style.fontSize = "12px";
-                tooltipIcon.style.position = "relative";
-                
-                const tooltipText = document.createElement("div");
-                tooltipText.textContent = field.tooltip;
-                tooltipText.style.visibility = "hidden";
-                tooltipText.style.backgroundColor = "black";
-                tooltipText.style.color = "white";
-                tooltipText.style.padding = "5px 10px";
-                tooltipText.style.borderRadius = "6px";
-                tooltipText.style.position = "absolute";
-                tooltipText.style.zIndex = "1";
-                tooltipText.style.width = "200px";
-                tooltipText.style.left = "25px";
-                tooltipText.style.top = "-5px";
-                tooltipText.style.fontSize = "12px";
-                
-                // Événements pour afficher/masquer le tooltip
-                const showTooltip = () => tooltipText.style.visibility = "visible";
-                const hideTooltip = () => tooltipText.style.visibility = "hidden";
-                
-                tooltipIcon.addEventListener("mouseover", showTooltip);
-                tooltipIcon.addEventListener("mouseout", hideTooltip);
-                tooltipIcon.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    if (tooltipText.style.visibility === "visible") {
-                        hideTooltip();
-                    } else {
-                        showTooltip();
-                    }
-                });
-                
-                // Fermer le tooltip si on clique ailleurs sur la page
-                document.addEventListener("click", hideTooltip);
-                
-                tooltipIcon.appendChild(tooltipText);
-                labelContainer.appendChild(tooltipIcon);
-            }
-
-            let input;
-            if (field.type === "select") {
-                input = document.createElement("select");
-                input.name = field.name;
-
-                const options = databasesData[field.optionsSource];
-                options.forEach(optionValue => {
-                    const option = document.createElement("option");
-                    //en minuscule
-                    option.value = optionValue.toLowerCase();
-                    option.textContent = optionValue;
-                    input.appendChild(option);
-                });
-
-            } else if (field.type === "text") {
-                input = document.createElement("input");
-                input.type = "text";
-                input.name = field.name;
-                input.value = field.default || "";
-
-            } else if (field.type === "file") {
-                console.log('single file input detected');
-                input = document.createElement("input");
-                input.type = "file";
-                input.name = field.name;
-
-            } else if (field.type === "file[]") {
-                console.log('multiple file input detected');
-                input = document.createElement("input");
-                input.type = "file";
-                input.name = field.name;
-                input.multiple = true; // Permet la sélection multiple
-            }
-
-            if (field.required) {
-                input.required = true;
-            }
-
+            const { labelContainer, input } = createFieldElements(field);
             formContainer.appendChild(labelContainer);
             formContainer.appendChild(input);
             formContainer.appendChild(document.createElement("br"));
+
+            if (workflowField && field.name === workflowField.name) {
+                workflowSelect = input;
+                workflowSelect.addEventListener("change", () => {
+                    const advancedContainer = document.getElementById("advancedContainer");
+                    if (advancedContainer && advancedContainer.style.display === "block") {
+                        renderAdvanced(workflowSelect.value, advancedContainer);
+                    }
+                });
+            }
         });
+
+        if (advancedDefinitions) {
+            const advancedText = document.createElement("p");
+            advancedText.textContent = "Advanced parameters ▼";
+            advancedText.style.cursor = "pointer";
+            advancedText.style.fontWeight = "bold";
+            advancedText.style.margin = "10px 0 5px 0";
+            advancedText.id = "advancedToggle";
+
+            const advancedContainer = document.createElement("div");
+            advancedContainer.id = "advancedContainer";
+            advancedContainer.className = "advanced-container";
+            advancedContainer.style.display = "none";
+
+            advancedText.onclick = () => {
+                const advancedContainer = document.getElementById("advancedContainer");
+                const isHidden = advancedContainer.style.display === "none";
+                advancedContainer.style.display = isHidden ? "block" : "none";
+                advancedText.textContent = isHidden ? "Advanced parameters ▲" : "Advanced parameters ▼";
+                if (isHidden && workflowSelect) {
+                    renderAdvanced(workflowSelect.value, advancedContainer);
+                }
+            }
+            formContainer.appendChild(advancedText);
+            formContainer.appendChild(advancedContainer);
+        }
 
         // Bouton Submit
         const submitButton = document.createElement("button");
