@@ -1,35 +1,6 @@
 <img src="public/img/SynFlow_logo.png" alt="SynFlow Logo" width="200"/>
 
 
-### 🚨 **Main Server Temporarily Unavailable**
-
-The main SynFlow server is currently **down due to technical issues**.
-
-##### ✅ **Working Demo Available** 👇
-[**https://southgreenplatform.github.io/SynFlow/**](https://southgreenplatform.github.io/SynFlow/)
-
-***Available features***:
-- ✅ Genome visualization 
-- ✅ Full user interface
-- ✅ Banana / Grapevine datasets
-
-***⚠️ Temporary limitations***:
-- ❌ **Run analysis** require backend server → **unavailable**
-
-### ⏳ Status & Updates
-
-| Service | Status | Details |
-|---------|--------|---------|
-| Web Interface | 🟢 **OK** | [GitHub Pages Demo](https://southgreenplatform.github.io/SynFlow/) |
-| Backend | 🔴 **Down** | Waiting for server recovery|
-| Workflows | ❌ **Blocked** | Backend dependent |
-
-
-**We'll update you as soon as the main server is back online.**
-
-*For questions/paper reviewers: contact [marilyne.summo@cirad.fr]*
-
-
 ## Description
 
 Synflow is a powerful web application for visualizing genome alignments and structural variations using SyRI (Structural Rearrangement Identifier) data. It provides an interactive platform for exploring genomic synteny, inversions, translocations, duplications, and other structural rearrangements between genomes.
@@ -75,6 +46,31 @@ Chromosome order can be changed by drag and drop.
 
 #### Filter the bands using the legend and the slider.
 ![Controle panel](public/img/control_panel.gif)
+
+## Performance
+
+SynFlow's rendering performance scales with the complexity of the genomic data and the user's hardware capabilities. Key factors affecting performance include:
+
+- **Data size**: Rendering time increases with the number of synteny bands, chromosomes, and genomes.
+- **Genome chaining**: Up to 20 genomes can be chained for comprehensive comparisons, but this may impact performance for very large datasets.
+- **Hardware requirements**: Optimal performance requires at least 4 CPU cores and 8 GB RAM. More cores and memory significantly reduce rendering times.
+
+**Limitations**:
+- Input data must be in SyRI output format (.out files) with specific naming conventions.
+- Maximum supported file sizes depend on browser and server limits (typically up to 100MB for uploads).
+- Requires a modern web browser with WebGL support for SVG rendering (Chrome 80+, Firefox 75+, Safari 13+).
+- Analysis workflows are limited to the available computational resources on the server.
+
+#### Metrics Dashboard
+
+SynFlow provides a performance metrics dashboard accessible at [https://synflow.southgreen.fr/metrics.html](https://synflow.southgreen.fr/metrics.html). This interactive tool visualizes rendering performance data collected from user analyses, displaying charts that correlate rendering duration with various parameters such as:
+- Number of synteny bands
+- Number of chromosomes
+- Number of genomes in the chain
+- CPU core count
+- Available memory
+
+The dashboard helps users understand performance expectations, optimize their data preparation, and make informed decisions about hardware requirements for large-scale genomic analyses.
 
 ## License
 
