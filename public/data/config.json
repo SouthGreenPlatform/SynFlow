@@ -1,4 +1,6 @@
 [
     { "organism": "Banana", "url": "https://synflow.southgreen.fr/bank/banana/" },
-    { "organism": "Grapevine", "url": "https://synflow.southgreen.fr/bank/vitis/" }
+    { "organism": "Grapevine", "url": "https://synflow.southgreen.fr/bank/vitis/" },
+    { "organism": "Dioscoreaceae", "url": "https://synflow.southgreen.fr/bank/Dioscoreaceae/" },
+    { "organism": "Bovidae", "url": "https://synflow.southgreen.fr/bank/Bovidae/" }
 ]
