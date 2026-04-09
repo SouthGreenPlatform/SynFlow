@@ -490,7 +490,7 @@ async function createExistingFilesForm() {
 
     // Container pour l'aide (partie droite)
     const existingHelpContainer = document.createElement('div');
-    existingHelpContainer.style.flex = '0 0 600px'; // Largeur fixe de 400px
+    existingHelpContainer.style.flex = '0 0 45%'; // Largeur fixe de 400px
     existingHelpContainer.style.padding = '15px';
     existingHelpContainer.style.backgroundColor = '#f8f9fa';
     existingHelpContainer.style.borderRadius = '5px';
@@ -505,7 +505,7 @@ async function createExistingFilesForm() {
             <p>
                 The available files come from analyses performed on several organisms using the <b>Synflow workflow</b>.
                 See the 
-                <a href="https://github.com/SouthGreenPlatform/synflow" target="_blank">Synflow documentation</a>.
+                <a href="https://synflow.readthedocs.io/en/latest/" target="_blank">Synflow documentation</a>.
             </p>
             <h6>How to select files</h6>
             <ul style="padding-left: 20px;">
@@ -1182,42 +1182,109 @@ export function createToolkitContainer() {
     // TOOLKIT
     ///////////////////
 
-    //crée le container pour le module toolkit
-    const toolkitContainer = document.createElement("div");
-    toolkitContainer.id = "toolkitContainer";    
-    toolkitContainer.style.position = "relative"; // Ajout de la position relative
-
-    // Ajout du bouton de fermeture
-    const closeButton = document.createElement("div");
-    closeButton.innerHTML = "&#10006;"; // Symbole croix (✖)
-    closeButton.style.cssText = `
-        position: absolute;
-        top: 0;
-        right: 0;
-        padding: 5px;
-        cursor: pointer;
-        font-size: 20px;
-        color: #666;
+    const pageWrapper = document.createElement("div");
+    pageWrapper.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
     `;
-    closeButton.addEventListener("click", () => {
-        toolkitContainer.style.display = "none";
-    });
+
+    // Conteneur principal avec 2 colonnes
+    const mainContainer = document.createElement("div");
+    mainContainer.className = "toolkit-main-wrapper";
+    mainContainer.style.cssText = `
+        display: flex !important;
+        gap: 20px;
+        flex-wrap: nowrap;
+    `;
     
-    toolkitContainer.appendChild(closeButton);
-    closeButton.style.display = "none"; // Masquer le bouton par défaut
+    // Colonne gauche : Toolkit
+    const toolkitSection = document.createElement("div");
+    toolkitSection.id = "toolkitContainer"; // L'ID que le toolkit cherche
+    toolkitSection.style.cssText = `
+        flex: 1;
+        min-width: 400px;
+    `;
+    
+    // Colonne droite : Help
+    const helpSection = document.createElement("div");
+    helpSection.id = "toolkit-help-section";
+    helpSection.style.cssText = `
+        flex: 0 0 500px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        border: 1px solid #dee2e6;
+        overflow-y: auto;
+    `;
+    
+    // Contenu de l'aide        
+    helpSection.innerHTML = `
+        <h5>About the workflow</h5>
+        <div style="margin-top: 15px;">
+            <p>The <b>Synflow workflow</b> detects synteny and chromosomal rearrangements between two or more genome assemblies.</p>  
+            <p>See the 
+                <a href="https://gitlab.cirad.fr/agap/cluster/snakemake/synflow" target="_blank">Synflow workflow documentation</a> for more information.
+            </p>
+            <p>Note: At least 2 fasta genomes are required. All pairwise combinations are processed.</p>
+            <p>The <code>GFF3 files</code> is optional but required when any two genomes have different chromosome counts (triggers MCScanX).</p>
+            <p>The <code>Method</code> parameter applies only to the SyRI pipeline (same chromosome count pairs).</p>
+            <p>You can input your email to receive a notification when the analysis is complete. Results will be available for 10 days.</p>
+        </div>
+
+    `;
+
+    const consoleWrapper = document.createElement("div");
+    consoleWrapper.id = "console-wrapper";
+    consoleWrapper.style.cssText = `
+        width: 100%;
+    `;
+
+    
+    // Assembler les colonnes
+    mainContainer.appendChild(toolkitSection);
+    mainContainer.appendChild(helpSection);
+
+    pageWrapper.appendChild(mainContainer);
+    pageWrapper.appendChild(consoleWrapper);
+
+    document.body.appendChild(pageWrapper);
 
 
-    document.body.appendChild(toolkitContainer);
+    //bouge la console quand elle arrive
+    const moveConsoleIfExists = () => {
+        const consoleDiv = document.getElementById("console");
+        if (consoleDiv && consoleDiv.parentElement !== consoleWrapper) {
+            consoleWrapper.appendChild(consoleDiv);
+        }
+    };
+    moveConsoleIfExists();
+
+    const observer = new MutationObserver(() => {
+        moveConsoleIfExists();
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
 
     //charge le css de toolkit
     const toolkitCSS = document.createElement("link");
     toolkitCSS.rel = "stylesheet";
-    toolkitCSS.href = "../../toolkit/toolkit.css";
+
+    const baseURL = globalThis.location.origin;
+    const isDev = globalThis.location.pathname.startsWith('/synflow');
+
+    toolkitCSS.href = isDev
+        ? `${baseURL}/synflow/toolkit/toolkit.css`
+        : `${baseURL}/toolkit/toolkit.css`;
+
     document.head.appendChild(toolkitCSS);
 
 
-        toolkitContainer.style.display = "block"; // Afficher le container
-        closeButton.style.display = "block"; // Afficher le bouton de fermeture
+        mainContainer.style.display = "flex"; // Afficher le container
 
         // Option pour générer le selecteur de service ou appeler un service spécifique
         const generateSelect = false;
@@ -1351,7 +1418,7 @@ export function createToolkitContainer() {
             });
         })
 
-    return toolkitContainer;
+    return pageWrapper;
 }
 
 
