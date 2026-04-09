@@ -1,69 +1,163 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <title>SynFlow metrics dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .chart-container { width: 48%; height: 400px; display: inline-block; margin: 1%; }
-        .filters { margin: 20px 0; }
-        select, input { margin: 5px; padding: 5px; }
-        table { border-collapse: collapse; margin: 20px 0; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-    </style>
-</head>
-<body>
-    <h1>Dashboard Performance Rendu Graphique</h1>
-    
-    <div class="filters">
-        <label>Filtrer par mode: 
-            <select id="modeFilter">
-                <option value="">Tous</option>
-                <option value="existing">Existing</option>
-            </select>
-        </label>
-        <label>Par nbGenomes: 
-            <input type="range" id="genomesMin" min="1" max="20" value="1">
-            <span id="genomesMinVal">1</span> - 
-            <input type="range" id="genomesMax" min="1" max="20" value="20">
-            <span id="genomesMaxVal">20</span>
-        </label>
-		<label>Chromosomes max: 
-			<input type="range" id="chromMax" min="1" max="50" value="50" style="width:100px">
-			<span id="chromMaxVal">50</span>
-		</label>
-		<label>Bandes max: 
-			<input type="range" id="bandsMax" min="100" max="10000" value="10000" style="width:100px">
-			<span id="bandsMaxVal">10000</span>
-		</label>
-		<label>Cores CPU: 
-			<input type="range" id="coresMin" min="1" max="16" value="1" style="width:80px">
-			<span id="coresMinVal">1</span> - 
-			<input type="range" id="coresMax" min="1" max="16" value="16" style="width:80px">
-			<span id="coresMaxVal">16</span>
-		</label>
-		<label>Mémoire RAM (Go): 
-			<select id="ramFilter">
-				<option value="">Toutes</option>
-				<option value="4">≤4Go</option>
-				<option value="8">8Go</option>
-				<option value="16">≥16Go</option>
-			</select>
-		</label>
-        <button onclick="updateCharts()">Rafraîchir</button>
-        <button onclick="downloadCSV()">Exporter CSV</button>
-    </div>
 
-    <div id="stats-table"></div>
+<head>
+	<title>SynFlow metrics dashboard</title>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<link rel="stylesheet" href="metrics.css" />
+</head>
+
+<body>
+	<div class="dashboard-shell">
+		<header class="topbar">
+			<div>
+				<p class="eyebrow">SynFlow analytics</p>
+				<h1>Rendering performance</h1>
+			</div>
+
+			<div class="topbar-actions">
+				<button class="btn btn-secondary" onclick="downloadCSV()">
+					Export CSV
+				</button>
+				<button class="btn btn-primary" onclick="updateCharts()">
+					Refresh
+				</button>
+			</div>
+		</header>
+
+		<section class="filters-panel">
+			<div class="filter-card filter-card-wide">
+				<label class="filter-label" for="modeFilter">Input mode</label>
+				<select id="modeFilter" class="field">
+					<option value="">All</option>
+					<option value="existing">Existing</option>
+				</select>
+			</div>
+
+			<div class="filter-card">
+				<div class="filter-head">
+					<label class="filter-label" for="genomesMin">Genomes</label>
+					<span class="filter-value"><span id="genomesMinVal">1</span> -
+						<span id="genomesMaxVal">20</span></span>
+				</div>
+				<div class="range-group">
+					<input type="range" id="genomesMin" min="1" max="20" value="1" />
+					<input type="range" id="genomesMax" min="1" max="20" value="20" />
+				</div>
+			</div>
+
+			<div class="filter-card">
+				<div class="filter-head">
+					<label class="filter-label" for="chromMax">Chromosomes</label>
+					<span class="filter-value" id="chromMaxVal">50</span>
+				</div>
+				<input type="range" id="chromMax" min="1" max="50" value="50" />
+			</div>
+
+			<div class="filter-card">
+				<div class="filter-head">
+					<label class="filter-label" for="bandsMax">Bands</label>
+					<span class="filter-value" id="bandsMaxVal">10000</span>
+				</div>
+				<input type="range" id="bandsMax" min="100" max="10000" value="10000" />
+			</div>
+
+			<div class="filter-card">
+				<div class="filter-head">
+					<label class="filter-label" for="coresMin">CPU cores</label>
+					<span class="filter-value"><span id="coresMinVal">1</span> -
+						<span id="coresMaxVal">16</span></span>
+				</div>
+				<div class="range-group">
+					<input type="range" id="coresMin" min="1" max="16" value="1" />
+					<input type="range" id="coresMax" min="1" max="16" value="16" />
+				</div>
+			</div>
+
+			<div class="filter-card filter-card-wide">
+				<label class="filter-label" for="ramFilter">Memory</label>
+				<select id="ramFilter" class="field">
+					<option value="">All</option>
+					<option value="4">≤4 GB</option>
+					<option value="8">8 GB</option>
+					<option value="16">≥16 GB</option>
+				</select>
+			</div>
+		</section>
+
+		<section class="charts-grid">
+			<article class="chart-card chart-card-large">
+				<div class="chart-card-head">
+					<h2>Duration vs bands</h2>
+					<p>Rendering time based on band count.</p>
+				</div>
+				<div class="chart-wrap">
+					<canvas id="chartDurationVsBands"></canvas>
+				</div>
+			</article>
+
+			<article class="chart-card chart-card-large">
+				<div class="chart-card-head">
+					<h2>Mean duration by bands</h2>
+					<p>Average rendering time based on band count.</p>
+				</div>
+				<div class="chart-wrap">
+					<canvas id="chartMeanStdPerBand"></canvas>
+				</div>
+			</article>
+
+			<article class="chart-card chart-card-large">
+				<div class="chart-card-head">
+					<h2>Duration vs chromosomes</h2>
+					<p>Rendering time based on chromosome count.</p>
+				</div>
+				<div class="chart-wrap">
+					<canvas id="chartDurationVsChromosomes"></canvas>
+				</div>
+			</article>
+
+			<article class="chart-card chart-card-large">
+				<div class="chart-card-head">
+					<h2>Duration vs genomes</h2>
+					<p>Rendering time based on genome count.</p>
+				</div>
+				<div class="chart-wrap">
+					<canvas id="chartDurationVsGenomes"></canvas>
+				</div>
+			</article>
+
+			<article class="chart-card chart-card-large">
+				<div class="chart-card-head">
+					<h2>Duration vs CPU cores</h2>
+					<p>Rendering time based on CPU core count.</p>
+				</div>
+				<div class="chart-wrap">
+					<canvas id="chartDurationVsCores"></canvas>
+				</div>
+			</article>
+
+			<article class="chart-card chart-card-large">
+				<div class="chart-card-head">
+					<h2>Duration vs memory</h2>
+					<p>Rendering time based on RAM capacity.</p>
+				</div>
+				<div class="chart-wrap">
+					<canvas id="chartDurationVsRam"></canvas>
+				</div>
+			</article>
+
+			
+		</section>
+	</div>
+
 	<div class="chart-container">
 		<canvas id="chartDurationVsBands"></canvas>
 	</div>
 	<div class="chart-container">
-		<canvas id="chartDurationVsGenomes"></canvas>      
+		<canvas id="chartDurationVsGenomes"></canvas>
 	</div>
-    <div class="chart-container">
-		<canvas id="chartDurationVsChromosomes"></canvas>  
+	<div class="chart-container">
+		<canvas id="chartDurationVsChromosomes"></canvas>
 	</div>
 	<div class="chart-container">
 		<canvas id="chartDurationVsCores"></canvas>
@@ -72,433 +166,444 @@
 		<canvas id="chartDurationVsRam"></canvas>
 	</div>
 	<div class="chart-container">
-		<canvas id="chartBoxplotDuration"></canvas>
-	</div>
-	<div class="chart-container">
 		<canvas id="chartMeanStdPerBand"></canvas>
 	</div>
 
+	<script>
+		let allData = [];
+		let charts = {};
 
-<script>
-    let allData = [];
-    let charts = {};
+		const pointHoverRadius = 3;
+		const pointRadius = 2;
 
-	const pointHoverRadius = 3;
-	const pointRadius = 2;
-
-    // 1. Charge et parse metrics.log (JSONL)
-    async function loadMetrics() {
-        try {
-            const response = await fetch('https://synflow.southgreen.fr/tmp/toolkit_run/metrics.log');
-            const text = await response.text();
-            allData = text.trim().split('\n')
-                .map(line => JSON.parse(line))
-                // AJOUT DE nbGenomes manquant
-                .map(d => {
-					const ctx = d.context || d;  // Ancien format = direct root
-					const env = d.env || {};
-					return {
-						ts: d.ts,
-						durationMs: d.durationMs,
-						nbGenomes: ctx.selectedGenomes ? ctx.selectedGenomes : 0,
-						nbChromosomes: ctx.nbChromosomes || 0,
-						nbBandes: ctx.nbBandes || 0,
-						mode: ctx.mode || '',
-						cores: env.cores || 0,
-						deviceMemory: env.deviceMemory || 0,
-						userAgent: env.userAgent || '',
-						browser: env.userAgent ? env.userAgent.split(' ')[0] : ''  // Chrome, Firefox...
-					};
-				})
-            console.log(`${allData.length} mesures chargées`, allData[0]);
-			updateSlidersRange();  //NOUVEAU : adapte les sliders
-			updateCharts();
-        } catch(e) {
-            console.error('Erreur:', e);
-            document.getElementById('stats-table').innerHTML = `<p style="color:red;">Erreur: ${e.message}</p>`;
-        }
-    }
-
-    // 2. Calcule stats et met à jour graphiques
-    function updateCharts() {
-        const filteredData = filterData();
-        console.log('Données filtrées:', filteredData.length);
-        
-        if (filteredData.length === 0) {
-            document.getElementById('stats-table').innerHTML = '<p>Aucune donnée après filtrage</p>';
-            return;
-        }
-        
-        updateStatsTable(filteredData);
-		updateChart('Duration vs Chromosomes', filteredData, 'chartDurationVsChromosomes', 'scatter', 'nbChromosomes', 'durationMs', 'Chromosomes', 'Temps (ms)');
-		updateChart('Duration vs Bandes', filteredData, 'chartDurationVsBands', 'scatter', 'nbBandes', 'durationMs', 'Bandes', 'Temps (ms)');
-		updateChart('Duration vs Génomes', filteredData, 'chartDurationVsGenomes', 'scatter', 'nbGenomes', 'durationMs', 'Génomes', 'Temps (ms)');
-		updateChart('Duration vs CPU Cores', filteredData, 'chartDurationVsCores', 'scatter', 'cores', 'durationMs', 'Cœurs CPU', 'Temps (ms)');
-		updateChart('Duration vs RAM', filteredData, 'chartDurationVsRam', 'scatter', 'deviceMemory', 'durationMs', 'RAM (Go)', 'Temps (ms)');
-		updateBoxplot(filteredData, 'chartBoxplotDuration');
-		updateMeanStdPerBandChart(filteredData);
-
-    }
-
-    // 3. Filtre CORRIGÉ (par défaut tout accepte)
-	function filterData() {
-		const mode = document.getElementById('modeFilter').value;
-		const minGenomes = Number.parseInt(document.getElementById('genomesMin').value) || 1;
-		const maxGenomes = Number.parseInt(document.getElementById('genomesMax').value) || Infinity;
-		const maxChrom = Number.parseInt(document.getElementById('chromMax').value) || Infinity;
-		const maxBands = Number.parseInt(document.getElementById('bandsMax').value) || Infinity;
-		
-		// NOUVEAUX FILTRES MACHINE
-		const minCores = Number.parseInt(document.getElementById('coresMin').value) || 1;
-		const maxCores = Number.parseInt(document.getElementById('coresMax').value) || Infinity;
-		const ramFilter = document.getElementById('ramFilter').value;
-		
-		return allData.filter(d => {
-			const baseOk = d.nbGenomes >= minGenomes && d.nbGenomes <= maxGenomes &&
-						(d.nbChromosomes || 0) <= maxChrom && 
-						(d.nbBandes || 0) <= maxBands &&
-						(!mode || d.mode === mode);
-			
-			const coresOk = d.cores >= minCores && d.cores <= maxCores;
-			const ramOk = !ramFilter || 
-						(ramFilter === '4' && d.deviceMemory <= 4) ||
-						(ramFilter === '8' && d.deviceMemory === 8) ||
-						(ramFilter === '16' && d.deviceMemory >= 16);
-						
-			return baseOk && coresOk && ramOk;
-		});
-	}
-
-	function groupByBandsStats(data) {
-		const byBands = new Map();
-
-		data.forEach(d => {
-			const key = d.nbBandes || 0;
-			if (!byBands.has(key)) byBands.set(key, []);
-			byBands.get(key).push(d.durationMs);
-		});
-
-		const labels = [];
-		const means = [];
-		const stds = [];
-
-		byBands.forEach((durations, bands) => {
-			const n = durations.length;
-			if (n === 0) return;
-			const mean = durations.reduce((a, v) => a + v, 0) / n;
-			const variance = durations.reduce((a, v) => a + Math.pow(v - mean, 2), 0) / n;
-			const std = Math.sqrt(variance);
-
-			labels.push(bands);
-			means.push(mean);
-			stds.push(std);
-		});
-
-		// tri par nbBandes croissant
-		const zipped = labels.map((b, i) => ({ b, mean: means[i], std: stds[i] }))
-							.sort((a, b) => a.b - b.b);
-		return {
-			labels: zipped.map(z => z.b),
-			means: zipped.map(z => z.mean),
-			stds: zipped.map(z => z.std)
+		const chartColors = {
+			green: {
+				fill: "rgb(16, 111, 104, 0.20)",
+				fillStrong: "rgb(16, 111, 104, 0.35)",
+				stroke: "rgb(16, 111, 104, 0.75)",
+				strokeStrong: "rgb(16, 111, 104, 0.95)",
+				hover: "rgb(16, 111, 104, 1)"
+			},
 		};
+
+		// 1. Charge et parse metrics.log (JSONL)
+		async function loadMetrics() {
+			try {
+				const response = await fetch(
+					"https://synflow.southgreen.fr/tmp/toolkit_run/metrics.log",
+				);
+				const text = await response.text();
+				allData = text
+					.trim()
+					.split("\n")
+					.map((line) => JSON.parse(line))
+					// AJOUT DE nbGenomes manquant
+					.map((d) => {
+						const ctx = d.context || d; // Ancien format = direct root
+						const env = d.env || {};
+						return {
+							ts: d.ts,
+							durationMs: d.durationMs,
+							nbGenomes: ctx.selectedGenomes ? ctx.selectedGenomes : 0,
+							nbChromosomes: ctx.nbChromosomes || 0,
+							nbBandes: ctx.nbBandes || 0,
+							mode: ctx.mode || "",
+							cores: env.cores || 0,
+							deviceMemory: env.deviceMemory || 0,
+							userAgent: env.userAgent || "",
+							browser: env.userAgent ? env.userAgent.split(" ")[0] : "", // Chrome, Firefox...
+						};
+					});
+				console.log(`${allData.length} mesures chargées`, allData[0]);
+				updateSlidersRange(); //NOUVEAU : adapte les sliders
+				updateCharts();
+			} catch (e) {
+				console.error("Erreur:", e);
+			}
 		}
 
-	function updateMeanStdPerBandChart(data) {
-		const ctx = document.getElementById('chartMeanStdPerBand').getContext('2d');
-		if (charts['chartMeanStdPerBand']) charts['chartMeanStdPerBand'].destroy();
+		// 2. Calcule stats et met à jour graphiques
+		function updateCharts() {
+			const filteredData = filterData();
+			console.log("Données filtrées:", filteredData.length);
 
-		const stats = groupByBandsStats(data);
-		if (stats.labels.length === 0) return;
+			updateChart(
+				"Render time vs number of chromosomes",
+				filteredData,
+				"chartDurationVsChromosomes",
+				"scatter",
+				"nbChromosomes",
+				"durationMs",
+				"Chromosomes",
+				"Time (ms)",
+			);
+			updateChart(
+				"Render time vs number of bands",
+				filteredData,
+				"chartDurationVsBands",
+				"scatter",
+				"nbBandes",
+				"durationMs",
+				"Bandes",
+				"Time (ms)",
+			);
+			updateChart(
+				"Render time vs number of genomes",
+				filteredData,
+				"chartDurationVsGenomes",
+				"scatter",
+				"nbGenomes",
+				"durationMs",
+				"Genomes",
+				"Time (ms)",
+			);
+			updateChart(
+				"Render time vs CPU Cores",
+				filteredData,
+				"chartDurationVsCores",
+				"scatter",
+				"cores",
+				"durationMs",
+				"CPU Cores",
+				"Time (ms)",
+			);
+			updateChart(
+				"Render time vs RAM",
+				filteredData,
+				"chartDurationVsRam",
+				"scatter",
+				"deviceMemory",
+				"durationMs",
+				"RAM (GB)",
+				"Time (ms)",
+			);
+			updateMeanStdPerBandChart(filteredData);
+		}
 
-		const errorBarData = stats.labels.map((bands, i) => {
-			const mean = stats.means[i];
-			const std = stats.stds[i];
+		// 3. Filtre CORRIGÉ (par défaut tout accepte)
+		function filterData() {
+			const mode = document.getElementById("modeFilter").value;
+			const minGenomes =
+				Number.parseInt(document.getElementById("genomesMin").value) || 1;
+			const maxGenomes =
+				Number.parseInt(document.getElementById("genomesMax").value) ||
+				Infinity;
+			const maxChrom =
+				Number.parseInt(document.getElementById("chromMax").value) ||
+				Infinity;
+			const maxBands =
+				Number.parseInt(document.getElementById("bandsMax").value) ||
+				Infinity;
+
+			// NOUVEAUX FILTRES MACHINE
+			const minCores =
+				Number.parseInt(document.getElementById("coresMin").value) || 1;
+			const maxCores =
+				Number.parseInt(document.getElementById("coresMax").value) ||
+				Infinity;
+			const ramFilter = document.getElementById("ramFilter").value;
+
+			return allData.filter((d) => {
+				const baseOk =
+					d.nbGenomes >= minGenomes &&
+					d.nbGenomes <= maxGenomes &&
+					(d.nbChromosomes || 0) <= maxChrom &&
+					(d.nbBandes || 0) <= maxBands &&
+					(!mode || d.mode === mode);
+
+				const coresOk = d.cores >= minCores && d.cores <= maxCores;
+				const ramOk =
+					!ramFilter ||
+					(ramFilter === "4" && d.deviceMemory <= 4) ||
+					(ramFilter === "8" && d.deviceMemory === 8) ||
+					(ramFilter === "16" && d.deviceMemory >= 16);
+
+				return baseOk && coresOk && ramOk;
+			});
+		}
+
+		function groupByBandsBins(data, binSize = 100) {
+			const bins = new Map();
+
+			data.forEach((d) => {
+				const bands = d.nbBandes || 0;
+				const binIndex = Math.floor(bands / binSize);
+				const start = binIndex === 0 ? 0 : binIndex * binSize + 1;
+				const end = (binIndex + 1) * binSize;
+				const key = `${start}-${end}`;
+
+				if (!bins.has(key)) {
+					bins.set(key, {
+						start,
+						end,
+						values: [],
+					});
+				}
+
+				bins.get(key).values.push(d.durationMs);
+			});
+
+			const sortedBins = Array.from(bins.values()).sort((a, b) => a.start - b.start);
+
 			return {
-			x: bands,
-			y: mean,
-			yMin: mean - std,
-			yMax: mean + std
+				labels: sortedBins.map((bin) => `${bin.end}`),
+				means: sortedBins.map((bin) => {
+					const n = bin.values.length;
+					return n ? bin.values.reduce((sum, v) => sum + v, 0) / n : 0;
+				}),
+				stds: sortedBins.map((bin) => {
+					const n = bin.values.length;
+					if (!n) return 0;
+					const mean = bin.values.reduce((sum, v) => sum + v, 0) / n;
+					const variance =
+						bin.values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / n;
+					return Math.sqrt(variance);
+				}),
 			};
+		}
+
+		function updateMeanStdPerBandChart(data) {
+			const ctx = document
+				.getElementById("chartMeanStdPerBand")
+				.getContext("2d");
+			if (charts["chartMeanStdPerBand"])
+				charts["chartMeanStdPerBand"].destroy();
+
+			const stats = groupByBandsBins(data, 100);
+			if (stats.labels.length === 0) return;
+
+			const errorBarData = stats.labels.map((bands, i) => {
+				const mean = stats.means[i];
+				const std = stats.stds[i];
+				return {
+					x: bands,
+					y: mean,
+					yMin: mean - std,
+					yMax: mean + std,
+				};
+			});
+
+			const color = chartColors.green;
+			charts["chartMeanStdPerBand"] = new Chart(ctx, {
+				type: "bar",
+				data: {
+					labels: stats.labels,
+					datasets: [
+						{
+							label: "Mean time",
+							data: errorBarData,
+							backgroundColor: color.fillStrong,
+							borderColor: color.stroke,
+							borderWidth: 1,
+							hoverBackgroundColor: color.hover,
+						},
+					],
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					animation: false,
+					plugins: {
+						tooltip: {
+							callbacks: {
+								label: (ctx) => {
+									const d = ctx.raw;
+									const mean = d.y.toFixed(1);
+									const std = (d.yMax - d.y).toFixed(1);
+									return `~${mean} ms`;
+								},
+							},
+						},
+					},
+					scales: {
+						x: {
+							title: { display: true, text: "Number of bands" },
+						},
+						y: {
+							title: { display: true, text: "Time (ms)" },
+							beginAtZero: true,
+						},
+					},
+				},
+			});
+		}
+
+		// 4. Graphique scatter avec ÉCHELLES DYNAMIQUES
+		function updateChart(
+			title,
+			data,
+			canvasId,
+			type,
+			xKey,
+			yKey,
+			xLabel,
+			yLabel,
+		) {
+			const ctx = document.getElementById(canvasId).getContext("2d");
+
+			if (charts[canvasId]) charts[canvasId].destroy();
+
+			const points = data.map((d) => ({
+				x: d[xKey] || 0,
+				y: d[yKey] || 0,
+			}));
+
+			const avgTime =
+				data.reduce((sum, d) => sum + (d[yKey] || 0), 0) / data.length;
+			const dynamicScales = getDynamicScales(data, xKey, yKey);
+			const color = chartColors.green;
+			charts[canvasId] = new Chart(ctx, {
+				type: "scatter",
+				data: {
+					datasets: [
+						{
+							label: `${title} (mean: ${Math.round(avgTime)}ms)`,
+							data: points,
+							backgroundColor: color.fill,
+							borderColor: color.stroke,
+							borderWidth: 1,
+							pointRadius: pointRadius,
+							pointHoverRadius: pointHoverRadius,
+						},
+					],
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: false,
+					animation: false,
+					plugins: {
+						legend: { display: true },
+					},
+					scales: {
+						x: {
+							type: "linear",
+							position: "bottom",
+							title: { display: true, text: xLabel },
+							min: dynamicScales.x.min,
+							max: dynamicScales.x.max,
+						},
+						y: {
+							title: { display: true, text: yLabel },
+							min: dynamicScales.y.min,
+							max: dynamicScales.y.max,
+						},
+					},
+					interaction: {
+						intersect: false,
+						mode: "point",
+					},
+				},
+			});
+		}
+
+		// 7. Export CSV
+		function downloadCSV() {
+			const data = filterData();
+			let csv =
+				"ts,durationMs,action,mode,nbGenomes,nbChromosomes,nbBandes\n";
+			data.forEach((d) => {
+				csv += `${d.ts},${Math.round(d.durationMs)},${d.action},${d.mode},${d.nbGenomes},${d.nbChromosomes},${d.nbBandes}\n`;
+			});
+			const blob = new Blob([csv], { type: "text/csv" });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = `metrics-${new Date().toISOString().slice(0, 10)}.csv`;
+			a.click();
+		}
+
+		// 8. Écouteurs + AUTO-UPDATE
+		document.addEventListener("DOMContentLoaded", function () {
+			// TOUS les écouteurs
+			document.getElementById("genomesMin").oninput = function () {
+				document.getElementById("genomesMinVal").textContent = this.value;
+				updateCharts();
+			};
+			document.getElementById("genomesMax").oninput = function () {
+				document.getElementById("genomesMaxVal").textContent = this.value;
+				updateCharts();
+			};
+			document.getElementById("coresMin").oninput = function () {
+				document.getElementById("coresMinVal").textContent = this.value;
+				updateCharts();
+			};
+			document.getElementById("coresMax").oninput = function () {
+				document.getElementById("coresMaxVal").textContent = this.value;
+				updateCharts();
+			};
+			document.getElementById("chromMax").oninput = function () {
+				document.getElementById("chromMaxVal").textContent = this.value;
+				updateCharts();
+			};
+			document.getElementById("bandsMax").oninput = function () {
+				document.getElementById("bandsMaxVal").textContent = this.value;
+				updateCharts();
+			};
+			document.getElementById("modeFilter").onchange = updateCharts;
+			document.getElementById("ramFilter").onchange = updateCharts;
+
+			loadMetrics();
 		});
 
-		charts['chartMeanStdPerBand'] = new Chart(ctx, {
-			type: 'bar',
-			data: {
-			labels: stats.labels,
-			datasets: [{
-				label: 'Durée moyenne (ms) ± écart-type',
-				data: errorBarData,
-				backgroundColor: 'rgba(75, 192, 192, 0.6)',
-				borderColor: 'rgba(75, 192, 192, 1)',
-				borderWidth: 1
-			}]
-			},
-			options: {
-			responsive: true,
-			maintainAspectRatio: false,
-			plugins: {
-				title: {
-				display: true,
-				text: 'Durée moyenne et écart-type par nombre de bandes'
-				},
-				tooltip: {
-				callbacks: {
-					label: (ctx) => {
-					const d = ctx.raw;
-					const mean = d.y.toFixed(1);
-					const std = (d.yMax - d.y).toFixed(1);
-					return `~${mean} ms (±${std} ms)`;
-					}
-				}
-				}
-			},
-			scales: {
+		// 9. ADAPTATION AUTOMATIQUE DES SLIDERS
+		function updateSlidersRange() {
+			if (allData.length === 0) return;
+
+			const maxGenomes = Math.max(...allData.map((d) => d.nbGenomes));
+			const maxChromosomes = Math.max(
+				...allData.map((d) => d.nbChromosomes || 0),
+			);
+			const maxBands = Math.max(...allData.map((d) => d.nbBandes || 0));
+			const maxCores = Math.max(...allData.map((d) => d.cores || 0));
+
+			// Génomes
+			document.getElementById("genomesMin").max = maxGenomes;
+			document.getElementById("genomesMax").max = maxGenomes;
+			document.getElementById("genomesMin").value = 1;
+			document.getElementById("genomesMax").value = maxGenomes;
+			document.getElementById("genomesMinVal").textContent = 1;
+			document.getElementById("genomesMaxVal").textContent = maxGenomes;
+
+			// Chromosomes
+			document.getElementById("chromMax").max = maxChromosomes;
+			document.getElementById("chromMax").value = maxChromosomes;
+			document.getElementById("chromMaxVal").textContent = maxChromosomes;
+
+			// Bandes
+			document.getElementById("bandsMax").max = maxBands;
+			document.getElementById("bandsMax").value = maxBands;
+			document.getElementById("bandsMaxVal").textContent = maxBands;
+
+			// Cores
+			document.getElementById("coresMin").max = maxCores;
+			document.getElementById("coresMax").max = maxCores;
+			document.getElementById("coresMin").value = 1;
+			document.getElementById("coresMax").value = maxCores;
+			document.getElementById("coresMinVal").textContent = 1;
+			document.getElementById("coresMaxVal").textContent = maxCores;
+
+			console.log(
+				`🎛️ Sliders OK: G${maxGenomes} C${maxChromosomes} B${maxBands} CPU${maxCores}`,
+			);
+		}
+
+		// 10. Échelles dynamiques pour les graphiques
+		function getDynamicScales(data, xKey, yKey) {
+			const xValues = data.map((d) => d[xKey] || 0);
+			const yValues = data.map((d) => d[yKey] || 0);
+
+			return {
 				x: {
-				title: { display: true, text: 'Nombre de bandes' }
+					min: Math.min(...xValues) * 0.95,
+					max: Math.max(...xValues) * 1.05,
 				},
 				y: {
-				title: { display: true, text: 'Durée (ms)' },
-				beginAtZero: true
-				}
-			}
-			}
-		});
+					min: 0,
+					max: Math.max(...yValues) * 1.1,
+				},
+			};
 		}
-
-
-
-	// 4. Graphique scatter avec ÉCHELLES DYNAMIQUES
-	function updateChart(title, data, canvasId, type, xKey, yKey, xLabel, yLabel) {
-		const ctx = document.getElementById(canvasId).getContext('2d');
-		
-		if (charts[canvasId]) charts[canvasId].destroy();
-		
-		const points = data.map(d => ({ 
-			x: d[xKey] || 0, 
-			y: d[yKey] || 0 
-		}));
-		
-		const avgTime = data.reduce((sum, d) => sum + (d[yKey] || 0), 0) / data.length;
-		const dynamicScales = getDynamicScales(data, xKey, yKey);
-		
-		charts[canvasId] = new Chart(ctx, {
-			type: 'scatter',
-			data: {
-				datasets: [{
-					label: `${title} (moyenne: ${Math.round(avgTime)}ms)`,
-					data: points,
-					backgroundColor: 'rgba(54, 162, 235, 0.6)',
-					borderColor: 'rgba(54, 162, 235, 1)',
-					borderWidth: 1,
-					pointRadius: pointRadius,
-					pointHoverRadius: pointHoverRadius
-				}]
-			},
-			options: {
-				responsive: true,
-				maintainAspectRatio: false,
-				plugins: { 
-					title: { 
-						display: true, 
-						text: title,
-						font: { size: 14 }
-					},
-					legend: { display: true }
-				},
-				scales: {
-					x: { 
-						type: 'linear',
-						position: 'bottom',
-						title: { display: true, text: xLabel },
-						min: dynamicScales.x.min,
-						max: dynamicScales.x.max
-					},
-					y: { 
-						title: { display: true, text: yLabel },
-						min: dynamicScales.y.min,
-						max: dynamicScales.y.max
-					}
-				},
-				interaction: {
-					intersect: false,
-					mode: 'point'
-				}
-			}
-		});
-	}
-
-    // 5. Boxplot durée
-    function updateBoxplot(data, canvasId) {
-        const durations = data.map(d => d.durationMs).sort((a,b) => a-b);
-        if (durations.length === 0) return;
-        
-        const q1 = durations[Math.floor(durations.length * 0.25)];
-        const median = durations[Math.floor(durations.length * 0.5)];
-        const q3 = durations[Math.floor(durations.length * 0.75)];
-        
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        if (charts[canvasId]) charts[canvasId].destroy();
-        
-        charts[canvasId] = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['Min', 'Q1', 'Médiane', 'Q3', 'Max'],
-                datasets: [{
-                    label: 'Distribution temps (ms)',
-                    data: [durations[0], q1, median, q3, durations.slice(-1)[0]],
-                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { 
-                    title: { display: true, text: 'Distribution des temps de rendu' }
-                },
-                scales: { y: { beginAtZero: true } }
-            }
-        });
-    }
-
-    // 6. Tableau stats
-    function updateStatsTable(data) {
-        if (data.length === 0) {
-            document.getElementById('stats-table').innerHTML = '<p>Aucune donnée après filtrage</p>';
-            return;
-        }
-        
-        const stats = {
-            count: data.length,
-			avgCores: Math.round(data.reduce((a,d) => a + (d.cores || 0), 0) / data.length),
-			avgRam: Math.round(data.reduce((a,d) => a + (d.deviceMemory || 0), 0) / data.length),
-			browsers: [...new Set(data.map(d => d.browser))].join(', '),
-            avgDuration: Math.round(data.reduce((a,d) => a + d.durationMs, 0) / data.length),
-            minDuration: Math.min(...data.map(d => d.durationMs)),
-            maxDuration: Math.max(...data.map(d => d.durationMs)),
-            avgChromosomes: Math.round(data.reduce((a,d) => a + (d.nbChromosomes || 0), 0) / data.length),
-            avgBands: Math.round(data.reduce((a,d) => a + (d.nbBandes || 0), 0) / data.length),
-            avgGenomes: Math.round(data.reduce((a,d) => a + d.nbGenomes, 0) / data.length)
-        };
-        
-        document.getElementById('stats-table').innerHTML = `
-            <h3>📈 Statistiques (${data.length} mesures)</h3>
-            <table>
-                <tr><th>Métrique</th><th>Valeur</th></tr>
-                <tr><td>Nombre de mesures</td><td>${stats.count}</td></tr>
-                <tr><td>Temps moyen (ms)</td><td>${stats.avgDuration}</td></tr>
-                <tr><td>Temps min (ms)</td><td>${stats.minDuration}</td></tr>
-                <tr><td>Temps max (ms)</td><td>${stats.maxDuration}</td></tr>
-                <tr><td>Chromosomes moyens</td><td>${stats.avgChromosomes}</td></tr>
-                <tr><td>Bandes moyennes</td><td>${stats.avgBands}</td></tr>
-                <tr><td>Génomes moyens</td><td>${stats.avgGenomes}</td></tr>
-				<tr><td>Cœurs CPU moyens</td><td>${stats.avgCores}</td></tr>
-				<tr><td>RAM moyenne (Go)</td><td>${stats.avgRam}</td></tr>
-				<tr><td>Navigateurs</td><td>${stats.browsers}</td></tr>
-            </table>
-        `;
-    }
-
-    // 7. Export CSV
-    function downloadCSV() {
-        const data = filterData();
-        let csv = 'ts,durationMs,action,mode,nbGenomes,nbChromosomes,nbBandes\n';
-        data.forEach(d => {
-            csv += `${d.ts},${Math.round(d.durationMs)},${d.action},${d.mode},${d.nbGenomes},${d.nbChromosomes},${d.nbBandes}\n`;
-        });
-        const blob = new Blob([csv], {type: 'text/csv'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url; 
-        a.download = `metrics-${new Date().toISOString().slice(0,10)}.csv`;
-        a.click();
-    }
-
-    // 8. Écouteurs + AUTO-UPDATE
-    document.addEventListener('DOMContentLoaded', function() {
-		// TOUS les écouteurs
-		document.getElementById('genomesMin').oninput = function() {
-			document.getElementById('genomesMinVal').textContent = this.value; updateCharts();
-		};
-		document.getElementById('genomesMax').oninput = function() {
-			document.getElementById('genomesMaxVal').textContent = this.value; updateCharts();
-		};
-		document.getElementById('coresMin').oninput = function() {
-			document.getElementById('coresMinVal').textContent = this.value; updateCharts();
-		};
-		document.getElementById('coresMax').oninput = function() {
-			document.getElementById('coresMaxVal').textContent = this.value; updateCharts();
-		};
-		document.getElementById('chromMax').oninput = function() {
-			document.getElementById('chromMaxVal').textContent = this.value; updateCharts();
-		};
-		document.getElementById('bandsMax').oninput = function() {
-			document.getElementById('bandsMaxVal').textContent = this.value; updateCharts();
-		};
-		document.getElementById('modeFilter').onchange = updateCharts;
-		document.getElementById('ramFilter').onchange = updateCharts;
-		
-		loadMetrics();
-	});
-
-
-
-	// 9. ADAPTATION AUTOMATIQUE DES SLIDERS
-	function updateSlidersRange() {
-		if (allData.length === 0) return;
-		
-		const maxGenomes = Math.max(...allData.map(d => d.nbGenomes));
-		const maxChromosomes = Math.max(...allData.map(d => d.nbChromosomes || 0));
-		const maxBands = Math.max(...allData.map(d => d.nbBandes || 0));
-		const maxCores = Math.max(...allData.map(d => d.cores || 0));
-		
-		// Génomes
-		document.getElementById('genomesMin').max = maxGenomes;
-		document.getElementById('genomesMax').max = maxGenomes;
-		document.getElementById('genomesMin').value = 1;
-		document.getElementById('genomesMax').value = maxGenomes;
-		document.getElementById('genomesMinVal').textContent = 1;
-		document.getElementById('genomesMaxVal').textContent = maxGenomes;
-		
-		// Chromosomes
-		document.getElementById('chromMax').max = maxChromosomes;
-		document.getElementById('chromMax').value = maxChromosomes;
-		document.getElementById('chromMaxVal').textContent = maxChromosomes;
-		
-		// Bandes
-		document.getElementById('bandsMax').max = maxBands;
-		document.getElementById('bandsMax').value = maxBands;
-		document.getElementById('bandsMaxVal').textContent = maxBands;
-		
-		// Cores
-		document.getElementById('coresMin').max = maxCores;
-		document.getElementById('coresMax').max = maxCores;
-		document.getElementById('coresMin').value = 1;
-		document.getElementById('coresMax').value = maxCores;
-		document.getElementById('coresMinVal').textContent = 1;
-		document.getElementById('coresMaxVal').textContent = maxCores;
-		
-		console.log(`🎛️ Sliders OK: G${maxGenomes} C${maxChromosomes} B${maxBands} CPU${maxCores}`);
-	}
-
-	// 10. Échelles dynamiques pour les graphiques
-	function getDynamicScales(data, xKey, yKey) {
-		const xValues = data.map(d => d[xKey] || 0);
-		const yValues = data.map(d => d[yKey] || 0);
-		
-		return {
-			x: {
-				min: Math.min(...xValues) * 0.95,
-				max: Math.max(...xValues) * 1.05
-			},
-			y: {
-				min: 0,
-				max: Math.max(...yValues) * 1.1
-			}
-		};
-	}
-
-</script>
-
+	</script>
 </body>
+
 </html>
