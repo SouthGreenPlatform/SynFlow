@@ -211,38 +211,38 @@ function fetchRemoteOutFileList(folder) {
     if (!url.endsWith('/')) {
         url += '/';
     }
-    
+
     return fetch(url, {
         method: 'GET',
         headers: {
             'Accept': 'text/html'
         }
     })
-        .then(response => {
-            if (!response.ok) throw new Error(`Erreur ${response.status}: ${response.statusText}`);
-            return response.text();
-        })
-        .then(html => {
-            // Parse le HTML pour extraire les liens vers les fichiers .out
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const links = Array.from(doc.querySelectorAll('a'));
-            
-            // Filtre les fichiers .out en utilisant l'attribut href
-            const files = links
-                .map(link => {
-                    const href = link.getAttribute('href');
-                    // Ignore le lien parent (..)
-                    if (!href || href === '../') return null;
-                    // Retourne seulement les fichiers .out
-                    if (href.endsWith('.out')) {
-                        return href;
-                    }
-                    return null;
-                })
-                .filter(name => name !== null);
-            return files;
-        });
+    .then(response => {
+        if (!response.ok) throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+        return response.text();
+    })
+    .then(html => {
+        // Parse le HTML pour extraire les liens vers les fichiers .out
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const links = Array.from(doc.querySelectorAll('a'));
+        
+        // Filtre les fichiers .out en utilisant l'attribut href
+        const files = links
+            .map(link => {
+                const href = link.getAttribute('href');
+                // Ignore le lien parent (..)
+                if (!href || href === '../') return null;
+                // Retourne seulement les fichiers .out
+                if (href.endsWith('.out')) {
+                    return href;
+                }
+                return null;
+            })
+            .filter(name => name !== null);
+        return files;
+    });
 }
 
 // Fonction pour récupérer la liste de tous les fichiers depuis un dossier distant
@@ -993,6 +993,14 @@ export function createFTPSection() {
                 updateChainDivFTP(chainDiv, ftpSelectedGenomes);
             }
         } catch (error) {
+            //fonction qui check si il y a des fichiers, si non et que toolkitid dans l'url, message qui dit que les fichiers sont pas encore disponibles
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.has('toolkitid')){
+                    fileListDiv.innerHTML = '<span style="color:red;">No files found in this folder. If you just launched a Synflow analysis, please wait a few minutes for the files to be available.</span>';
+            }else{
+                    fileListDiv.innerHTML = '<span style="color:red;">No files found in this folder.</span>';
+            }
             fileListDiv.innerHTML = `<span style="color:red;">Error fetching files: ${error.message}</span>`;
         }
     });
@@ -1064,6 +1072,7 @@ export function createFTPSection() {
 
         const folder = ftpInput.value.trim();
         const allFiles = await fetchRemoteOutFileList(folder);
+
         //nettoie les espaces autour des noms de fichiers
         const allFilesTrimmed = new Set(allFiles.map(f => f.trim()));
 
