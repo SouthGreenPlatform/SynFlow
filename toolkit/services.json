@@ -190,7 +190,7 @@
 						"options": [
 							{"label": "asm5", "value": "asm5"},
 							{"label": "asm10", "value": "asm10"},
-							{"label": "asm6", "value": "asm6"}
+							{"label": "asm20", "value": "asm20"}
 						],
 						"default": "asm5",
 						"required": false	
