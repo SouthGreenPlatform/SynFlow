@@ -993,15 +993,13 @@ export function createFTPSection() {
                 updateChainDivFTP(chainDiv, ftpSelectedGenomes);
             }
         } catch (error) {
-            //fonction qui check si il y a des fichiers, si non et que toolkitid dans l'url, message qui dit que les fichiers sont pas encore disponibles
-
             const urlParams = new URLSearchParams(window.location.search);
-            if(urlParams.has('toolkitid')){
+            if(urlParams.has('id')){
+                console.log(urlParams.get('id'));
                     fileListDiv.innerHTML = '<span style="color:red;">No files found in this folder. If you just launched a Synflow analysis, please wait a few minutes for the files to be available.</span>';
             }else{
-                    fileListDiv.innerHTML = '<span style="color:red;">No files found in this folder.</span>';
+                fileListDiv.innerHTML = `<span style="color:red;">Error fetching files: ${error.message}</span>`;
             }
-            fileListDiv.innerHTML = `<span style="color:red;">Error fetching files: ${error.message}</span>`;
         }
     });
 
