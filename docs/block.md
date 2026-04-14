@@ -20,3 +20,4 @@ In SynFlow, the synteny view is centered on gene colinearity within the selected
 Below the graph, a gene list table provides the genes contained in the selected block, including gene identifiers and chromosome positions.
 If JBrowse integration is available, the table view also provides direct links to the corresponding regions in JBrowse for fast, context-aware genome browsing.
 
+![Colinearity graph](assets/colinearity_graph.png)

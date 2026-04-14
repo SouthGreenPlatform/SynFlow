@@ -13,6 +13,8 @@ To explore without uploading anything, you can choose from a list of curated gen
 
 - **Banana** (*Musa* species)
 - **Grapevine** (*Vitis* species)
+- **Yam** (*Dioscoreaceae* species)
+- **Taurus** (*Bovidae* species)
 
 Go to the **“Existing files”** tab.
 
@@ -71,7 +73,7 @@ Once validated, the data will be accessible in the same interface as results gen
 ---
 ## Upload your own SyRI output
 
-Files must be in SyRI output results in TSV formats. [See the SyRI documentation](https://schneebergerlab.github.io/syri/fileformat.html)
+Files must be in SyRI output results in TSV/BEDPE formats. [See the SyRI documentation](https://schneebergerlab.github.io/syri/fileformat.html)
 
 Go to the **“Upload files”** tab.
 

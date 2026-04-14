@@ -58,7 +58,7 @@ SynFlow's rendering performance scales with the complexity of the genomic data a
 **Limitations**:
 - Input data must be in SyRI output format (.out files) with specific naming conventions.
 - Maximum supported file sizes depend on browser and server limits (typically up to 100MB for uploads).
-- Requires a modern web browser with WebGL support for SVG rendering (Chrome 80+, Firefox 75+, Safari 13+).
+- Requires a modern web browser with support for SVG rendering (Chrome 80+, Firefox 75+, Safari 13+).
 - Analysis workflows are limited to the available computational resources on the server.
 
 #### Metrics Dashboard
