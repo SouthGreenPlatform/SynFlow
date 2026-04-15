@@ -26,18 +26,13 @@ export function sendMetric(metric) {
         socket.emit('metric', metric);
     }
 }
-// console.log("syri");
-// Définir le comportement de zoom
-// export const zoom = d3.zoom()
-//     .scaleExtent([0.1, 10]) // Définir les niveaux de zoom minimum et maximum
-//     .on("zoom", (event) => {
-//     d3.select('#zoomGroup').attr("transform", event.transform);
-// });
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
 
     const mainContainer = document.getElementById('main-container');
-    createForm().then(form => {                 
+    const study = await checkStudyParam(); // Vérifie les paramètres de l'étude dans l'URL
+
+    createForm(study).then(form => {                 
         mainContainer.appendChild(form);
         mainContainer.appendChild(createControlPanel());
         mainContainer.appendChild(createGraphSection());
@@ -102,4 +97,35 @@ function checkToolkitParam() {
         const fetchButton = document.getElementById('fetch-ftp-button');
         if (fetchButton) fetchButton.click();
     }       
+}
+
+async function checkStudyParam() {
+    //check si l'url contient un studyID exemple :
+    // https://synflow.southgreen.fr/?study=study_12345
+    const urlParams = new URLSearchParams(globalThis.location.search);
+    const study = urlParams.get('study');
+    if (study) {
+        console.log('Study ID trouvé dans l\'URL :', study);
+        
+        // Vérifier que le study existe dans config.json
+        try {
+            const response = await fetch('public/data/config.json');
+            if (!response.ok) throw new Error('Failed to fetch config');
+            const dirs = await response.json();
+            
+            const studyExists = dirs.some(({organism}) => 
+                organism.toLowerCase() === study.toLowerCase()
+            );
+            
+            if (!studyExists) {
+                alert(`Study "${study}" not found in available studies. Reverting to normal mode.`);
+                logActivity(`Invalid study parameter: ${study}`);
+                return null; // Retourner null pour mode normal
+            }
+        } catch (error) {
+            console.error('Error validating study parameter:', error);
+            return null; // En cas d'erreur, mode normal
+        }
+    }
+    return study;       
 }

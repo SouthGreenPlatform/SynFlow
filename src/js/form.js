@@ -16,7 +16,12 @@ export function setSelectedGenomes(genomes) {
     selectedGenomes = genomes;
 };
 
-export async function createForm() {
+export async function createForm(study) {
+
+    //if study param exists, do not display "Run analysis" and "Browse FTP" and  "Upload files" options.
+    //only Exixting Files will be available to display the results of the study.
+    //No study selector
+
     const form = document.createElement('form');
     form.setAttribute('id', 'file-upload-form');
 
@@ -35,7 +40,8 @@ export async function createForm() {
     
     // Ajout du titre
     const title = document.createElement('h4');
-    title.textContent = 'Input Selection';
+    //study first letter uppercase and the rest lowercase
+    title.textContent = study ? `View Study: ${study.charAt(0).toUpperCase() + study.slice(1).toLowerCase()}` : 'Input Selection';
     title.style.margin = '0';
     headerBar.appendChild(title);
 
@@ -71,23 +77,26 @@ export async function createForm() {
     const gridContainer = document.createElement('div');
     gridContainer.style.cssText = `
         display: grid;
-        grid-template-columns: 200px 1fr;
+        grid-template-columns: ${study ? '1fr' : '200px 1fr'};
         gap: 20px;
         padding: 20px;
         background-color: #f5f5f5;
         border-radius: 0 0 8px 8px;
     `;
 
-    // Colonne 1 : Menu de sélection
+    // Colonne 1 : Menu de sélection (masqué en mode study)
     const menuColumn = document.createElement('div');
     menuColumn.setAttribute('class', 'menu-section');
 
-    const menuItems = [
+    const allMenuItems = [
         { id: 'existing', icon: 'fas fa-folder-open', text: 'Existing Files' },
         { id: 'calculate', icon: 'fas fa-cogs', text: 'Run analysis' },
         { id: 'ftp', icon: 'fas fa-network-wired', text: 'Browse FTP' },
         { id: 'upload', icon: 'fas fa-upload', text: 'Upload Files' }
     ];
+
+    // Si un study est fourni, ne pas afficher le menu
+    const menuItems = study ? [] : allMenuItems;
 
     menuItems.forEach(item => {
         const menuItem = document.createElement('div');
@@ -113,7 +122,7 @@ export async function createForm() {
             menuItem.style.color = 'white';
             
             // Afficher le formulaire correspondant
-            await showForm(item.id);
+            await showForm(item.id, study);
         });
         
         menuColumn.appendChild(menuItem);
@@ -130,8 +139,10 @@ export async function createForm() {
         box-shadow: 0 0 5px rgba(0,0,0,0.1);
     `;
 
-    // Ajout des colonnes au container
-    gridContainer.appendChild(menuColumn);
+    // Ajout des colonnes au container (menu seulement si pas en mode study)
+    if (!study) {
+        gridContainer.appendChild(menuColumn);
+    }
     gridContainer.appendChild(contentColumn);
 
     // Ajouter le bouton et le contenu au formulaire    
@@ -140,23 +151,24 @@ export async function createForm() {
     formContent.appendChild(gridContainer);  // Ne garder que cette ligne
 
     // Afficher le formulaire "existing" par défaut
-    // Ajouter la classe active à l'item sélectionné
-    // Sélectionne le div "existing" par défaut
-    const selectedItem = menuColumn.querySelector(`div[data-option="existing"]`);
-    selectedItem.style.backgroundColor = 'black';
-    selectedItem.style.color = 'white';
+    // Ajouter la classe active à l'item sélectionné (seulement si menu visible)
+    if (!study) {
+        const selectedItem = menuColumn.querySelector(`div[data-option="existing"]`);
+        selectedItem.style.backgroundColor = 'black';
+        selectedItem.style.color = 'white';
+    }
     
     // Affiche le formulaire existing après que le formulaire soit ajouté au DOM
     setTimeout(async () => {
         console.log("Showing existing form");
-        await showForm('existing');
+        await showForm('existing', study);
     }, 0);
     
     return form;
 }
 
 // Fonction pour afficher le bon formulaire
-export async function showForm(option) {
+export async function showForm(option, studyParam = null) {
     const contentColumn = document.getElementById('dynamic-content');
     if (!contentColumn) {
         console.warn('contentColumn not found in DOM yet');
@@ -165,7 +177,7 @@ export async function showForm(option) {
     contentColumn.innerHTML = '';
     switch(option) {
         case 'existing':
-            contentColumn.appendChild(await createExistingFilesForm());
+            contentColumn.appendChild(await createExistingFilesForm(studyParam));
             break;
         case 'upload':
             contentColumn.appendChild(createUploadSection());
@@ -298,7 +310,10 @@ export function updateChainDiv() {
 }
 
 // Cree le formulaire pour sélectionner les fichiers existants
-async function createExistingFilesForm() {
+async function createExistingFilesForm(activeStudy = null) {
+
+    //va chercher les répertoires Synflow depuis le fichier JSON
+    const remoteFolders = await fetchSynflowDirectories();
 
     //Crée un conteneur pour le form + le help
     const existingSection = document.createElement('div');
@@ -310,18 +325,21 @@ async function createExistingFilesForm() {
     existingFormContainer.style.flex = '1';
 
     const title = document.createElement('h5');
-    title.textContent = 'Select Study';
+    title.textContent = activeStudy ? `Study: ${activeStudy}` : 'Select Study';
     title.style.marginBottom = '10px';
     existingFormContainer.appendChild(title);
 
-    // Sélecteur de dossier (dataset)
+    // Sélecteur de dossier (dataset) - masqué si activeStudy
     const folderSelect = document.createElement('select');
     folderSelect.setAttribute('id', 'remote-folder-select');
     folderSelect.style.width = '100%';
     folderSelect.style.marginBottom = '10px';
+    if (activeStudy) {
+        folderSelect.style.display = 'none';
+    }
 
-    //va chercher les répertoires Synflow depuis le fichier JSON
-    const remoteFolders = await fetchSynflowDirectories();
+    let selectedStudyUrl = null;
+    
     remoteFolders.forEach(({organism, url}) => {
         const option = document.createElement('option');
         option.value = url;
@@ -329,7 +347,18 @@ async function createExistingFilesForm() {
         const formattedFolderName = organism.charAt(0).toUpperCase() + organism.slice(1).toLowerCase();
         option.textContent = formattedFolderName;
         folderSelect.appendChild(option);
+        
+        // Si activeStudy correspond à cet organism, sauvegarder l'URL
+        if (activeStudy && organism.toLowerCase() === activeStudy.toLowerCase()) {
+            selectedStudyUrl = url;
+        }
     });
+    
+    // Si activeStudy fourni, sélectionner l'URL correspondante
+    if (activeStudy && selectedStudyUrl) {
+        folderSelect.value = selectedStudyUrl;
+    }
+    
     existingFormContainer.appendChild(folderSelect);
 
     // Liste cliquable des génomes
@@ -488,40 +517,45 @@ async function createExistingFilesForm() {
         handleFileUpload(dataTransfer.files, bedFiles);
     });
 
-    // Container pour l'aide (partie droite)
-    const existingHelpContainer = document.createElement('div');
-    existingHelpContainer.style.flex = '0 0 45%'; // Largeur fixe de 400px
-    existingHelpContainer.style.padding = '15px';
-    existingHelpContainer.style.backgroundColor = '#f8f9fa';
-    existingHelpContainer.style.borderRadius = '5px';
-    existingHelpContainer.style.border = '1px solid #dee2e6';
-    existingHelpContainer.style.maxHeight = '600px'; // Hauteur maximale
-    existingHelpContainer.style.overflowY = 'auto'; // Scroll si le contenu dépasse
+    // Container pour l'aide (partie droite) - masqué en mode study
+    if (!activeStudy) {
+        const existingHelpContainer = document.createElement('div');
+        existingHelpContainer.style.flex = '0 0 45%'; // Largeur fixe de 400px
+        existingHelpContainer.style.padding = '15px';
+        existingHelpContainer.style.backgroundColor = '#f8f9fa';
+        existingHelpContainer.style.borderRadius = '5px';
+        existingHelpContainer.style.border = '1px solid #dee2e6';
+        existingHelpContainer.style.maxHeight = '600px'; // Hauteur maximale
+        existingHelpContainer.style.overflowY = 'auto'; // Scroll si le contenu dépasse
 
-    // Contenu de l'aide
-    existingHelpContainer.innerHTML = `
-        <h5>About the studies</h5>
-        <div style="margin-top: 15px;">
-            <p>
-                The available files come from analyses performed on several organisms using the <b>Synflow workflow</b>.
-                See the 
-                <a href="https://synflow.readthedocs.io/en/latest/" target="_blank">Synflow documentation</a>.
-            </p>
-            <h6>How to select files</h6>
-            <ul style="padding-left: 20px;">
-                <li>
-                    Select a study from the dropdown menu to view the available accessions.
-                    <br>
-                </li>
-                <li>
-                    Click on every accession you want to include in the chain. The order of selection matters.
-                </li>
-            </ul>
-        </div>
-    `;
+        // Contenu de l'aide
+        existingHelpContainer.innerHTML = `
+            <h5>About the studies</h5>
+            <div style="margin-top: 15px;">
+                <p>
+                    The available files come from analyses performed on several organisms using the <b>Synflow workflow</b>.
+                    See the 
+                    <a href="https://synflow.readthedocs.io/en/latest/" target="_blank">Synflow documentation</a>.
+                </p>
+                <h6>How to select files</h6>
+                <ul style="padding-left: 20px;">
+                    <li>
+                        Select a study from the dropdown menu to view the available accessions.
+                        <br>
+                    </li>
+                    <li>
+                        Click on every accession you want to include in the chain. The order of selection matters.
+                    </li>
+                </ul>
+            </div>
+        `;
 
-    existingSection.appendChild(existingFormContainer);
-    existingSection.appendChild(existingHelpContainer);
+        existingSection.appendChild(existingFormContainer);
+        existingSection.appendChild(existingHelpContainer);
+    } else {
+        existingSection.appendChild(existingFormContainer);
+    }
+
     return existingSection;
 }
     
