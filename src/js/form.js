@@ -41,7 +41,7 @@ export async function createForm(study) {
     // Ajout du titre
     const title = document.createElement('h4');
     //study first letter uppercase and the rest lowercase
-    title.textContent = study ? `View Study: ${study.charAt(0).toUpperCase() + study.slice(1).toLowerCase()}` : 'Input Selection';
+    title.textContent = study ? `${study.charAt(0).toUpperCase() + study.slice(1).toLowerCase()} input files selection` : 'Input Selection';
     title.style.margin = '0';
     headerBar.appendChild(title);
 
@@ -324,10 +324,13 @@ async function createExistingFilesForm(activeStudy = null) {
     const existingFormContainer = document.createElement('div');
     existingFormContainer.style.flex = '1';
 
-    const title = document.createElement('h5');
-    title.textContent = activeStudy ? `Study: ${activeStudy}` : 'Select Study';
-    title.style.marginBottom = '10px';
-    existingFormContainer.appendChild(title);
+    //If study : no title, else display title
+    if (!activeStudy) {
+        const title = document.createElement('h5');
+        title.textContent = 'Select Study';
+        title.style.marginBottom = '10px';
+        existingFormContainer.appendChild(title);
+    }
 
     // Sélecteur de dossier (dataset) - masqué si activeStudy
     const folderSelect = document.createElement('select');
