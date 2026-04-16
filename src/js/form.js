@@ -1019,6 +1019,8 @@ export function createFTPSection() {
                 const file = outFiles[0];
                 const parts = file.replace('.out', '').split('_').map(part => part.trim());
                 ftpSelectedGenomes = parts;
+                //cache le selecteur de fichiers et affiche la chaîne directement
+                fileListDiv.style.display = 'none';
                 updateChainDivFTP(chainDiv, ftpSelectedGenomes);
             } else if (outFiles.length === expectedFileCount) {
                 // Mode all vs all
@@ -1160,7 +1162,7 @@ export function createFTPSection() {
 
     // Partie droite : aide
     const helpContainer = document.createElement('div');
-    helpContainer.style.flex = '0 0 600px';
+    helpContainer.style.flex = '0 0 45%';
     helpContainer.style.padding = '15px';
     helpContainer.style.backgroundColor = '#f8f9fa';
     helpContainer.style.borderRadius = '5px';
