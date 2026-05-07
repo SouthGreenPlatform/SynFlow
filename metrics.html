@@ -190,7 +190,7 @@
 		async function loadMetrics() {
 			try {
 				const response = await fetch(
-					"https://synflow.southgreen.fr/tmp/toolkit_run/metrics.log",
+					"https://synflow.southgreen.fr/metrics.log",
 				);
 				const text = await response.text();
 				allData = text
