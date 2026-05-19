@@ -230,6 +230,8 @@ function updateChromList(globalMaxChromosomeLengths) {
 
     const chromNums = Object.keys(globalMaxChromosomeLengths);
     const chromPositions = {};
+    let currentDraggingItem = null;
+    let dragSiblingRects = [];
 
     // Récupérer les positions des chromosomes
     chromNums.forEach(chromNum => {
@@ -240,6 +242,7 @@ function updateChromList(globalMaxChromosomeLengths) {
         }
     });
 
+    const fragment = document.createDocumentFragment();
     chromNums.forEach(chromNum => {
         const listItem = document.createElement('div');
         listItem.style.display = 'flex';
@@ -319,11 +322,18 @@ function updateChromList(globalMaxChromosomeLengths) {
 
         // Drag and drop events sur l'item
         listItem.addEventListener('dragstart', (e) => {
+            currentDraggingItem = listItem;
+            dragSiblingRects = [...chromListDiv.querySelectorAll('[draggable]:not(.dragging)')].map(sibling => ({
+                node: sibling,
+                rect: sibling.getBoundingClientRect()
+            }));
             e.target.classList.add('dragging');
             e.dataTransfer.setData('text/plain', chromNum);
         });
 
         listItem.addEventListener('dragend', (e) => {
+            currentDraggingItem = null;
+            dragSiblingRects = [];
             e.target.classList.remove('dragging');
         });
 
@@ -338,21 +348,21 @@ function updateChromList(globalMaxChromosomeLengths) {
 
         listItem.appendChild(text);
         
-        chromListDiv.appendChild(listItem);
+        fragment.appendChild(listItem);
     });
+
+    chromListDiv.appendChild(fragment);
 
     // Drag and drop events sur le conteneur
     chromListDiv.addEventListener('dragover', (e) => {
         e.preventDefault();
-        const draggingItem = chromListDiv.querySelector('.dragging');
-        if (!draggingItem) return;
+        const draggingItem = currentDraggingItem || chromListDiv.querySelector('.dragging');
+        if (!draggingItem || dragSiblingRects.length === 0) return;
 
-        const siblings = [...chromListDiv.querySelectorAll('[draggable]:not(.dragging)')];
         let insertBefore = null;
+        const firstSiblingRect = dragSiblingRects[0]?.rect;
 
-        for (const sibling of siblings) {
-            const rect = sibling.getBoundingClientRect();
-            // Si la souris est dans la moitié gauche de l'élément, on insère avant
+        for (const { node: sibling, rect } of dragSiblingRects) {
             if (
                 e.clientY >= rect.top && e.clientY <= rect.bottom &&
                 e.clientX < rect.left + rect.width / 2
@@ -360,11 +370,10 @@ function updateChromList(globalMaxChromosomeLengths) {
                 insertBefore = sibling;
                 break;
             }
-            // Si la souris est au-dessus de la première ligne, on insère avant le premier
-            if (e.clientY < siblings[0].getBoundingClientRect().top) {
-                insertBefore = siblings[0];
-                break;
-            }
+        }
+
+        if (!insertBefore && firstSiblingRect && e.clientY < firstSiblingRect.top) {
+            insertBefore = dragSiblingRects[0].node;
         }
 
         if (insertBefore) {
@@ -513,6 +522,7 @@ function updateChromControler() {
     grid.style.display = 'grid';
     grid.style.gridTemplateColumns = `repeat(${maxChromCount + 1}, 1fr)`;
     grid.style.gap = '8px';
+    const positionCellsMap = new Map();
 
     // --- EN-TÊTES ---
     const headerRow = document.createElement('div');
@@ -530,23 +540,20 @@ function updateChromControler() {
         col.style.cursor = 'grab';
         col.setAttribute('draggable', 'true');
         col.dataset.position = i;
+        positionCellsMap.set(i, [col]);
 
         //drag and drop colonne
         col.addEventListener('dragstart', (e) => {
             e.dataTransfer.setData('col-drag', i);
             col.classList.add('dragging');
-            // Ajoute la classe à toute la colonne
-            document.querySelectorAll(`[data-position="${i}"]`).forEach(cell => {
-                cell.classList.add('drag-col');
-            });
+            const positionCells = positionCellsMap.get(i) || [];
+            positionCells.forEach(cell => cell.classList.add('drag-col'));
         });
 
         col.addEventListener('dragend', () => {
-            // Nettoyage visuel uniquement
             col.classList.remove('dragging');
-            document.querySelectorAll('.drag-col').forEach(cell => {
-                cell.classList.remove('drag-col');
-            });
+            const positionCells = positionCellsMap.get(i) || [];
+            positionCells.forEach(cell => cell.classList.remove('drag-col'));
         });
 
         col.addEventListener('dragover', (e) => {
@@ -564,7 +571,8 @@ function updateChromControler() {
             logActivity('Chromosome controller : swapping columns ' + e.dataTransfer.getData('col-drag') + ' and ' + i);
             e.preventDefault();
             col.classList.remove('drop-target');
-            document.querySelectorAll('.drag-col').forEach(cell => {
+            const dragCells = document.querySelectorAll('.drag-col');
+            dragCells.forEach(cell => {
                 cell.classList.remove('drag-col');
             });
 
@@ -625,6 +633,9 @@ function updateChromControler() {
             chromCell.dataset.visible = 'true';
             chromCell.textContent = chrom ? chrom.name : '-';
             chromCell.dataset.id = chrom ? `${genome}-${chrom.name}` : `empty-${i}`;
+            const positionCells = positionCellsMap.get(i) || [];
+            positionCells.push(chromCell);
+            positionCellsMap.set(i, positionCells);
 
             //click pour show/hide
             chromCell.addEventListener('click', (e) => {
