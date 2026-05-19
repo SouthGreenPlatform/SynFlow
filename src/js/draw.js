@@ -77,6 +77,47 @@ export function resetDrawGlobals() {
 }
 export let zoom; // Déclarer zoom ici pour l'utiliser dans d'autres fonctions
 
+let bandTip = null;
+
+// fonction pour créer et retourner le tooltip pour les bandes, avec mémorisation pour éviter de le recréer à chaque fois
+function getBandTip() {
+    if (bandTip) return bandTip;
+    bandTip = d3.tip()
+        .attr('class', 'd3-tip')
+        .offset([-10, 0])
+        .html((event, d) => {
+            const color = currentBandTypeColors[d.type] || '#ccc';
+            return `
+                <div style="min-width:220px; font-size:15px;">
+                    <div style="margin-bottom:6px;">
+                        <span style="font-weight:bold;">Ref</span> : 
+                        <span>${d.refChr}</span> 
+                        <span>[${d.refStart}..${d.refEnd}]</span>
+                    </div>
+                    <div style="margin-bottom:6px;">
+                        <span style="font-weight:bold;">Query</span> : 
+                        <span>${d.queryChr}</span> 
+                        <span>[${d.queryStart}..${d.queryEnd}]</span>
+                    </div>
+                    <div>
+                        <span style="font-weight:bold;">Type :</span> 
+                        <span style="background:${color}; border-radius:6px; padding:2px 8px; margin-left:4px;">${d.type}</span>
+                    </div>
+                </div>
+            `;
+        });
+    return bandTip;
+}
+
+function buildChromNameToNumMap(genome) {
+    const map = {};
+    for (const chrom in genome) {
+        const name = genome[chrom]?.name;
+        if (name) map[name] = chrom;
+    }
+    return map;
+}
+
 export function createGraphSection() {
     // Création du conteneur principal
     const graphSection = document.createElement('div');
@@ -628,6 +669,17 @@ function drawSNPDensityHeatmap(snpDensity, refLengths, chromPositions, binSize =
 export function drawCorrespondenceBands(data, chromPositions, isFirstFile, scale, mergeThreshold = 500000) {
 
     const svgGroup = d3.select('#zoomGroup');
+    const tip = getBandTip();
+    d3.select('#viz').call(tip);
+    d3.select('#viz').on('click', function(event) {
+        if (event.target.tagName === 'svg') {
+            selectedBands.clear();
+            updateBandSelection();
+        }
+    });
+
+    const refChromLookup = buildChromNameToNumMap(genomeData[refGenome] || {});
+    const queryChromLookup = buildChromNameToNumMap(genomeData[queryGenome] || {});
 
     // Types à merger
     const mergeTypes = new Set(['INVTR', 'TRANS']);
@@ -642,10 +694,10 @@ export function drawCorrespondenceBands(data, chromPositions, isFirstFile, scale
     const mergedBands = mergeBands(bandsToMerge, bandsNormal, mergeThreshold);
 
     // Concatène tout pour le dessin
-    const allBands = bandsNormal.concat(mergedBands);    
+    const allBands = bandsNormal.concat(mergedBands);
 
     allBands.forEach(d => {
-        drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome);
+        drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome, tip, refChromLookup, queryChromLookup);
     });
 }
 
@@ -701,15 +753,7 @@ function mergeBands(bandsToMerge, otherBands, threshold) {
     return merged;
 }
 
-function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
-    // Ajouter un écouteur de clic sur le svg pour déselectionner
-    d3.select('#viz').on('click', function(event) {
-        if (event.target.tagName === 'svg') {
-            selectedBands.clear();
-            updateBandSelection();
-        }
-    });
-
+function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome, tip, refChromLookup, queryChromLookup) {
     let display = 'null';
     //Si c'est un redraw alors on vérifie les filtres de bandes
     if(!isFirstDraw){
@@ -718,51 +762,18 @@ function drawOneBand(svgGroup, d, chromPositions, refGenome, queryGenome) {
         }
     }
     
-    let refChromNum = Object.values(genomeData[refGenome]).findIndex(item => item && item.name === d.refChr) + 1;
-    let queryChromNum = Object.values(genomeData[queryGenome]).findIndex(item => item && item.name === d.queryChr) + 1;
-    const refX = chromPositions[[refChromNum]]?.refX;
-    const queryX = chromPositions[[queryChromNum]]?.queryX;
+    const refChromNum = refChromLookup[d.refChr];
+    const queryChromNum = queryChromLookup[d.queryChr];
+    const refX = chromPositions[refChromNum]?.refX;
+    const queryX = chromPositions[queryChromNum]?.queryX;
 
     let color;
-    if (bandColorMode !== undefined && bandColorMode === 'byChrom') {
-        // Utilise le numéro de chromosome de référence (refChromNum) pour choisir la couleur
-        // refChromNum est 1-based ; generateColor attend un index, on met refChromNum-1
-        // Si refChromNum est invalide, on retombe sur la couleur par type
-        if (Number.isFinite(refChromNum) && refChromNum > 0) {
-            color = generateColor(refChromNum - 1);
-        } else {
-            color = currentBandTypeColors[d.type] || '#ccc';
-        }
+    const refChromIndex = Number.parseInt(refChromNum, 10);
+    if (bandColorMode !== undefined && bandColorMode === 'byChrom' && Number.isFinite(refChromIndex) && refChromIndex > 0) {
+        color = generateColor(refChromIndex - 1);
     } else {
-        // Mode par type (par défaut)
         color = currentBandTypeColors[d.type] || '#ccc';
     }
-    // Tooltip
-    const tip = d3.tip()
-        .attr('class', 'd3-tip')
-        .offset([-10, 0])
-        .html(function (event, d) {
-            return `
-                <div style="min-width:220px; font-size:15px;">
-                    <div style="margin-bottom:6px;">
-                        <span style="font-weight:bold;">Ref</span> : 
-                        <span>${d.refChr}</span> 
-                        <span>[${d.refStart}..${d.refEnd}]</span>
-                    </div>
-                    <div style="margin-bottom:6px;">
-                        <span style="font-weight:bold;">Query</span> : 
-                        <span>${d.queryChr}</span> 
-                        <span>[${d.queryStart}..${d.queryEnd}]</span>
-                    </div>
-                    <div>
-                        <span style="font-weight:bold;">Type :</span> 
-                        <span style="background:${color}; border-radius:6px; padding:2px 8px; margin-left:4px;">${d.type}</span>
-                    </div>
-                </div>
-            `;
-    });
-
-    svgGroup.call(tip);
 
     if (refX !== undefined && queryX !== undefined) {
 
