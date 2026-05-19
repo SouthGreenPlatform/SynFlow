@@ -165,11 +165,12 @@ function processChunks(lines, isFirstFile) {
     let parsedData = [];
 
     function processNextChunk() {
-        const chunk = lines.slice(offset, offset + CHUNK_SIZE);
-        offset += CHUNK_SIZE;
+        const end = Math.min(offset + CHUNK_SIZE, lines.length);
+        const chunk = lines.slice(offset, end);
+        offset = end;
 
-        const chunkData = parseSyriData(chunk.join('\n'));
-        parsedData = parsedData.concat(chunkData);
+        const chunkData = parseSyriData(chunk);
+        parsedData.push(...chunkData);
 
         const stackMode = false; // IGNORE
 
@@ -1472,7 +1473,7 @@ function calculateGlobalMaxChromosomeLengths(genomeData) {
 }
 
 function parseSyriData(data) {
-    const lines = data.split('\n');
+    const lines = Array.isArray(data) ? data : data.split('\n');
     const parsedData = lines.map(line => {
         const parts = line.split('\t');
         return {
