@@ -436,6 +436,7 @@ async function createExistingFilesForm(activeStudy = null) {
 
         // Lance le spinner (et démarre le chronomètre de rendu)
         const target = document.getElementById('spinner');
+        spinner.setStep('Loading files...', 10);
         try {
             console.info('startRenderTimer called (existing)', selectedGenomes);
             startRenderTimer({ action: 'draw-click', mode: 'existing', selectedGenomes: selectedGenomes.length });
@@ -777,6 +778,7 @@ function createUploadSection() {
 
         // Lance le spinner
         const target = document.getElementById('spinner');
+        spinner.setStep('Loading files...', 10);
         spinner.spin(target); 
 
         fileUploadMode = 'local'; // Change mode to local for file upload
@@ -1098,6 +1100,7 @@ export function createFTPSection() {
 
         // Lance le spinner
         const target = document.getElementById('spinner');
+        spinner.setStep('Loading files...', 10);
         spinner.spin(target);
 
         fileUploadMode = 'FTP';

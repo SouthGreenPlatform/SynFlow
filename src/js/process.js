@@ -31,7 +31,7 @@ export function setBandColorMode(mode) {
 }
 //spinner
 const opts = {
-    lines: 20, length: 120, width: 50, radius: 1, scale: 0.8,
+    lines: 20, length: 24, width: 10, radius: 1, scale: 0.2,
     corners: 1, speed: 1, rotate: 0, animation: 'spinner-line-shrink',
     direction: 1, color: 'grey', fadeColor: 'transparent', top: '50%',
     left: '50%', shadow: '0 0 1px transparent', zIndex: 2000000000,
@@ -90,7 +90,7 @@ export function stopRenderTimer(extra = {}) {
         } catch (e) {
             console.warn('Failed to store render metric in localStorage', e);
         }
-
+        
         // stop spinner (actual UI)
         try { spinner.stop(); } catch (e) { console.warn('Failed to stop spinner', e); }
 
@@ -151,7 +151,22 @@ export function generateColor(index) {
     return colors[index % colors.length];
 }
 
+function getSpinnerProgressPercent(fileIndex, totalFiles) {
+    if (!Number.isFinite(fileIndex) || fileIndex < 0 || !totalFiles) {
+        return 30;
+    }
+    // Progress from 30% to 100% based on file index
+    return Math.round(30 + (fileIndex / totalFiles) * 70);
+}
+
 function readFileInChunks(file, isFirstFile) {
+    const fileIndex = orderedFileObjects.indexOf(file);
+    const totalFiles = orderedFileObjects.length;
+    spinner.setStep(
+        `Parsing file ${fileIndex + 1}/${totalFiles}: ${file ? file.name : 'unknown file'}`,
+        getSpinnerProgressPercent(fileIndex, totalFiles)
+    );
+
     file.text().then(data => {
         const lines = data.split('\n');
         processChunks(lines, isFirstFile);
@@ -192,6 +207,8 @@ function processChunks(lines, isFirstFile) {
                 queryGenome,
                 data: parsedData
             });
+            const progress = getSpinnerProgressPercent(orderedFileObjects.indexOf(currentFile) + 1, orderedFileObjects.length);
+            spinner.setStep(`Processing file ${orderedFileObjects.indexOf(currentFile) + 1}/${orderedFileObjects.length}...`, progress);
             processNextFile(); // Traiter le fichier suivant
         }
     }
@@ -896,6 +913,8 @@ function extractGenomeNames(chrlenFileNames) {
 // exemple genome-1_genome-2.out
 export function findUniqueGenomes(bandFileNames) {
 
+    console.log("Finding unique genomes from band files:", bandFileNames);
+    
     //met à jour le nombre de génomes
     numGenomes = bandFileNames.length + 1; // Nombre de génomes = nombre de fichiers + 1
 
@@ -947,6 +966,7 @@ function handleFileUpload(bandFiles, bedFiles) {
     const bandFileNames = Array.from(bandFiles).map(file => file.name);
     
     const outFiles = bandFileNames.filter(name => name.endsWith('.out'));
+    spinner.setStep(`Preparing ${outFiles.length} file${outFiles.length > 1 ? 's' : ''}...`, 10);
     if (outFiles.length === 0) {
         alert('No valid band files (.out) found. Please upload the correct files.');
         stopRenderTimer();
@@ -1013,11 +1033,13 @@ function handleFileUpload(bandFiles, bedFiles) {
 
     // Lire les longueurs des chromosomes à partir du fichier band
     calculateChromosomeDataFromBandFilesAlphabetical(orderedFileObjects, uniqueGenomes).then((data) => {
+        spinner.setStep('Calculating chromosome data...', 20);
         genomeData = data;
         // console.log(genomeData)
         globalMaxChromosomeLengths = calculateGlobalMaxChromosomeLengths(genomeData);
         scale = calculateScale(globalMaxChromosomeLengths);
         // console.log("Global Max Chromosome Lengths: ", globalMaxChromosomeLengths);
+        spinner.setStep('Starting to parse files...', 30);
         //traite les fichiers
         readFileInChunks(currentFile, true);
     });
@@ -1453,6 +1475,7 @@ function reorderFileList(fileListElement, orderedFileNames, fileType) {
 }
 
 function orderFilesByGenomes(files, genomes) {
+    console.log("Ordering files based on genomes:", files, genomes);
     const orderedFiles = [];
     for (let i = 0; i < genomes.length - 1; i++) {
         const fileName = `${genomes[i]}_${genomes[i + 1]}.out`;
