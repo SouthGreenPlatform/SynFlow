@@ -218,7 +218,6 @@ async function fetchSynflowDirectories() {
 // Fonction pour récupérer la liste des fichiers .out depuis un dossier distant
 function fetchRemoteOutFileList(folder) {
     console.log('Fetching file list from FTP folder:', folder);
-    // Normalise l'URL pour s'assurer qu'elle se termine par un /
     let url = folder.trim();
     if (!url.endsWith('/')) {
         url += '/';
@@ -231,28 +230,25 @@ function fetchRemoteOutFileList(folder) {
         }
     })
     .then(response => {
+        console.log('Remote file list response status:', response.status, response.statusText, 'for', url);
         if (!response.ok) throw new Error(`Erreur ${response.status}: ${response.statusText}`);
         return response.text();
     })
     .then(html => {
-        // Parse le HTML pour extraire les liens vers les fichiers .out
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
         const links = Array.from(doc.querySelectorAll('a'));
-        
-        // Filtre les fichiers .out en utilisant l'attribut href
         const files = links
             .map(link => {
                 const href = link.getAttribute('href');
-                // Ignore le lien parent (..)
                 if (!href || href === '../') return null;
-                // Retourne seulement les fichiers .out
                 if (href.endsWith('.out')) {
                     return href;
                 }
                 return null;
             })
             .filter(name => name !== null);
+        console.log('Remote .out files found:', files.length, files);
         return files;
     });
 }
@@ -436,7 +432,7 @@ async function createExistingFilesForm(activeStudy = null) {
 
         // Lance le spinner (et démarre le chronomètre de rendu)
         const target = document.getElementById('spinner');
-        spinner.setStep('Loading files...', 10);
+        spinner.setStep('Starting...', 10);
         try {
             console.info('startRenderTimer called (existing)', selectedGenomes);
             startRenderTimer({ action: 'draw-click', mode: 'existing', selectedGenomes: selectedGenomes.length });
@@ -505,15 +501,16 @@ async function createExistingFilesForm(activeStudy = null) {
         }
 
         // Télécharge les fichiers nécessaires et crée des objets File
+        spinner.setStep(`Downloading ${neededFiles.length} comparison files...`, 12);
         const files = await Promise.all(neededFiles.map(async file => {
             const filePath = `${folder}${file}`;
-            // Utilise fetch pour récupérer le contenu du fichier
             const response = await fetch(filePath);
             const text = await response.text();
             return new File([text], file, { type: 'text/plain' });
         }));
 
         //cherche les fichiers anchors, bed et jbrowse associés
+        spinner.setStep('Searching optional files...', 15);
         await searchAdditionalFiles(selectedGenomes, files, folder);
         // Simule un input file multiple pour handleFileUpload
         const dataTransfer = new DataTransfer();
@@ -1100,7 +1097,7 @@ export function createFTPSection() {
 
         // Lance le spinner
         const target = document.getElementById('spinner');
-        spinner.setStep('Loading files...', 10);
+        spinner.setStep('Starting...', 10);
         spinner.spin(target);
 
         fileUploadMode = 'FTP';
@@ -1137,9 +1134,8 @@ export function createFTPSection() {
         }
 
         // Télécharge les fichiers nécessaires et crée des objets File
+        spinner.setStep(`Downloading ${neededFiles.length} comparison files...`, 12);
         const files = await Promise.all(neededFiles.map(async file => {
-
-            //ajoute un slash à la fin du folder si pas présent
             const folderWithSlash = folder.endsWith('/') ? folder : folder + '/';
             const filePath = `${folderWithSlash}${file}`;
             const response = await fetch(filePath);
@@ -1147,6 +1143,7 @@ export function createFTPSection() {
             return new File([text], file, { type: 'text/plain' });
         }));
 
+        spinner.setStep('Searching optional files...', 15);
         //cherche les fichiers anchors, bed et jbrowse associés
         await searchAdditionalFiles(ftpSelectedGenomes, files, folder);
 
@@ -1596,10 +1593,8 @@ export function loadAllChromosomeLengths(files) {
 async function searchAdditionalFiles(selectedGenomes, files, folder) {
     const folderWithSlash = folder.endsWith('/') ? folder : folder + '/';
 
-    //Cherche s'il y a un fichier .bed pour chaque genome et si oui, le télécharge
     bedFiles = await Promise.all(selectedGenomes.map(async genome => {
         const bedFilePath = `${folderWithSlash}${genome}.bed`;
-        //si le fichier existe on le télécharge
         try {
             const response = await fetch(bedFilePath);
             if (response.ok) {
@@ -1609,13 +1604,11 @@ async function searchAdditionalFiles(selectedGenomes, files, folder) {
         } catch (error) {
             console.log(`Error fetching bed file for ${genome}:`, error);
         }
-        
         return null;
     }));
 
-    //Cherche les fichiers .anchors correspondant aux fichiers .out sélectionnés
     anchorsFiles = [];
-    files.forEach(async file => {
+    await Promise.all(files.map(async file => {
         const anchorsFileName = file.name.replace('.out', '.anchors');
         const anchorsFilePath = `${folderWithSlash}${anchorsFileName}`;
         try {
@@ -1627,19 +1620,18 @@ async function searchAdditionalFiles(selectedGenomes, files, folder) {
         } catch (error) {
             console.log(`Error fetching anchors file for ${file.name}:`, error);
         }
-    });
+    }));
     
-    //cherche s'il y a un fichier jbrowse_links.json dans le dossier et si oui, le télécharge
     const jbrowseFileName = 'jbrowse_link.json';
     const jbrowseFilePath = `${folderWithSlash}${jbrowseFileName}`;
 
     try {
         const jbrowseResponse = await fetch(jbrowseFilePath);
         if (jbrowseResponse.ok) {
-            jbrowseLinks = await jbrowseResponse.json();   
+            jbrowseLinks = await jbrowseResponse.json();
         }
     } catch (error) {
-        console.log("Error fetching jbrowse links:", error);
+        console.log('Error fetching jbrowse links:', error);
     }
 }
 

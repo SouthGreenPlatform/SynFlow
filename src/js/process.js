@@ -144,6 +144,7 @@ function resetGlobals() {
 }
 
 export function generateColor(index) {
+    console.log(`Generating color for index ${index}`);
     const colors = [
         '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
         '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
@@ -153,10 +154,10 @@ export function generateColor(index) {
 
 function getSpinnerProgressPercent(fileIndex, totalFiles) {
     if (!Number.isFinite(fileIndex) || fileIndex < 0 || !totalFiles) {
-        return 30;
+        return 20;
     }
-    // Progress from 30% to 100% based on file index
-    return Math.round(30 + (fileIndex / totalFiles) * 70);
+    // Progress from 20% to 100% based on file index
+    return Math.round(20 + (fileIndex / totalFiles) * 80);
 }
 
 function readFileInChunks(file, isFirstFile) {
@@ -987,7 +988,7 @@ function handleFileUpload(bandFiles, bedFiles, orderedGenomes = null, orderedFil
     const bandFileNames = Array.from(bandFiles).map(file => file.name);
     
     const outFiles = bandFileNames.filter(name => name.endsWith('.out'));
-    spinner.setStep(`Preparing ${outFiles.length} file${outFiles.length > 1 ? 's' : ''}...`, 10);
+    spinner.setStep(`Preparing ${outFiles.length} file${outFiles.length > 1 ? 's' : ''}...`, 20);
     if (outFiles.length === 0) {
         alert('No valid band files (.out) found. Please upload the correct files.');
         stopRenderTimer();
@@ -996,11 +997,8 @@ function handleFileUpload(bandFiles, bedFiles, orderedGenomes = null, orderedFil
 
     // Si l'appelant fournit déjà l'ordre des génomes, on l'utilise directement.
     if (Array.isArray(orderedGenomes) && orderedGenomes.length >= 2) {
-        console.log("Using provided ordered genomes:", orderedGenomes);
         uniqueGenomes = Array.from(new Set(orderedGenomes));
     } else {
-        console.log("Determining unique genomes from uploaded band files...");
-        // Trouver et ordonne les génomes à partir des noms de fichiers de bandes
         uniqueGenomes = findUniqueGenomes(outFiles);
     }
 
@@ -1060,15 +1058,13 @@ function handleFileUpload(bandFiles, bedFiles, orderedGenomes = null, orderedFil
         });
     }
 
-    // Lire les longueurs des chromosomes à partir du fichier band
     calculateChromosomeDataFromBandFilesAlphabetical(orderedFileObjects, uniqueGenomes).then((data) => {
-        spinner.setStep('Calculating chromosome data...', 20);
         genomeData = data;
         // console.log(genomeData)
         globalMaxChromosomeLengths = calculateGlobalMaxChromosomeLengths(genomeData);
         scale = calculateScale(globalMaxChromosomeLengths);
         // console.log("Global Max Chromosome Lengths: ", globalMaxChromosomeLengths);
-        spinner.setStep('Starting to parse files...', 30);
+        spinner.setStep('Starting to parse files...', 20);
         //traite les fichiers
         readFileInChunks(currentFile, true);
     });
@@ -1251,36 +1247,44 @@ async function calculateChromosomeDataFromBandFilesAlphabetical(orderedFileObjec
         genomeChromMap[g] = {};
     });
 
-    // Parcourir tous les fichiers et accumuler les chromosomes trouvés
-    for (let i = 0; i < orderedFileObjects.length; i++) {
-        const file = orderedFileObjects[i];
+    // Lire les fichiers de bande en parallèle pour réduire le temps d'attente global
+    const readPromises = orderedFileObjects.map(async (file, i) => {
         const refGenome = uniqueGenomes[i];
         const queryGenome = uniqueGenomes[i + 1];
 
         try {
             const { refLengths, queryLengths } = await readChromosomeLengthsFromBandFile(file);
-
-            // Ajouter/refresher les chromosomes ref
-            Object.values(refLengths).forEach(ch => {
-                if (!ch?.name) return;
-                const existing = genomeChromMap[refGenome][ch.name];
-                if (!existing || (ch.length && ch.length > existing.length)) {
-                    genomeChromMap[refGenome][ch.name] = { name: ch.name, length: ch.length };
-                }
-            });
-
-            // Ajouter/refresher les chromosomes query
-            Object.values(queryLengths).forEach(ch => {
-                if (!ch?.name) return;
-                const existing = genomeChromMap[queryGenome][ch.name];
-                if (!existing || (ch.length && ch.length > existing.length)) {
-                    genomeChromMap[queryGenome][ch.name] = { name: ch.name, length: ch.length };
-                }
-            });
+            return { fileName: file.name, refGenome, queryGenome, refLengths, queryLengths };
         } catch (err) {
             console.warn('Erreur lecture fichier band pour', file?.name, err);
+            return null;
         }
-    }
+    });
+
+    const results = await Promise.all(readPromises);
+
+    results.forEach(result => {
+        if (!result) return;
+
+        const { refGenome, queryGenome, refLengths, queryLengths, fileName } = result;
+        // Ajouter/refresher les chromosomes ref
+        Object.values(refLengths).forEach(ch => {
+            if (!ch?.name) return;
+            const existing = genomeChromMap[refGenome][ch.name];
+            if (!existing || (ch.length && ch.length > existing.length)) {
+                genomeChromMap[refGenome][ch.name] = { name: ch.name, length: ch.length };
+            }
+        });
+
+        // Ajouter/refresher les chromosomes query
+        Object.values(queryLengths).forEach(ch => {
+            if (!ch?.name) return;
+            const existing = genomeChromMap[queryGenome][ch.name];
+            if (!existing || (ch.length && ch.length > existing.length)) {
+                genomeChromMap[queryGenome][ch.name] = { name: ch.name, length: ch.length };
+            }
+        });
+    });
 
     // Construire genomeData en triant par nom (ordre naturel)
     uniqueGenomes.forEach(genome => {
@@ -1303,69 +1307,94 @@ async function calculateChromosomeDataFromBandFilesAlphabetical(orderedFileObjec
 // queryLengths = { "1": { name: "chr1", length: 70856583 }, "2": { name: "chr2", length: 54676892 }, ... }
 // alignments = { "chr1": { "chr1": 1000, "chr2": 2000, ... }, "chr2": { "chr1": 3000, "chr2": 4000, ... }, ... }
 function readChromosomeLengthsFromBandFile(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const refLengths = {};
-            const queryLengths = {};
-            const alignments = {};
-            const lines = event.target.result.split('\n');
-            let refIndex = 0;
-            let queryIndex = 1;
-            let lastRefChromosome = null;
+    return new Promise(async (resolve, reject) => {
+        const refLengths = {};
+        const queryLengths = {};
+        const alignments = {};
+        let refIndex = 0;
+        let queryIndex = 1;
+        let lastRefChromosome = null;
+        let buffer = '';
 
-            lines.forEach(line => {
-                const parts = line.split('\t');
-                if (parts.length >= 8) {
-                    const refChromosome = parts[0];
-                    const queryChromosome = parts[5];
-                    const refStart = +parts[1];
-                    const refEnd = +parts[2];
-                    const queryEnd = +parts[7];
-                    const alignmentLength = refEnd - refStart;
+        const processLine = (line) => {
+            if (!line) return;
+            line = line.replace(/\r$/, '');
+            const parts = line.split('\t');
+            if (parts.length < 8) return;
 
-                    if (refChromosome !== "-") {
-                        if (refChromosome !== lastRefChromosome) {
-                            lastRefChromosome = refChromosome;
-                            refIndex++;
-                        }
-                        if (!refLengths[refIndex] || refEnd > refLengths[refIndex].length) {
-                            refLengths[refIndex] = { name: refChromosome, length: refEnd };
-                        }
-                    }
+            const refChromosome = parts[0];
+            const queryChromosome = parts[5];
+            const refStart = +parts[1];
+            const refEnd = +parts[2];
+            const queryEnd = +parts[7];
+            const alignmentLength = refEnd - refStart;
 
-                    if (queryChromosome !== "-") {
-                        let found = false;
-                        for (const key in queryLengths) {
-                            if (queryLengths[key].name === queryChromosome) {
-                                queryIndex = key;
-                                found = true;
-                                if (queryEnd > queryLengths[queryIndex].length) {
-                                    queryLengths[queryIndex] = { name: queryChromosome, length: queryEnd };
-                                }
-                                break;
-                            }
-                        }
-                        if (!found) {
-                            queryIndex = Object.keys(queryLengths).length + 1;
+            if (refChromosome !== '-') {
+                if (refChromosome !== lastRefChromosome) {
+                    lastRefChromosome = refChromosome;
+                    refIndex++;
+                }
+                if (!refLengths[refIndex] || refEnd > refLengths[refIndex].length) {
+                    refLengths[refIndex] = { name: refChromosome, length: refEnd };
+                }
+            }
+
+            if (queryChromosome !== '-') {
+                let found = false;
+                for (const key in queryLengths) {
+                    if (queryLengths[key].name === queryChromosome) {
+                        queryIndex = key;
+                        found = true;
+                        if (queryEnd > queryLengths[queryIndex].length) {
                             queryLengths[queryIndex] = { name: queryChromosome, length: queryEnd };
                         }
+                        break;
                     }
-
-                    if (!alignments[refChromosome]) {
-                        alignments[refChromosome] = {};
-                    }
-                    if (!alignments[refChromosome][queryChromosome]) {
-                        alignments[refChromosome][queryChromosome] = 0;
-                    }
-                    alignments[refChromosome][queryChromosome] += alignmentLength;
                 }
-            });
+                if (!found) {
+                    queryIndex = Object.keys(queryLengths).length + 1;
+                    queryLengths[queryIndex] = { name: queryChromosome, length: queryEnd };
+                }
+            }
+
+            if (!alignments[refChromosome]) {
+                alignments[refChromosome] = {};
+            }
+            if (!alignments[refChromosome][queryChromosome]) {
+                alignments[refChromosome][queryChromosome] = 0;
+            }
+            alignments[refChromosome][queryChromosome] += alignmentLength;
+        };
+
+        try {
+            if (file.stream) {
+                const reader = file.stream().getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+                    let newlineIndex;
+                    while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+                        const line = buffer.slice(0, newlineIndex);
+                        buffer = buffer.slice(newlineIndex + 1);
+                        processLine(line);
+                    }
+                }
+
+                if (buffer.length) {
+                    processLine(buffer);
+                }
+            } else {
+                const text = await file.text();
+                text.split('\n').forEach(processLine);
+            }
 
             resolve({ refLengths, queryLengths, alignments });
-        };
-        reader.onerror = (error) => reject(error);
-        reader.readAsText(file);
+        } catch (error) {
+            reject(error);
+        }
     });
 }
 
@@ -1412,6 +1441,7 @@ export { readFileInChunks, handleFileUpload };
 
 
 function reorderFileList(fileListElement, orderedFileNames, fileType) {
+    console.log(`Reordering file list for type ${fileType}:`, orderedFileNames);
     // Ne rien faire si la liste n'existe pas
     //exemple: chargement depuis l'onglet existing files
     if (!fileListElement) return;
