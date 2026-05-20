@@ -848,6 +848,8 @@ function calculateSNPDensity(data, refLengths, binSize = 100000) {
 //chromosome    start	end	name	strand
 //Macmad_h1_01	16953	25284	Macmad_h1_01g000010	+
 export function calculateAnnotationDensity(data, genomeName, binSize = 20000) {
+
+    console.log(`Calculating annotation density for genome ${genomeName} with bin size ${binSize}...`);
     const annotationDensity = {};
 
     // Compter les annotations par bin
@@ -914,51 +916,76 @@ function extractGenomeNames(chrlenFileNames) {
 export function findUniqueGenomes(bandFileNames) {
 
     console.log("Finding unique genomes from band files:", bandFileNames);
-    
+
     //met à jour le nombre de génomes
     numGenomes = bandFileNames.length + 1; // Nombre de génomes = nombre de fichiers + 1
 
-    // Extrait les paires de chaque fichier
-    const pairs = bandFileNames
-        .map(f => f.replace('.out', '').split('_'))
-        .filter(parts => parts.length === 2);
+    const pairs = [];
+    const adjacency = new Map();
 
-    // Compte les occurrences de chaque génome
-    const counts = {};
-    pairs.forEach(([a, b]) => {
-        counts[a] = (counts[a] || 0) + 1;
-        counts[b] = (counts[b] || 0) + 1;
-    });
+    for (const fileName of bandFileNames) {
+        const baseName = fileName.replace(/\.out$/i, '');
+        const sepIndex = baseName.lastIndexOf('_');
+        if (sepIndex < 1 || sepIndex === baseName.length - 1) {
+            console.warn('Skipping invalid band filename:', fileName);
+            continue;
+        }
 
-    // Liste des génomes qui apparaissent en début de fichier
-    const firsts = new Set(pairs.map(([a, b]) => a));
+        const a = baseName.slice(0, sepIndex);
+        const b = baseName.slice(sepIndex + 1);
+        pairs.push([a, b]);
 
-    // Trouve une extrémité : n'apparaît qu'une fois ET est en début de fichier
-    let start = Object.keys(counts).find(g => counts[g] === 1 && firsts.has(g));
-    if (!start) {
-        alert("Error: Unable to find a unique starting genome. Please check your band files.");
-        console.log("Counts:", counts);
-        console.log("Firsts:", firsts);
+        if (!adjacency.has(a)) adjacency.set(a, []);
+        if (!adjacency.has(b)) adjacency.set(b, []);
+        adjacency.get(a).push(b);
+        adjacency.get(b).push(a);
+    }
+
+    if (pairs.length === 0) {
+        alert('Error: No valid band files found. Please check your input files.');
         stopRenderTimer();
         return null;
     }
-    // Reconstitue la chaîne
+
+    let start = null;
+    for (const [genome, neighbors] of adjacency.entries()) {
+        if (neighbors.length === 1) {
+            start = genome;
+            break;
+        }
+    }
+
+    if (!start) {
+        alert("Error: Unable to find a unique starting genome. Please check your band files.");
+        console.log("Adjacency:", Object.fromEntries(adjacency.entries()));
+        stopRenderTimer();
+        return null;
+    }
+
     const result = [start];
     let current = start;
     let prev = null;
+
     while (result.length < pairs.length + 1) {
-        // Cherche le binôme du génome courant qui n'est pas le précédent
-        const next = pairs.find(([a, b]) => (a === current && b !== prev) || (b === current && a !== prev));
-        if (!next) break;
-        const nextGenome = next[0] === current ? next[1] : next[0];
+        const neighbors = adjacency.get(current) || [];
+        const nextGenome = neighbors.find(neighbor => neighbor !== prev);
+        if (!nextGenome) break;
         result.push(nextGenome);
         prev = current;
         current = nextGenome;
     }
+
+    if (result.length !== pairs.length + 1) {
+        alert('Error: Unable to reconstruct the full genome chain. Please check your band files.');
+        console.log('Expected chain length:', pairs.length + 1, 'Got:', result.length);
+        stopRenderTimer();
+        return null;
+    }
+
     return result;
 }
 
-function handleFileUpload(bandFiles, bedFiles) {
+function handleFileUpload(bandFiles, bedFiles, orderedGenomes = null, orderedFileNames = null) {
     resetGlobals(); // Réinitialiser les variables globales
     // spinner.spin(target);
 
@@ -973,8 +1000,15 @@ function handleFileUpload(bandFiles, bedFiles) {
         return;
     }
 
-    // Trouver et ordonne les génomes à partir des noms de fichiers de bandes
-    uniqueGenomes = findUniqueGenomes(outFiles);
+    // Si l'appelant fournit déjà l'ordre des génomes, on l'utilise directement.
+    if (Array.isArray(orderedGenomes) && orderedGenomes.length >= 2) {
+        console.log("Using provided ordered genomes:", orderedGenomes);
+        uniqueGenomes = Array.from(new Set(orderedGenomes));
+    } else {
+        console.log("Determining unique genomes from uploaded band files...");
+        // Trouver et ordonne les génomes à partir des noms de fichiers de bandes
+        uniqueGenomes = findUniqueGenomes(outFiles);
+    }
 
     // Vérifier si tous les fichiers de bandes nécessaires sont présents
     if (!uniqueGenomes || uniqueGenomes.length < 2) {
@@ -989,9 +1023,10 @@ function handleFileUpload(bandFiles, bedFiles) {
     });
 
     //retrouve l'ordre des fichier 
-    // const orderedFiles = orderFilesByGenomes(bandFileNames, uniqueGenomes);
-    const orderedFiles = orderFilesByGenomes(outFiles, uniqueGenomes);
-
+    const orderedFiles = Array.isArray(orderedFileNames) && orderedFileNames.length
+        ? orderedFileNames
+        : orderFilesByGenomes(outFiles, uniqueGenomes);
+        
     // Vérifier si tous les fichiers de bandes nécessaires sont présents et dans l'ordre
     if (orderedFiles.length !== outFiles.length) {
         alert('Some band files are missing. Please ensure all necessary files are uploaded.');

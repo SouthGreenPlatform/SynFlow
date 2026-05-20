@@ -518,7 +518,7 @@ async function createExistingFilesForm(activeStudy = null) {
         // Simule un input file multiple pour handleFileUpload
         const dataTransfer = new DataTransfer();
         files.forEach(file => dataTransfer.items.add(file));
-        handleFileUpload(dataTransfer.files, bedFiles);
+        handleFileUpload(dataTransfer.files, bedFiles, selectedGenomes, neededFiles);
     });
 
     // Container pour l'aide (partie droite) - masqué en mode study
@@ -833,13 +833,13 @@ function createUploadSection() {
                 chainDiv.innerHTML = `<span style="color:red;">Internal error: some files not found.</span>`;
                 return;
             }
-            handleFileUpload(filesToSend);
+            handleFileUpload(filesToSend, null, selectedGenomes, neededFiles);
 
 
         }else{
             //sinon charge comme avant a partir des fichiers.
             const bandFiles = document.getElementById('band-files').files;
-            handleFileUpload(bandFiles);
+            handleFileUpload(bandFiles, null, selectedGenomes);
         }
     });
 
@@ -1160,7 +1160,7 @@ export function createFTPSection() {
         d3.select('#info').html('');
         d3.select("#viz").call(zoom);
         d3.select("#viz").append("g").attr("id", "zoomGroup");
-        handleFileUpload(dataTransfer.files);
+        handleFileUpload(dataTransfer.files, null, ftpSelectedGenomes, neededFiles);
     });
 
     // Partie droite : aide

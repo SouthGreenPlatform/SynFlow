@@ -701,6 +701,7 @@ function configJBrowse() {
 
 
 export function generateBandTypeFilters() {
+    console.log("Generating band type filters");
     const filterDiv = document.querySelector('.filter-section'); 
     filterDiv.innerHTML = ''; // Clear previous legend
     filterDiv.style.marginTop = '20px';
