@@ -848,43 +848,36 @@ function calculateSNPDensity(data, refLengths, binSize = 100000) {
 //chromosome    start	end	name	strand
 //Macmad_h1_01	16953	25284	Macmad_h1_01g000010	+
 export function calculateAnnotationDensity(data, genomeName, binSize = 20000) {
-
-    console.log(`Calculating annotation density for genome ${genomeName} with bin size ${binSize}...`);
     const annotationDensity = {};
+    let maxCount = 0;
 
-    // Compter les annotations par bin
-    data.split('\n').forEach(d => {
-        const [chr, start] = d.split('\t');
-        if (!chr || !start) return; // Ignorer les lignes vides ou incorrectes
+    data.split('\n').forEach(line => {
+        const [chr, start] = line.split('\t');
+        if (!chr || !start) return;
+
         const binIndex = Math.floor(+start / binSize);
-        if (!annotationDensity[chr]) {
-            annotationDensity[chr] = {};
+        const chrDensity = annotationDensity[chr] || (annotationDensity[chr] = {});
+        const count = (chrDensity[binIndex] || 0) + 1;
+        chrDensity[binIndex] = count;
+
+        if (count > maxCount) {
+            maxCount = count;
         }
-        annotationDensity[chr][binIndex] = (annotationDensity[chr][binIndex] || 0) + 1;
     });
 
-    // Extraire toutes les densités pour l'échelle de couleur
-    const allCounts = [];
-    for (const chr in annotationDensity) {
-        allCounts.push(...Object.values(annotationDensity[chr]));
+    if (maxCount === 0) {
+        return;
     }
 
-    //applique les couleurs des genomes
-    const color = genomeColors[genomeName] || '#000'; // Couleur de départ
-    const colorScale = d3.scaleSequential(d3.interpolateRgb("white", color))
-        .domain([0, d3.max(allCounts)]);
+    const color = genomeColors[genomeName] || '#000';
+    const colorScale = d3.scaleSequential(d3.interpolateRgb('white', color)).domain([0, maxCount]);
 
-    // Ajouter les gradients
     const svg = d3.select('#viz');
-
     let defs = svg.select('defs');
-    if (defs.empty()) {
-        defs = svg.append('defs');
-    }
+    if (defs.empty()) defs = svg.append('defs');
 
-    for (const chr in annotationDensity) {
+    Object.entries(annotationDensity).forEach(([chr, bins]) => {
         const gradientId = `gradient-${genomeName}-${chr}`;
-
         const gradient = defs.append('linearGradient')
             .attr('id', gradientId)
             .attr('x1', '0%')
@@ -892,18 +885,19 @@ export function calculateAnnotationDensity(data, genomeName, binSize = 20000) {
             .attr('x2', '100%')
             .attr('y2', '0%');
 
-        const bins = Object.keys(annotationDensity[chr]).map(Number);
-        const minBin = Math.min(...bins);
-        const maxBin = Math.max(...bins);
+        const binIndexes = Object.keys(bins).map(Number).sort((a, b) => a - b);
+        const minBin = binIndexes[0];
+        const maxBin = binIndexes[binIndexes.length - 1];
+        const range = maxBin - minBin || 1;
 
-        for (const bin of bins) {
-            const density = annotationDensity[chr][bin] || 0;
-            const offset = ((bin - minBin) / (maxBin - minBin)) * 100;
+        binIndexes.forEach(bin => {
+            const density = bins[bin] || 0;
+            const offset = ((bin - minBin) / range) * 100;
             gradient.append('stop')
                 .attr('offset', `${offset}%`)
                 .attr('stop-color', colorScale(density));
-        }
-    }
+        });
+    });
 }
 
 // Extraire les noms des génomes à partir des fichiers .chrlen
