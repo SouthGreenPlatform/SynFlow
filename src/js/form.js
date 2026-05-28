@@ -1,11 +1,16 @@
-import * as toolkit from '../../toolkit/toolkit.js';
-import { zoom } from './draw.js';
-import { handleFileUpload, extractAllGenomes, spinner, startRenderTimer } from './process.js';
-import { updateFileMatrix } from './matrix.js';
-import { logActivity } from './main.js';
+import * as toolkit from "../../toolkit/toolkit.js";
+import { zoom } from "./draw.js";
+import {
+	handleFileUpload,
+	extractAllGenomes,
+	spinner,
+	startRenderTimer,
+} from "./process.js";
+import { updateFileMatrix } from "./matrix.js";
+import { logActivity } from "./main.js";
 //mode de chargement des fichiers
-export let fileUploadMode = ''; //  'remote' ou 'local'
-export let fileOrderMode = ''; //'allavsall' ou 'chain'
+export let fileUploadMode = ""; //  'remote' ou 'local'
+export let fileOrderMode = ""; //'allavsall' ou 'chain'
 export let jbrowseLinks = {}; //liste des lien jbrowse pour les genome sélectionnés dans "existing files"
 export let anchorsFiles = [];
 export let bedFiles = [];
@@ -13,21 +18,20 @@ export let bedFiles = [];
 // Sélection ordonnée
 export let selectedGenomes = [];
 export function setSelectedGenomes(genomes) {
-    selectedGenomes = genomes;
-};
+	selectedGenomes = genomes;
+}
 
 export async function createForm(study) {
+	//if study param exists, do not display "Run analysis" and "Browse FTP" and  "Upload files" options.
+	//only Exixting Files will be available to display the results of the study.
+	//No study selector
 
-    //if study param exists, do not display "Run analysis" and "Browse FTP" and  "Upload files" options.
-    //only Exixting Files will be available to display the results of the study.
-    //No study selector
+	const form = document.createElement("form");
+	form.setAttribute("id", "file-upload-form");
 
-    const form = document.createElement('form');
-    form.setAttribute('id', 'file-upload-form');
-
-    // Créer un conteneur pour le titre qui reste toujours visible
-    const headerBar = document.createElement('div');
-    headerBar.style.cssText = `
+	// Créer un conteneur pour le titre qui reste toujours visible
+	const headerBar = document.createElement("div");
+	headerBar.style.cssText = `
         padding: 10px 15px;
         background-color: #f5f5f5;
         border-radius: 8px 8px 0 0;
@@ -37,101 +41,103 @@ export async function createForm(study) {
         align-items: center;
         cursor: pointer;
     `;
-    
-    // Ajout du titre
-    const title = document.createElement('h4');
-    //study first letter uppercase and the rest lowercase
-    title.textContent = study ? `${study.charAt(0).toUpperCase() + study.slice(1).toLowerCase()} input files selection` : 'Input Selection';
-    title.style.margin = '0';
-    headerBar.appendChild(title);
 
-    // Ajout de l'icône de fermeture
-    const chevronIcon = document.createElement('i');
-    chevronIcon.className = 'fas fa-chevron-up';
-    chevronIcon.style.color = '#666';
-    headerBar.appendChild(chevronIcon);
+	// Ajout du titre
+	const title = document.createElement("h4");
+	//study first letter uppercase and the rest lowercase
+	title.textContent = study
+		? `${study.charAt(0).toUpperCase() + study.slice(1).toLowerCase()} input files selection`
+		: "Input Selection";
+	title.style.margin = "0";
+	headerBar.appendChild(title);
 
-    // Créer un conteneur pour le contenu
-    const formContent = document.createElement('div');
-    formContent.setAttribute('id', 'form-content');
-    formContent.style.cssText = `
+	// Ajout de l'icône de fermeture
+	const chevronIcon = document.createElement("i");
+	chevronIcon.className = "fas fa-chevron-up";
+	chevronIcon.style.color = "#666";
+	headerBar.appendChild(chevronIcon);
+
+	// Créer un conteneur pour le contenu
+	const formContent = document.createElement("div");
+	formContent.setAttribute("id", "form-content");
+	formContent.style.cssText = `
         background-color: white;
         transition: max-height 0.3s ease-out;
         overflow: hidden;
     `;
 
-    // Event listener sur headerBar
-    headerBar.addEventListener('click', (event) => {
-        logActivity('Toggling form visibility');
-        event.preventDefault();
-        if(formContent.style.maxHeight === '0px' || !formContent.style.maxHeight) {
-            formContent.style.maxHeight = 'unset'; // Pour une animation fluide
-            chevronIcon.className = 'fas fa-chevron-up';
-        } else {
-            formContent.style.maxHeight = '0px';
-            chevronIcon.className = 'fas fa-chevron-down';
-        }
-    });
+	// Event listener sur headerBar
+	headerBar.addEventListener("click", (event) => {
+		logActivity("Toggling form visibility");
+		event.preventDefault();
+		if (formContent.style.maxHeight === "0px" || !formContent.style.maxHeight) {
+			formContent.style.maxHeight = "unset"; // Pour une animation fluide
+			chevronIcon.className = "fas fa-chevron-up";
+		} else {
+			formContent.style.maxHeight = "0px";
+			chevronIcon.className = "fas fa-chevron-down";
+		}
+	});
 
-    // Container principal avec CSS Grid
-    const gridContainer = document.createElement('div');
-    gridContainer.style.cssText = `
+	// Container principal avec CSS Grid
+	const gridContainer = document.createElement("div");
+	gridContainer.style.cssText = `
         display: grid;
-        grid-template-columns: ${study ? '1fr' : '200px 1fr'};
+        grid-template-columns: ${study ? "1fr" : "200px 1fr"};
         gap: 20px;
         padding: 20px;
         background-color: #f5f5f5;
         border-radius: 0 0 8px 8px;
     `;
 
-    // Colonne 1 : Menu de sélection (masqué en mode study)
-    const menuColumn = document.createElement('div');
-    menuColumn.setAttribute('class', 'menu-section');
+	// Colonne 1 : Menu de sélection (masqué en mode study)
+	const menuColumn = document.createElement("div");
+	menuColumn.setAttribute("class", "menu-section");
 
-    const allMenuItems = [
-        { id: 'existing', icon: 'fas fa-folder-open', text: 'Existing Files' },
-        { id: 'calculate', icon: 'fas fa-cogs', text: 'Run analysis' },
-        { id: 'ftp', icon: 'fas fa-network-wired', text: 'Browse FTP' },
-        { id: 'upload', icon: 'fas fa-upload', text: 'Upload Files' }
-    ];
+	const allMenuItems = [
+		{ id: "existing", icon: "fas fa-folder-open", text: "Existing Files" },
+		{ id: "calculate", icon: "fas fa-cogs", text: "Run analysis" },
+		{ id: "ftp", icon: "fas fa-network-wired", text: "Browse FTP" },
+		{ id: "upload", icon: "fas fa-upload", text: "Upload Files" },
+	];
 
-    // Si un study est fourni, ne pas afficher le menu
-    const menuItems = study ? [] : allMenuItems;
+	// Si un study est fourni, ne pas afficher le menu
+	const menuItems = study ? [] : allMenuItems;
 
-    menuItems.forEach(item => {
-        const menuItem = document.createElement('div');
-        menuItem.style.cssText = `
+	menuItems.forEach((item) => {
+		const menuItem = document.createElement("div");
+		menuItem.style.cssText = `
             padding: 15px;
             margin: 5px 0;
             cursor: pointer;
             border-radius: 5px;
             transition: all 0.3s ease;
         `;
-        menuItem.innerHTML = `<i class="${item.icon}"></i> ${item.text}`;
-        menuItem.dataset.option = item.id;
-        
-        menuItem.addEventListener('click', async () => {
-            logActivity(`Selected form option: ${item.text}`);
-            // Retirer la classe active de tous les items
-            menuColumn.querySelectorAll('div').forEach(div => {
-                div.style.backgroundColor = 'transparent';
-                div.style.color = '#000';
-            });
-            // Ajouter la classe active à l'item sélectionné
-            menuItem.style.backgroundColor = 'black';
-            menuItem.style.color = 'white';
-            
-            // Afficher le formulaire correspondant
-            await showForm(item.id, study);
-        });
-        
-        menuColumn.appendChild(menuItem);
-    });
+		menuItem.innerHTML = `<i class="${item.icon}"></i> ${item.text}`;
+		menuItem.dataset.option = item.id;
 
-    // Colonne 2 : Zone de contenu dynamique
-    const contentColumn = document.createElement('div');
-    contentColumn.setAttribute('id', 'dynamic-content');
-    contentColumn.style.cssText = `
+		menuItem.addEventListener("click", async () => {
+			logActivity(`Selected form option: ${item.text}`);
+			// Retirer la classe active de tous les items
+			menuColumn.querySelectorAll("div").forEach((div) => {
+				div.style.backgroundColor = "transparent";
+				div.style.color = "#000";
+			});
+			// Ajouter la classe active à l'item sélectionné
+			menuItem.style.backgroundColor = "black";
+			menuItem.style.color = "white";
+
+			// Afficher le formulaire correspondant
+			await showForm(item.id, study);
+		});
+
+		menuColumn.appendChild(menuItem);
+	});
+
+	// Colonne 2 : Zone de contenu dynamique
+	const contentColumn = document.createElement("div");
+	contentColumn.setAttribute("id", "dynamic-content");
+	contentColumn.style.cssText = `
         padding: 15px;
         background-color: white;
         border-radius: 5px;
@@ -139,403 +145,431 @@ export async function createForm(study) {
         box-shadow: 0 0 5px rgba(0,0,0,0.1);
     `;
 
-    // Ajout des colonnes au container (menu seulement si pas en mode study)
-    if (!study) {
-        gridContainer.appendChild(menuColumn);
-    }
-    gridContainer.appendChild(contentColumn);
+	// Ajout des colonnes au container (menu seulement si pas en mode study)
+	if (!study) {
+		gridContainer.appendChild(menuColumn);
+	}
+	gridContainer.appendChild(contentColumn);
 
-    // Ajouter le bouton et le contenu au formulaire    
-    form.appendChild(headerBar);
-    form.appendChild(formContent);
-    formContent.appendChild(gridContainer);  // Ne garder que cette ligne
+	// Ajouter le bouton et le contenu au formulaire
+	form.appendChild(headerBar);
+	form.appendChild(formContent);
+	formContent.appendChild(gridContainer); // Ne garder que cette ligne
 
-    // Afficher le formulaire "existing" par défaut
-    // Ajouter la classe active à l'item sélectionné (seulement si menu visible)
-    if (!study) {
-        const selectedItem = menuColumn.querySelector(`div[data-option="existing"]`);
-        selectedItem.style.backgroundColor = 'black';
-        selectedItem.style.color = 'white';
-    }
-    
-    // Affiche le formulaire existing après que le formulaire soit ajouté au DOM
-    setTimeout(async () => {
-        console.log("Showing existing form");
-        await showForm('existing', study);
-    }, 0);
-    
-    return form;
+	// Afficher le formulaire "existing" par défaut
+	// Ajouter la classe active à l'item sélectionné (seulement si menu visible)
+	if (!study) {
+		const selectedItem = menuColumn.querySelector(
+			`div[data-option="existing"]`,
+		);
+		selectedItem.style.backgroundColor = "black";
+		selectedItem.style.color = "white";
+	}
+
+	// Affiche le formulaire existing après que le formulaire soit ajouté au DOM
+	setTimeout(async () => {
+		console.log("Showing existing form");
+		await showForm("existing", study);
+	}, 0);
+
+	return form;
 }
 
 // Fonction pour afficher le bon formulaire
 export async function showForm(option, studyParam = null) {
-    const contentColumn = document.getElementById('dynamic-content');
-    if (!contentColumn) {
-        console.warn('contentColumn not found in DOM yet');
-        return;
-    }
-    contentColumn.innerHTML = '';
-    switch(option) {
-        case 'existing':
-            contentColumn.appendChild(await createExistingFilesForm(studyParam));
-            break;
-        case 'upload':
-            contentColumn.appendChild(createUploadSection());
-            break;
-        case 'calculate':
-            contentColumn.appendChild(createToolkitContainer());
-            break;
-        case 'ftp':
-            contentColumn.appendChild(createFTPSection());
-            break;
-    }
+	const contentColumn = document.getElementById("dynamic-content");
+	if (!contentColumn) {
+		console.warn("contentColumn not found in DOM yet");
+		return;
+	}
+	contentColumn.innerHTML = "";
+	switch (option) {
+		case "existing":
+			contentColumn.appendChild(await createExistingFilesForm(studyParam));
+			break;
+		case "upload":
+			contentColumn.appendChild(createUploadSection());
+			break;
+		case "calculate":
+			contentColumn.appendChild(createToolkitContainer());
+			break;
+		case "ftp":
+			contentColumn.appendChild(createFTPSection());
+			break;
+	}
 }
 
 //fonction hide form
 export function hideForm() {
-    const formContent = document.getElementById('form-content');
-    if (formContent) {
-        formContent.style.maxHeight = '0px';
-        const chevronIcon = document.querySelector('#file-upload-form i');
-        chevronIcon.className = 'fas fa-chevron-down';
-
-    }
+	const formContent = document.getElementById("form-content");
+	if (formContent) {
+		formContent.style.maxHeight = "0px";
+		const chevronIcon = document.querySelector("#file-upload-form i");
+		chevronIcon.className = "fas fa-chevron-down";
+	}
 }
 
 // Fonction pour récupérer les répertoires Synflow depuis un fichier JSON
 async function fetchSynflowDirectories() {
-    try {
-        const response = await fetch('public/data/config.json');
-        if (!response.ok) throw new Error('Erreur lors du chargement du JSON');
-        const dirs = await response.json();
-        return dirs;
-    } catch (error) {
-        console.error('Error fetching Synflow directories:', error);
-        return [];
-    }
+	try {
+		const response = await fetch("public/data/config.json");
+		if (!response.ok) throw new Error("Erreur lors du chargement du JSON");
+		const dirs = await response.json();
+		return dirs;
+	} catch (error) {
+		console.error("Error fetching Synflow directories:", error);
+		return [];
+	}
 }
 
 // Fonction pour récupérer la liste des fichiers .out depuis un dossier distant
 function fetchRemoteOutFileList(folder) {
-    console.log('Fetching file list from FTP folder:', folder);
-    let url = folder.trim();
-    if (!url.endsWith('/')) {
-        url += '/';
-    }
+	console.log("Fetching file list from FTP folder:", folder);
+	let url = folder.trim();
+	if (!url.endsWith("/")) {
+		url += "/";
+	}
 
-    return fetch(url, {
-        method: 'GET',
-        headers: {
-            'Accept': 'text/html'
-        }
-    })
-    .then(response => {
-        console.log('Remote file list response status:', response.status, response.statusText, 'for', url);
-        if (!response.ok) throw new Error(`Erreur ${response.status}: ${response.statusText}`);
-        return response.text();
-    })
-    .then(html => {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, 'text/html');
-        const links = Array.from(doc.querySelectorAll('a'));
-        const files = links
-            .map(link => {
-                const href = link.getAttribute('href');
-                if (!href || href === '../') return null;
-                if (href.endsWith('.out')) {
-                    return href;
-                }
-                return null;
-            })
-            .filter(name => name !== null);
-        console.log('Remote .out files found:', files.length, files);
-        return files;
-    });
+	return fetch(url, {
+		method: "GET",
+		headers: {
+			Accept: "text/html",
+		},
+	})
+		.then((response) => {
+			console.log(
+				"Remote file list response status:",
+				response.status,
+				response.statusText,
+				"for",
+				url,
+			);
+			if (!response.ok)
+				throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+			return response.text();
+		})
+		.then((html) => {
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(html, "text/html");
+			const links = Array.from(doc.querySelectorAll("a"));
+			const files = links
+				.map((link) => {
+					const href = link.getAttribute("href");
+					if (!href || href === "../") return null;
+					if (href.endsWith(".out")) {
+						return href;
+					}
+					return null;
+				})
+				.filter((name) => name !== null);
+			console.log("Remote .out files found:", files.length, files);
+			return files;
+		});
 }
 
 // Fonction pour récupérer la liste de tous les fichiers depuis un dossier distant
 function fetchRemoteAllFileList(folder) {
-    console.log('Fetching all files from remote folder:', folder);
-    // Normalise l'URL pour s'assurer qu'elle se termine par un /
-    let url = folder.trim();
-    if (!url.endsWith('/')) {
-        url += '/';
-    }    
-    return fetch(url, {
-        method: 'GET',
-        headers: {
-            'Accept': 'text/html'
-        }
-    })
-        .then(response => {
-            if (!response.ok) throw new Error(`Erreur ${response.status}: ${response.statusText}`);
-            return response.text();
-        })
-        .then(html => {
-            // Parse le HTML pour extraire les liens vers les fichiers .out
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            const links = Array.from(doc.querySelectorAll('a'));
-            
-            // Filtre les fichiers parents seulement
-            const files = links
-                .map(link => {
-                    const href = link.getAttribute('href');
-                    // Ignore le lien parent (..)
-                    if (!href || href === '../') return null;
-                    //ignore les dossiers (ceux qui se terminent par /)
-                    if (href.endsWith('/')) return null;
-                    return href;
-                })
-                .filter(name => name !== null);
-            
-            return files;
-        });
+	console.log("Fetching all files from remote folder:", folder);
+	// Normalise l'URL pour s'assurer qu'elle se termine par un /
+	let url = folder.trim();
+	if (!url.endsWith("/")) {
+		url += "/";
+	}
+	return fetch(url, {
+		method: "GET",
+		headers: {
+			Accept: "text/html",
+		},
+	})
+		.then((response) => {
+			if (!response.ok)
+				throw new Error(`Erreur ${response.status}: ${response.statusText}`);
+			return response.text();
+		})
+		.then((html) => {
+			// Parse le HTML pour extraire les liens vers les fichiers .out
+			const parser = new DOMParser();
+			const doc = parser.parseFromString(html, "text/html");
+			const links = Array.from(doc.querySelectorAll("a"));
+
+			// Filtre les fichiers parents seulement
+			const files = links
+				.map((link) => {
+					const href = link.getAttribute("href");
+					// Ignore le lien parent (..)
+					if (!href || href === "../") return null;
+					//ignore les dossiers (ceux qui se terminent par /)
+					if (href.endsWith("/")) return null;
+					return href;
+				})
+				.filter((name) => name !== null);
+
+			return files;
+		});
 }
 
 export function updateChainDiv() {
-    const chainDiv = document.getElementById('selected-chain');
-    if(chainDiv){
-         if (selectedGenomes.length > 0) {
-            chainDiv.innerHTML = `<b>Selected chain :</b> <br>${selectedGenomes.join(' &rarr; ')}`;
-        } else {
-            chainDiv.innerHTML = '';
-        }
-    }
-   
+	const chainDiv = document.getElementById("selected-chain");
+	if (chainDiv) {
+		if (selectedGenomes.length > 0) {
+			chainDiv.innerHTML = `<b>Selected chain :</b> <br>${selectedGenomes.join(" &rarr; ")}`;
+		} else {
+			chainDiv.innerHTML = "";
+		}
+	}
 }
 
 // Cree le formulaire pour sélectionner les fichiers existants
 async function createExistingFilesForm(activeStudy = null) {
+	//va chercher les répertoires Synflow depuis le fichier JSON
+	const remoteFolders = await fetchSynflowDirectories();
 
-    //va chercher les répertoires Synflow depuis le fichier JSON
-    const remoteFolders = await fetchSynflowDirectories();
+	//Crée un conteneur pour le form + le help
+	const existingSection = document.createElement("div");
+	existingSection.setAttribute("id", "existing-file-form");
+	existingSection.style.display = "flex";
+	existingSection.style.gap = "20px";
 
-    //Crée un conteneur pour le form + le help
-    const existingSection = document.createElement('div');
-    existingSection.setAttribute('id', 'existing-file-form');
-    existingSection.style.display = 'flex';
-    existingSection.style.gap = '20px';
+	const existingFormContainer = document.createElement("div");
+	existingFormContainer.style.flex = "1";
 
-    const existingFormContainer = document.createElement('div');
-    existingFormContainer.style.flex = '1';
+	//If study : no title, else display title
+	if (!activeStudy) {
+		const title = document.createElement("h5");
+		title.textContent = "Select Study";
+		title.style.marginBottom = "10px";
+		existingFormContainer.appendChild(title);
+	}
 
-    //If study : no title, else display title
-    if (!activeStudy) {
-        const title = document.createElement('h5');
-        title.textContent = 'Select Study';
-        title.style.marginBottom = '10px';
-        existingFormContainer.appendChild(title);
-    }
+	// Sélecteur de dossier (dataset) - masqué si activeStudy
+	const folderSelect = document.createElement("select");
+	folderSelect.setAttribute("id", "remote-folder-select");
+	folderSelect.style.width = "100%";
+	folderSelect.style.marginBottom = "10px";
+	if (activeStudy) {
+		folderSelect.style.display = "none";
+	}
 
-    // Sélecteur de dossier (dataset) - masqué si activeStudy
-    const folderSelect = document.createElement('select');
-    folderSelect.setAttribute('id', 'remote-folder-select');
-    folderSelect.style.width = '100%';
-    folderSelect.style.marginBottom = '10px';
-    if (activeStudy) {
-        folderSelect.style.display = 'none';
-    }
+	let selectedStudyUrl = null;
 
-    let selectedStudyUrl = null;
-    
-    remoteFolders.forEach(({organism, url}) => {
-        const option = document.createElement('option');
-        option.value = url;
-        // Mettre la première lettre en majuscule et le reste en minuscules
-        const formattedFolderName = organism.charAt(0).toUpperCase() + organism.slice(1).toLowerCase();
-        option.textContent = formattedFolderName;
-        folderSelect.appendChild(option);
-        
-        // Si activeStudy correspond à cet organism, sauvegarder l'URL
-        if (activeStudy && organism.toLowerCase() === activeStudy.toLowerCase()) {
-            selectedStudyUrl = url;
-        }
-    });
-    
-    // Si activeStudy fourni, sélectionner l'URL correspondante
-    if (activeStudy && selectedStudyUrl) {
-        folderSelect.value = selectedStudyUrl;
-    }
-    
-    existingFormContainer.appendChild(folderSelect);
+	remoteFolders.forEach(({ organism, url }) => {
+		const option = document.createElement("option");
+		option.value = url;
+		// Mettre la première lettre en majuscule et le reste en minuscules
+		const formattedFolderName =
+			organism.charAt(0).toUpperCase() + organism.slice(1).toLowerCase();
+		option.textContent = formattedFolderName;
+		folderSelect.appendChild(option);
 
-    // Liste cliquable des génomes
-    const fileListDiv = document.createElement('div');
-    fileListDiv.setAttribute('id', 'existing-files-list');
-    fileListDiv.style.maxHeight = '180px';
-    fileListDiv.style.overflowY = 'auto';
-    fileListDiv.style.border = '1px solid #ccc';
-    fileListDiv.style.padding = '5px';
-    existingFormContainer.appendChild(fileListDiv);
+		// Si activeStudy correspond à cet organism, sauvegarder l'URL
+		if (activeStudy && organism.toLowerCase() === activeStudy.toLowerCase()) {
+			selectedStudyUrl = url;
+		}
+	});
 
-    // Affichage de la chaîne sélectionnée
-    const chainDiv = document.createElement('div');
-    chainDiv.setAttribute('id', 'selected-chain');
-    chainDiv.style.marginTop = '15px';
-    chainDiv.style.fontSize = '0.95em';
-    chainDiv.style.color = '#333';
-    existingFormContainer.appendChild(chainDiv);
+	// Si activeStudy fourni, sélectionner l'URL correspondante
+	if (activeStudy && selectedStudyUrl) {
+		folderSelect.value = selectedStudyUrl;
+	}
 
-    // Sélection ordonnée
-    selectedGenomes = [];
+	existingFormContainer.appendChild(folderSelect);
 
-    //charge la liste des fichiers disponibles
-    function loadFiles(folder) {
-        fileListDiv.innerHTML = '';
-        selectedGenomes = [];
-        updateChainDiv();
-        fetchRemoteAllFileList(folder).then(files => {
-            const genomes = extractAllGenomes(files);
-            populateGenomeList(genomes, fileListDiv);
-            updateFileMatrix(files);
-        });
-    }
+	// Liste cliquable des génomes
+	const fileListDiv = document.createElement("div");
+	fileListDiv.setAttribute("id", "existing-files-list");
+	fileListDiv.style.maxHeight = "180px";
+	fileListDiv.style.overflowY = "auto";
+	fileListDiv.style.border = "1px solid #ccc";
+	fileListDiv.style.padding = "5px";
+	existingFormContainer.appendChild(fileListDiv);
 
-    // Initialisation avec le premier dossier
-    loadFiles(folderSelect.value);
+	// Affichage de la chaîne sélectionnée
+	const chainDiv = document.createElement("div");
+	chainDiv.setAttribute("id", "selected-chain");
+	chainDiv.style.marginTop = "15px";
+	chainDiv.style.fontSize = "0.95em";
+	chainDiv.style.color = "#333";
+	existingFormContainer.appendChild(chainDiv);
 
-    // Changement de dossier = recharge la liste de fichiers
-    folderSelect.addEventListener('change', (e) => {
-        loadFiles(e.target.value);
-    });
+	// Sélection ordonnée
+	selectedGenomes = [];
 
-    //bouton clear pour deselectionner tout
-    const clearButton = document.createElement('button');
-    clearButton.setAttribute('type', 'button');
-    clearButton.classList.add('btn-simple');
-    clearButton.textContent = 'Clear Selection';
-    clearButton.style.marginTop = '10px';
-    clearButton.addEventListener('click', () => {
-        logActivity('Clearing selected genomes');
-        selectedGenomes = [];
-        updateChainDiv();
-        fileListDiv.querySelectorAll('.genome-item').forEach(item => {
-            item.style.background = '';
-            item.style.color = '';
-        });
-    });
-    existingFormContainer.appendChild(clearButton);
+	//charge la liste des fichiers disponibles
+	function loadFiles(folder) {
+		fileListDiv.innerHTML = "";
+		selectedGenomes = [];
+		updateChainDiv();
+		fetchRemoteAllFileList(folder).then((files) => {
+			const genomes = extractAllGenomes(files);
+			populateGenomeList(genomes, fileListDiv);
+			updateFileMatrix(files);
+		});
+	}
 
-    // Bouton pour charger les fichiers sélectionnés
-    const loadButton = document.createElement('button');
-    loadButton.setAttribute('type', 'button');
-    loadButton.classList.add('btn-magic');
-    loadButton.setAttribute('id', 'submit-existing');
-    loadButton.textContent = 'Draw';
-    loadButton.style.marginTop = '10px';
-    existingFormContainer.appendChild(loadButton);
+	// Initialisation avec le premier dossier
+	loadFiles(folderSelect.value);
 
-    loadButton.addEventListener('click', async () => {
+	// Changement de dossier = recharge la liste de fichiers
+	folderSelect.addEventListener("change", (e) => {
+		loadFiles(e.target.value);
+	});
 
-        logActivity('Loading existing files for selected genomes: ' + selectedGenomes.join(', '));
+	//bouton clear pour deselectionner tout
+	const clearButton = document.createElement("button");
+	clearButton.setAttribute("type", "button");
+	clearButton.classList.add("btn-simple");
+	clearButton.textContent = "Clear Selection";
+	clearButton.style.marginTop = "10px";
+	clearButton.addEventListener("click", () => {
+		logActivity("Clearing selected genomes");
+		selectedGenomes = [];
+		updateChainDiv();
+		fileListDiv.querySelectorAll(".genome-item").forEach((item) => {
+			item.style.background = "";
+			item.style.color = "";
+		});
+	});
+	existingFormContainer.appendChild(clearButton);
 
-        // Lance le spinner (et démarre le chronomètre de rendu)
-        const target = document.getElementById('spinner');
-        spinner.setStep('Starting...', 10);
-        try {
-            console.info('startRenderTimer called (existing)', selectedGenomes);
-            startRenderTimer({ action: 'draw-click', mode: 'existing', selectedGenomes: selectedGenomes.length });
-        } catch (e) {
-            console.warn('startRenderTimer missing', e);
-        }
-        spinner.spin(target);
+	// Bouton pour charger les fichiers sélectionnés
+	const loadButton = document.createElement("button");
+	loadButton.setAttribute("type", "button");
+	loadButton.classList.add("btn-magic");
+	loadButton.setAttribute("id", "submit-existing");
+	loadButton.textContent = "Draw";
+	loadButton.style.marginTop = "10px";
+	existingFormContainer.appendChild(loadButton);
 
-        fileUploadMode = 'remote'; // Change mode to remote for file upload
+	loadButton.addEventListener("click", async () => {
+		logActivity(
+			"Loading existing files for selected genomes: " +
+				selectedGenomes.join(", "),
+		);
 
-        // Réinitialise les variables de dessin
-        const visualizationContainer = document.getElementById('viz');
-        visualizationContainer.innerHTML = ''; // Efface le contenu existant
-        d3.select('#info').html('');
-        d3.select("#viz").call(zoom);
-        // Ajoutez un groupe à l'intérieur de l'élément SVG pour contenir les éléments zoomables
-        d3.select("#viz").append("g").attr("id", "zoomGroup");
+		// Lance le spinner (et démarre le chronomètre de rendu)
+		const target = document.getElementById("spinner");
+		spinner.setStep("Starting...", 10);
+		try {
+			console.info("startRenderTimer called (existing)", selectedGenomes);
+			startRenderTimer({
+				action: "draw-click",
+				mode: "existing",
+				selectedGenomes: selectedGenomes.length,
+			});
+		} catch (e) {
+			console.warn("startRenderTimer missing", e);
+		}
+		spinner.spin(target);
 
-        if (selectedGenomes.length < 2) {
-            chainDiv.innerHTML = '<span style="color:red;">Please select at least 2 genomes to construct a chain.</span>';
-            return;
-        }
+		fileUploadMode = "remote"; // Change mode to remote for file upload
 
-        // Récupère la liste des fichiers disponibles dans le dossier sélectionné
-        const folder = folderSelect.value;
-        //fetch et catch les erreurs de fetch pour éviter que l'application plante si le dossier est inaccessible
-        let allFiles;
-        try {
-            allFiles = await fetchRemoteOutFileList(folder);
-            console.log('Files fetched from remote folder:', allFiles);
-        } catch (error) {
-            console.error('Error fetching remote file list:', error);
-            chainDiv.innerHTML = '<span style="color:red;">Error fetching file list from remote folder.</span>';
-            return;
-        }
-        // Nettoie les espaces autour des noms de fichiers
-        const allFilesTrimmed = new Set(allFiles.map(f => f.trim()));
+		// Réinitialise les variables de dessin
+		const visualizationContainer = document.getElementById("viz");
+		visualizationContainer.innerHTML = ""; // Efface le contenu existant
+		d3.select("#info").html("");
+		d3.select("#viz").call(zoom);
+		// Ajoutez un groupe à l'intérieur de l'élément SVG pour contenir les éléments zoomables
+		d3.select("#viz").append("g").attr("id", "zoomGroup");
 
-        // Construit la liste des fichiers nécessaires pour la chaîne
-        const neededFiles = [];
-        let missingFiles = [];
-        for (let i = 0; i < selectedGenomes.length - 1; i++) {
-            const fileName = `${selectedGenomes[i]}_${selectedGenomes[i+1]}.out`;
-            if (allFilesTrimmed.has(fileName)) {
-                neededFiles.push(fileName);
-            } else {
-                missingFiles.push(fileName);
-            }
-        }
+		if (selectedGenomes.length < 2) {
+			chainDiv.innerHTML =
+				'<span style="color:red;">Please select at least 2 genomes to construct a chain.</span>';
+			return;
+		}
 
-        // Affiche un message si des fichiers sont manquants
-        if (missingFiles.length > 0) {
-            chainDiv.innerHTML = `<span style="color:red;">Missing file(s) :<br>${missingFiles.join('<br>')}</span>`;
-            return;
-        }
+		// Récupère la liste des fichiers disponibles dans le dossier sélectionné
+		const folder = folderSelect.value;
+		//fetch et catch les erreurs de fetch pour éviter que l'application plante si le dossier est inaccessible
+		let allFiles;
+		try {
+			allFiles = await fetchRemoteOutFileList(folder);
+			console.log("Files fetched from remote folder:", allFiles);
+		} catch (error) {
+			console.error("Error fetching remote file list:", error);
+			chainDiv.innerHTML =
+				'<span style="color:red;">Error fetching file list from remote folder.</span>';
+			return;
+		}
+		// Nettoie les espaces autour des noms de fichiers
+		const allFilesTrimmed = new Set(allFiles.map((f) => f.trim()));
 
-        // check de sécurité pour éviter les chemins d'accès malveillants
-        const safeFiles = neededFiles.filter(file => {
-            // Autorise alphanum + _ - . / et extensions connues
-            const safe = /^[a-zA-Z0-9_\-\.\/]+\.(out|bed|anchors|txt|json|gz)$/i.test(file);
-            return safe;
-        });
+		// Construit la liste des fichiers nécessaires pour la chaîne
+		const neededFiles = [];
+		let missingFiles = [];
+		for (let i = 0; i < selectedGenomes.length - 1; i++) {
+			const fileName = `${selectedGenomes[i]}_${selectedGenomes[i + 1]}.out`;
+			if (allFilesTrimmed.has(fileName)) {
+				neededFiles.push(fileName);
+			} else {
+				missingFiles.push(fileName);
+			}
+		}
 
-        if (safeFiles.length !== neededFiles.length) {
-            chainDiv.innerHTML = `<span style="color:orange;">Warning: ${neededFiles.length - safeFiles.length} unsafe files skipped</span>`;
-        }
+		// Affiche un message si des fichiers sont manquants
+		if (missingFiles.length > 0) {
+			chainDiv.innerHTML = `<span style="color:red;">Missing file(s) :<br>${missingFiles.join("<br>")}</span>`;
+			return;
+		}
 
-        // Télécharge les fichiers nécessaires et crée des objets File
-        spinner.setStep(`Downloading ${neededFiles.length} comparison files...`, 12);
-        const files = await Promise.all(neededFiles.map(async file => {
-            const filePath = `${folder}${file}`;
-            const response = await fetch(filePath);
-            const text = await response.text();
-            return new File([text], file, { type: 'text/plain' });
-        }));
+		// check de sécurité pour éviter les chemins d'accès malveillants
+		const safeFiles = neededFiles.filter((file) => {
+			// Autorise alphanum + _ - . / et extensions connues
+			const safe = /^[a-zA-Z0-9_\-\.\/]+\.(out|bed|anchors|txt|json|gz)$/i.test(
+				file,
+			);
+			return safe;
+		});
 
-        //cherche les fichiers anchors, bed et jbrowse associés
-        spinner.setStep('Searching optional files...', 15);
-        await searchAdditionalFiles(selectedGenomes, files, folder);
-        // Simule un input file multiple pour handleFileUpload
-        const dataTransfer = new DataTransfer();
-        files.forEach(file => dataTransfer.items.add(file));
-        handleFileUpload(dataTransfer.files, bedFiles, selectedGenomes, neededFiles);
-    });
+		if (safeFiles.length !== neededFiles.length) {
+			chainDiv.innerHTML = `<span style="color:orange;">Warning: ${neededFiles.length - safeFiles.length} unsafe files skipped</span>`;
+		}
 
-    // Container pour l'aide (partie droite) - masqué en mode study
-    if (!activeStudy) {
-        const existingHelpContainer = document.createElement('div');
-        existingHelpContainer.style.flex = '0 0 45%'; // Largeur fixe de 400px
-        existingHelpContainer.style.padding = '15px';
-        existingHelpContainer.style.backgroundColor = '#f8f9fa';
-        existingHelpContainer.style.borderRadius = '5px';
-        existingHelpContainer.style.border = '1px solid #dee2e6';
-        existingHelpContainer.style.maxHeight = '600px'; // Hauteur maximale
-        existingHelpContainer.style.overflowY = 'auto'; // Scroll si le contenu dépasse
+		// Télécharge les fichiers nécessaires et crée des objets File
+		spinner.setStep(
+			`Downloading ${neededFiles.length} comparison files...`,
+			12,
+		);
+		const files = await Promise.all(
+			neededFiles.map(async (file) => {
+				const filePath = `${folder}${file}`;
+				const response = await fetch(filePath);
+				const text = await response.text();
+				return new File([text], file, { type: "text/plain" });
+			}),
+		);
 
-        // Contenu de l'aide
-        existingHelpContainer.innerHTML = `
+		//cherche les fichiers anchors, bed et jbrowse associés
+		spinner.setStep("Searching optional files...", 15);
+		await searchAdditionalFiles(selectedGenomes, files, folder);
+		// Simule un input file multiple pour handleFileUpload
+		const dataTransfer = new DataTransfer();
+		files.forEach((file) => dataTransfer.items.add(file));
+		handleFileUpload(
+			dataTransfer.files,
+			bedFiles,
+			selectedGenomes,
+			neededFiles,
+		);
+	});
+
+	// Container pour l'aide (partie droite) - masqué en mode study
+	if (!activeStudy) {
+		const existingHelpContainer = document.createElement("div");
+		existingHelpContainer.style.flex = "0 0 45%"; // Largeur fixe de 400px
+		existingHelpContainer.style.padding = "15px";
+		existingHelpContainer.style.backgroundColor = "#f8f9fa";
+		existingHelpContainer.style.borderRadius = "5px";
+		existingHelpContainer.style.border = "1px solid #dee2e6";
+		existingHelpContainer.style.maxHeight = "600px"; // Hauteur maximale
+		existingHelpContainer.style.overflowY = "auto"; // Scroll si le contenu dépasse
+
+		// Contenu de l'aide
+		existingHelpContainer.innerHTML = `
             <h5>About the studies</h5>
             <div style="margin-top: 15px;">
                 <p>
                     The available files come from analyses performed on several organisms using the <b>Synflow workflow</b>.
-                    See the 
+                    See the
                     <a href="https://synflow.readthedocs.io/en/latest/" target="_blank">Synflow documentation</a>.
                 </p>
                 <h6>How to select files</h6>
@@ -551,56 +585,38 @@ async function createExistingFilesForm(activeStudy = null) {
             </div>
         `;
 
-        existingSection.appendChild(existingFormContainer);
-        existingSection.appendChild(existingHelpContainer);
-    } else {
-        existingSection.appendChild(existingFormContainer);
-    }
+		existingSection.appendChild(existingFormContainer);
+		existingSection.appendChild(existingHelpContainer);
+	} else {
+		existingSection.appendChild(existingFormContainer);
+	}
 
-    return existingSection;
+	return existingSection;
 }
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // Fonction helper pour créer la section upload (votre code existant)
 function createUploadSection() {
-    const uploadSection = document.createElement('div');
-    uploadSection.setAttribute('id', 'file-upload-form');
-    uploadSection.style.display = 'flex';
-    uploadSection.style.gap = '20px';
+	const uploadSection = document.createElement("div");
+	uploadSection.setAttribute("id", "file-upload-form");
+	uploadSection.style.display = "flex";
+	uploadSection.style.gap = "20px";
 
-    // Container pour le formulaire (partie gauche)
-    const formContainer = document.createElement('div');
-    formContainer.style.flex = '1';
+	// Container pour le formulaire (partie gauche)
+	const formContainer = document.createElement("div");
+	formContainer.style.flex = "1";
 
-    // Container pour l'aide (partie droite)
-    const helpContainer = document.createElement('div');
-    helpContainer.style.flex = '0 0 600px'; // Largeur fixe de 400px
-    helpContainer.style.padding = '15px';
-    helpContainer.style.backgroundColor = '#f8f9fa';
-    helpContainer.style.borderRadius = '5px';
-    helpContainer.style.border = '1px solid #dee2e6';
-    helpContainer.style.maxHeight = '300px'; // Hauteur maximale
-    helpContainer.style.overflowY = 'auto'; // Scroll si le contenu dépasse
+	// Container pour l'aide (partie droite)
+	const helpContainer = document.createElement("div");
+	helpContainer.style.flex = "0 0 600px"; // Largeur fixe de 400px
+	helpContainer.style.padding = "15px";
+	helpContainer.style.backgroundColor = "#f8f9fa";
+	helpContainer.style.borderRadius = "5px";
+	helpContainer.style.border = "1px solid #dee2e6";
+	helpContainer.style.maxHeight = "300px"; // Hauteur maximale
+	helpContainer.style.overflowY = "auto"; // Scroll si le contenu dépasse
 
-    // Contenu de l'aide
-    helpContainer.innerHTML = `
+	// Contenu de l'aide
+	helpContainer.innerHTML = `
         <h5>File Requirements</h5>
         <div style="margin-top: 15px;">
             <h6>SyRI output files (.out)</h6>
@@ -609,7 +625,7 @@ function createUploadSection() {
                 <li>The file names should follow the pattern: <strong>ref-genome_query-genome.out</strong></li>
                 <li>Files can be chained for multiple genome comparisons (chain mode), or you can upload all possible pairs (all vs all mode).</li>
             </ul>
-            
+
             <div style="margin: 15px 0; padding: 10px; background-color: #fff; border-radius: 4px;">
                 <strong>Example of file chain for 3 genomes :</strong>
                 <ul style="padding-left: 20px;">
@@ -648,528 +664,553 @@ function createUploadSection() {
         </div>
     `;
 
-    // Container for the file inputs and legend
-    const inputContainer = document.createElement('div');
-    inputContainer.setAttribute('id', 'input-container');
-    inputContainer.style.display = 'flex';
-    inputContainer.style.justifyContent = 'space-between';
-    inputContainer.style.alignItems = 'flex-start';
+	// Container for the file inputs and legend
+	const inputContainer = document.createElement("div");
+	inputContainer.setAttribute("id", "input-container");
+	inputContainer.style.display = "flex";
+	inputContainer.style.justifyContent = "space-between";
+	inputContainer.style.alignItems = "flex-start";
 
-    // Container for band files
-    const bandContainer = document.createElement('div');
+	// Container for band files
+	const bandContainer = document.createElement("div");
 
-    const bandH5 = document.createElement('h5');
-    bandH5.textContent = 'Upload Syri output files';
+	const bandH5 = document.createElement("h5");
+	bandH5.textContent = "Upload Syri output files";
 
-    const bandInput = document.createElement('input');
-    bandInput.setAttribute('type', 'file');
-    bandInput.setAttribute('id', 'band-files');
-    bandInput.setAttribute('name', 'band-files');
-    bandInput.setAttribute('multiple', true);
-    //fichiers acceptés = out bed anchors json
-    bandInput.setAttribute('accept', '.out,.bed,.anchors,.json');
-    bandInput.style.display = 'none'; // Cache l'input file par défaut
+	const bandInput = document.createElement("input");
+	bandInput.setAttribute("type", "file");
+	bandInput.setAttribute("id", "band-files");
+	bandInput.setAttribute("name", "band-files");
+	bandInput.setAttribute("multiple", true);
+	//fichiers acceptés = out bed anchors json
+	bandInput.setAttribute("accept", ".out,.bed,.anchors,.json");
+	bandInput.style.display = "none"; // Cache l'input file par défaut
 
-    // Créer un bouton personnalisé
-    const customButton = document.createElement('button');
-    customButton.type = 'button';
-    customButton.classList.add('btn-simple');
-    customButton.textContent = 'Select Files';
-    customButton.style.marginBottom = '10px';
-    
-    // Div pour afficher les fichiers sélectionnés
-    const fileLabel = document.createElement('span');
-    fileLabel.textContent = 'No files chosen';
-    fileLabel.style.marginLeft = '10px';
-    
-    // Event listener pour le bouton personnalisé
-    customButton.addEventListener('click', () => {
-        bandInput.click();
-    });
-    
-    // Mettre à jour le label quand des fichiers sont sélectionnés
-    bandInput.addEventListener('change', async () => {
-        if (bandInput.files.length > 0) {
-            //compte chaque type de fichier
-            const fileCounts = {
-                out: 0,
-                bed: 0,
-                anchors: 0,
-                json: 0
-            };
-            Array.from(bandInput.files).forEach(file => {
-                const ext = file.name.split('.').pop();
-                if (fileCounts.hasOwnProperty(ext)) {
-                    fileCounts[ext]++;
-                }
-            });
-            
-            fileLabel.textContent = `${bandInput.files.length} file(s) selected`;
-            const details = [];
-            for (const [ext, count] of Object.entries(fileCounts)) {
-                if (count > 0) {
-                    details.push(`${count} ${ext} file(s)`);
-                }
-            }
-            fileLabel.textContent += ` (${details.join(', ')})`;
+	// Créer un bouton personnalisé
+	const customButton = document.createElement("button");
+	customButton.type = "button";
+	customButton.classList.add("btn-simple");
+	customButton.textContent = "Select Files";
+	customButton.style.marginBottom = "10px";
 
-            // Chercher le fichier .json
-            const jbrowseFile = Array.from(bandInput.files).find(file => file.name.endsWith('.json'));
-            if (jbrowseFile) {
-                try {
-                    const text = await jbrowseFile.text();
-                    jbrowseLinks = JSON.parse(text);
-                } catch (error) {
-                    console.log('Error parsing jbrowse_link.json:', error);
-                }
-            }
+	// Div pour afficher les fichiers sélectionnés
+	const fileLabel = document.createElement("span");
+	fileLabel.textContent = "No files chosen";
+	fileLabel.style.marginLeft = "10px";
 
-            //met les fichiers .anchors dans anchorsFiles
-            anchorsFiles = Array.from(bandInput.files).filter(file => file.name.endsWith('.anchors'));
-            //met les fichiers .bed dans bedFiles
-            bedFiles = Array.from(bandInput.files).filter(file => file.name.endsWith('.bed'));
+	// Event listener pour le bouton personnalisé
+	customButton.addEventListener("click", () => {
+		bandInput.click();
+	});
 
-            //////////////////
-            //matrix
-            updateFileMatrix(bandInput.files);
+	// Mettre à jour le label quand des fichiers sont sélectionnés
+	bandInput.addEventListener("change", async () => {
+		if (bandInput.files.length > 0) {
+			//compte chaque type de fichier
+			const fileCounts = {
+				out: 0,
+				bed: 0,
+				anchors: 0,
+				json: 0,
+			};
+			Array.from(bandInput.files).forEach((file) => {
+				const ext = file.name.split(".").pop();
+				if (fileCounts.hasOwnProperty(ext)) {
+					fileCounts[ext]++;
+				}
+			});
 
+			fileLabel.textContent = `${bandInput.files.length} file(s) selected`;
+			const details = [];
+			for (const [ext, count] of Object.entries(fileCounts)) {
+				if (count > 0) {
+					details.push(`${count} ${ext} file(s)`);
+				}
+			}
+			fileLabel.textContent += ` (${details.join(", ")})`;
 
-        } else {
-            fileLabel.textContent = 'No files chosen';
-            
-            //////////////////
-            //matrix
-            updateFileMatrix([]); // Supprime la matrice si aucun fichier
+			// Chercher le fichier .json
+			const jbrowseFile = Array.from(bandInput.files).find((file) =>
+				file.name.endsWith(".json"),
+			);
+			if (jbrowseFile) {
+				try {
+					const text = await jbrowseFile.text();
+					jbrowseLinks = JSON.parse(text);
+				} catch (error) {
+					console.log("Error parsing jbrowse_link.json:", error);
+				}
+			}
 
-        }
-    });
+			//met les fichiers .anchors dans anchorsFiles
+			anchorsFiles = Array.from(bandInput.files).filter((file) =>
+				file.name.endsWith(".anchors"),
+			);
+			//met les fichiers .bed dans bedFiles
+			bedFiles = Array.from(bandInput.files).filter((file) =>
+				file.name.endsWith(".bed"),
+			);
 
-    bandContainer.appendChild(bandH5);
-    bandContainer.appendChild(document.createElement('br'));
-    bandContainer.appendChild(bandInput);
-    bandContainer.appendChild(customButton);
-    bandContainer.appendChild(fileLabel);
+			//////////////////
+			//matrix
+			updateFileMatrix(bandInput.files);
+		} else {
+			fileLabel.textContent = "No files chosen";
 
-    // Append containers to input container
-    inputContainer.appendChild(bandContainer);
+			//////////////////
+			//matrix
+			updateFileMatrix([]); // Supprime la matrice si aucun fichier
+		}
+	});
 
-    //affiche la chain
-    const chainDiv = document.createElement('div');
-    chainDiv.setAttribute('id', 'selected-chain');
-    chainDiv.style.marginTop = '15px';
-    chainDiv.style.fontSize = '0.95em';
-    chainDiv.style.color = '#333';
+	bandContainer.appendChild(bandH5);
+	bandContainer.appendChild(document.createElement("br"));
+	bandContainer.appendChild(bandInput);
+	bandContainer.appendChild(customButton);
+	bandContainer.appendChild(fileLabel);
 
-    // Submit button
-    const submitButton = document.createElement('button');
-    submitButton.setAttribute('type', 'button');
-    submitButton.classList.add('btn-magic');
-    submitButton.setAttribute('style', 'margin-bottom:20px');
-	submitButton.setAttribute('id', 'submit-local');
-    submitButton.style.marginLeft = '10px';
-    submitButton.textContent = 'Draw';
+	// Append containers to input container
+	inputContainer.appendChild(bandContainer);
 
-    submitButton.addEventListener('click', () => {
+	//affiche la chain
+	const chainDiv = document.createElement("div");
+	chainDiv.setAttribute("id", "selected-chain");
+	chainDiv.style.marginTop = "15px";
+	chainDiv.style.fontSize = "0.95em";
+	chainDiv.style.color = "#333";
 
-        logActivity('Loading uploaded files for selected genomes: ' + selectedGenomes.join(', '));
+	// Submit button
+	const submitButton = document.createElement("button");
+	submitButton.setAttribute("type", "button");
+	submitButton.classList.add("btn-magic");
+	submitButton.setAttribute("style", "margin-bottom:20px");
+	submitButton.setAttribute("id", "submit-local");
+	submitButton.style.marginLeft = "10px";
+	submitButton.textContent = "Draw";
 
-        // Lance le spinner
-        const target = document.getElementById('spinner');
-        spinner.setStep('Loading files...', 10);
-        spinner.spin(target); 
+	submitButton.addEventListener("click", () => {
+		logActivity(
+			"Loading uploaded files for selected genomes: " +
+				selectedGenomes.join(", "),
+		);
 
-        fileUploadMode = 'local'; // Change mode to local for file upload
-    
-        const visualizationContainer = document.getElementById('viz');
-        visualizationContainer.innerHTML = ''; // Efface le contenu existant
+		// Lance le spinner
+		const target = document.getElementById("spinner");
+		spinner.setStep("Loading files...", 10);
+		spinner.spin(target);
 
-        d3.select('#info').html('');
+		fileUploadMode = "local"; // Change mode to local for file upload
 
-        d3.select("#viz").call(zoom);
+		const visualizationContainer = document.getElementById("viz");
+		visualizationContainer.innerHTML = ""; // Efface le contenu existant
 
-        // Ajoutez un groupe à l'intérieur de l'élément SVG pour contenir les éléments zoomables
-        d3.select("#viz").append("g").attr("id", "zoomGroup");
+		d3.select("#info").html("");
 
+		d3.select("#viz").call(zoom);
 
-        //si mode allavsall
-        //récupère la chaine choisi par l'utilisateur
-        if(fileOrderMode === 'allvsall'){
-            if (selectedGenomes.length < 2) {
-                chainDiv.innerHTML = '<span style="color:red;">Please select at least 2 genomes to construct a chain.</span>';
-                return;
-            }
+		// Ajoutez un groupe à l'intérieur de l'élément SVG pour contenir les éléments zoomables
+		d3.select("#viz").append("g").attr("id", "zoomGroup");
 
-            // Nettoie les espaces autour des noms de fichiers
-            const files = document.getElementById('band-files').files;
-            const allFilesTrimmed = new Set(Array.from(files).map(f => f.name.trim()));
-            // Construit la liste des fichiers nécessaires pour la chaîne
-            const neededFiles = [];
-            let missingFiles = [];
-            for (let i = 0; i < selectedGenomes.length - 1; i++) {
-                const fileName = `${selectedGenomes[i]}_${selectedGenomes[i+1]}.out`;
-                if (allFilesTrimmed.has(fileName)) {
-                    neededFiles.push(fileName);
-                } else {
-                    missingFiles.push(fileName);
-                }
-            }
-            // Affiche un message si des fichiers sont manquants
-            if (missingFiles.length > 0) {
-                chainDiv.innerHTML = `<span style="color:red;">Missing file(s) :<br>${missingFiles.join('<br>')}</span>`;
-                return;
-            }
+		//si mode allavsall
+		//récupère la chaine choisi par l'utilisateur
+		if (fileOrderMode === "allvsall") {
+			if (selectedGenomes.length < 2) {
+				chainDiv.innerHTML =
+					'<span style="color:red;">Please select at least 2 genomes to construct a chain.</span>';
+				return;
+			}
 
-            // Récupère les objets File correspondant à neededFiles
-            const filesArray = Array.from(files);
-            const filesToSend = neededFiles.map(name =>
-                filesArray.find(f => f.name.trim() === name)
-            );
+			// Nettoie les espaces autour des noms de fichiers
+			const files = document.getElementById("band-files").files;
+			const allFilesTrimmed = new Set(
+				Array.from(files).map((f) => f.name.trim()),
+			);
+			// Construit la liste des fichiers nécessaires pour la chaîne
+			const neededFiles = [];
+			let missingFiles = [];
+			for (let i = 0; i < selectedGenomes.length - 1; i++) {
+				const fileName = `${selectedGenomes[i]}_${selectedGenomes[i + 1]}.out`;
+				if (allFilesTrimmed.has(fileName)) {
+					neededFiles.push(fileName);
+				} else {
+					missingFiles.push(fileName);
+				}
+			}
+			// Affiche un message si des fichiers sont manquants
+			if (missingFiles.length > 0) {
+				chainDiv.innerHTML = `<span style="color:red;">Missing file(s) :<br>${missingFiles.join("<br>")}</span>`;
+				return;
+			}
 
-            // Vérifie qu'on a bien tous les objets File
-            if (filesToSend.includes(undefined)) {
-                chainDiv.innerHTML = `<span style="color:red;">Internal error: some files not found.</span>`;
-                return;
-            }
-            handleFileUpload(filesToSend, null, selectedGenomes, neededFiles);
+			// Récupère les objets File correspondant à neededFiles
+			const filesArray = Array.from(files);
+			const filesToSend = neededFiles.map((name) =>
+				filesArray.find((f) => f.name.trim() === name),
+			);
 
+			// Vérifie qu'on a bien tous les objets File
+			if (filesToSend.includes(undefined)) {
+				chainDiv.innerHTML = `<span style="color:red;">Internal error: some files not found.</span>`;
+				return;
+			}
+			handleFileUpload(filesToSend, null, selectedGenomes, neededFiles);
+		} else {
+			//sinon charge comme avant a partir des fichiers.
+			const bandFiles = document.getElementById("band-files").files;
+			handleFileUpload(bandFiles, null, selectedGenomes);
+		}
+	});
 
-        }else{
-            //sinon charge comme avant a partir des fichiers.
-            const bandFiles = document.getElementById('band-files').files;
-            handleFileUpload(bandFiles, null, selectedGenomes);
-        }
-    });
+	bandInput.addEventListener("change", (event) => {
+		updateFileList(bandInput);
+	});
 
-    bandInput.addEventListener('change', (event) => {
-        updateFileList(bandInput);
-    });
-        
+	// Boutons
+	const buttonContainer = document.createElement("div");
+	buttonContainer.style.marginTop = "20px";
+	buttonContainer.appendChild(submitButton);
 
-     // Boutons
-    const buttonContainer = document.createElement('div');
-    buttonContainer.style.marginTop = '20px';
-    buttonContainer.appendChild(submitButton);
+	// Assemblage final
+	formContainer.appendChild(inputContainer);
+	formContainer.appendChild(chainDiv);
+	formContainer.appendChild(buttonContainer);
 
-    // Assemblage final
-    formContainer.appendChild(inputContainer);
-    formContainer.appendChild(chainDiv);
-    formContainer.appendChild(buttonContainer);
-    
-    uploadSection.appendChild(document.createElement('br'));
-    uploadSection.appendChild(formContainer);
-    uploadSection.appendChild(helpContainer);
+	uploadSection.appendChild(document.createElement("br"));
+	uploadSection.appendChild(formContainer);
+	uploadSection.appendChild(helpContainer);
 
-    return uploadSection;
+	return uploadSection;
 }
-
-
-
-
-
 
 //
 //      ///////////    /////////////    ////////////
 //     //                  //          //        //
 //    /////               //          ////////////
-//   //                  //          //    
+//   //                  //          //
 //  //                  //          //
 //
 
 export function createFTPSection() {
-    // Section principale
-    const ftpSection = document.createElement('div');
-    ftpSection.setAttribute('id', 'ftp-section');
-    ftpSection.style.display = 'flex';
-    ftpSection.style.gap = '20px';
+	// Section principale
+	const ftpSection = document.createElement("div");
+	ftpSection.setAttribute("id", "ftp-section");
+	ftpSection.style.display = "flex";
+	ftpSection.style.gap = "20px";
 
-    // Partie gauche : formulaire FTP
-    const formContainer = document.createElement('div');
-    formContainer.style.flex = '1';
+	// Partie gauche : formulaire FTP
+	const formContainer = document.createElement("div");
+	formContainer.style.flex = "1";
 
-    const title = document.createElement('h5');
-    title.textContent = 'Import files from FTP';
-    title.style.marginBottom = '10px';
-    formContainer.appendChild(title);
+	const title = document.createElement("h5");
+	title.textContent = "Import files from FTP";
+	title.style.marginBottom = "10px";
+	formContainer.appendChild(title);
 
-    // Champ d'URL FTP
-    const ftpInput = document.createElement('input');
-    ftpInput.setAttribute('type', 'text');
-    ftpInput.setAttribute('id', 'ftp-input');
-    ftpInput.setAttribute('placeholder', 'Paste FTP folder URL here');
-    ftpInput.style.width = '100%';
-    ftpInput.style.marginBottom = '5px';
-    formContainer.appendChild(ftpInput);
+	// Champ d'URL FTP
+	const ftpInput = document.createElement("input");
+	ftpInput.setAttribute("type", "text");
+	ftpInput.setAttribute("id", "ftp-input");
+	ftpInput.setAttribute("placeholder", "Paste FTP folder URL here");
+	ftpInput.style.width = "100%";
+	ftpInput.style.marginBottom = "5px";
+	formContainer.appendChild(ftpInput);
 
-    const exampleLink = document.createElement('a');
-    exampleLink.setAttribute('href', 'https://synflow.southgreen.fr/bank/banana/');
-    exampleLink.setAttribute('target', '_blank');
-    exampleLink.textContent = 'Example: https://synflow.southgreen.fr/bank/banana/';
-    exampleLink.style.display = 'block';
-    exampleLink.style.marginBottom = '10px';
-    exampleLink.style.color = 'grey';
-    exampleLink.style.fontSize = '0.9em';
-    exampleLink.style.fontStyle = 'italic';
-    exampleLink.style.textDecoration = 'none';
-    exampleLink.addEventListener('click', (event) => {
-        logActivity('Filling FTP input with example link');
-        event.preventDefault(); // Empêche le comportement par défaut du lien
-        ftpInput.value = exampleLink.href; // Remplit le champ d'URL avec l'exemple
-    });
-    formContainer.appendChild(exampleLink);
+	const exampleLink = document.createElement("a");
+	exampleLink.setAttribute(
+		"href",
+		"https://synflow.southgreen.fr/bank/banana/",
+	);
+	exampleLink.setAttribute("target", "_blank");
+	exampleLink.textContent =
+		"Example: https://synflow.southgreen.fr/bank/banana/";
+	exampleLink.style.display = "block";
+	exampleLink.style.marginBottom = "10px";
+	exampleLink.style.color = "grey";
+	exampleLink.style.fontSize = "0.9em";
+	exampleLink.style.fontStyle = "italic";
+	exampleLink.style.textDecoration = "none";
+	exampleLink.addEventListener("click", (event) => {
+		logActivity("Filling FTP input with example link");
+		event.preventDefault(); // Empêche le comportement par défaut du lien
+		ftpInput.value = exampleLink.href; // Remplit le champ d'URL avec l'exemple
+	});
+	formContainer.appendChild(exampleLink);
 
-    // Bouton pour charger la liste des fichiers
-    const fetchButton = document.createElement('button');
-    fetchButton.setAttribute('type', 'button');
-    fetchButton.setAttribute('id', 'fetch-ftp-button');
-    fetchButton.classList.add('btn-simple');
-    fetchButton.textContent = 'Fetch Files';
-    fetchButton.style.marginBottom = '10px';
-    formContainer.appendChild(fetchButton);
+	// Bouton pour charger la liste des fichiers
+	const fetchButton = document.createElement("button");
+	fetchButton.setAttribute("type", "button");
+	fetchButton.setAttribute("id", "fetch-ftp-button");
+	fetchButton.classList.add("btn-simple");
+	fetchButton.textContent = "Fetch Files";
+	fetchButton.style.marginBottom = "10px";
+	formContainer.appendChild(fetchButton);
 
-    // Liste des fichiers .out trouvés
-    const fileListDiv = document.createElement('div');
-    fileListDiv.setAttribute('id', 'ftp-files-list');
-    fileListDiv.style.maxHeight = '180px';
-    fileListDiv.style.overflowY = 'auto';
-    fileListDiv.style.border = '1px solid #ccc';
-    fileListDiv.style.padding = '5px';
-    fileListDiv.style.display = 'none';
-    formContainer.appendChild(fileListDiv);
+	// Liste des fichiers .out trouvés
+	const fileListDiv = document.createElement("div");
+	fileListDiv.setAttribute("id", "ftp-files-list");
+	fileListDiv.style.maxHeight = "180px";
+	fileListDiv.style.overflowY = "auto";
+	fileListDiv.style.border = "1px solid #ccc";
+	fileListDiv.style.padding = "5px";
+	fileListDiv.style.display = "none";
+	formContainer.appendChild(fileListDiv);
 
-    // Affichage de la chaîne sélectionnée
-    const chainDiv = document.createElement('div');
-    chainDiv.setAttribute('id', 'selected-chain-ftp');
-    chainDiv.style.marginTop = '15px';
-    chainDiv.style.fontSize = '0.95em';
-    chainDiv.style.color = '#333';
-    formContainer.appendChild(chainDiv);
+	// Affichage de la chaîne sélectionnée
+	const chainDiv = document.createElement("div");
+	chainDiv.setAttribute("id", "selected-chain-ftp");
+	chainDiv.style.marginTop = "15px";
+	chainDiv.style.fontSize = "0.95em";
+	chainDiv.style.color = "#333";
+	formContainer.appendChild(chainDiv);
 
-    // Bouton pour lancer la visualisation
-    const drawButton = document.createElement('button');
-    drawButton.setAttribute('type', 'button');
-    drawButton.setAttribute('id', 'submit-ftp');
-    drawButton.classList.add('btn-magic');
-    drawButton.textContent = 'Draw';
-    drawButton.style.marginTop = '10px';
-    formContainer.appendChild(drawButton);
+	// Bouton pour lancer la visualisation
+	const drawButton = document.createElement("button");
+	drawButton.setAttribute("type", "button");
+	drawButton.setAttribute("id", "submit-ftp");
+	drawButton.classList.add("btn-magic");
+	drawButton.textContent = "Draw";
+	drawButton.style.marginTop = "10px";
+	formContainer.appendChild(drawButton);
 
-    // Sélection ordonnée
-    let ftpSelectedGenomes = [];
+	// Sélection ordonnée
+	let ftpSelectedGenomes = [];
 
-    fetchButton.addEventListener('click', async () => {
+	fetchButton.addEventListener("click", async () => {
+		logActivity("Fetching files from FTP: " + ftpInput.value.trim());
 
-        logActivity('Fetching files from FTP: ' + ftpInput.value.trim());
+		fileListDiv.innerHTML = "";
+		fileListDiv.style.display = "block";
 
-        fileListDiv.innerHTML = '';
-        fileListDiv.style.display = 'block';
+		ftpSelectedGenomes = [];
+		chainDiv.innerHTML = "";
 
-        ftpSelectedGenomes = [];
-        chainDiv.innerHTML = '';
-        
-        // Récupère la valeur brute sans transformation
-        const folder = ftpInput.value.trim();
+		// Récupère la valeur brute sans transformation
+		const folder = ftpInput.value.trim();
 
-        if (!folder.startsWith('http')) {
-            fileListDiv.innerHTML = '<span style="color:red;">Must start with http:// or https://</span>';
-            return;
-        }
-        
-        // Bloque les data: et javascript:
-        if (folder.includes('data:') || folder.includes('javascript:')) {
-            fileListDiv.innerHTML = '<span style="color:red;">Invalid URL scheme</span>';
-            return;
-        }
-                
-        if (!folder) {
-            fileListDiv.innerHTML = '<span style="color:red;">Please enter a valid FTP folder URL.</span>';
-            return;
-        }
-        
-        // Vérification que le port est bien présent
-        if (folder.includes('localhost') && !folder.includes(':8080')) {
-            fileListDiv.innerHTML = '<span style="color:red;">Port 8080 is missing from the URL.</span>';
-            return;
-        }
-        
-        try {
-            const files = await fetchRemoteAllFileList(folder);
+		if (!folder.startsWith("http")) {
+			fileListDiv.innerHTML =
+				'<span style="color:red;">Must start with http:// or https://</span>';
+			return;
+		}
 
-            // Met à jour la matrice avec les fichiers récupérés
-            updateFileMatrix(files);
+		// Bloque les data: et javascript:
+		if (folder.includes("data:") || folder.includes("javascript:")) {
+			fileListDiv.innerHTML =
+				'<span style="color:red;">Invalid URL scheme</span>';
+			return;
+		}
 
-            if (files.length === 0) {
-                fileListDiv.innerHTML = '<span style="color:red;">No .out files found in this folder.</span>';
-                return;
-            }
-            const genomes = extractAllGenomes(files);
-            const outFiles = Array.from(files).filter(file => {
-                // Si c'est un objet File, utilise file.name, sinon utilise la chaîne directement
-                const fileName = typeof file === 'string' ? file : file.name;
-                return fileName.endsWith('.out');
-            });
-            
-            // Mode all vs all ou chaîne
-            const expectedFileCount = genomes.length * (genomes.length - 1);
-            
-            if (outFiles.length === 1 && genomes.length === 2) {
-                // Mode chaîne avec 2 génomes
-                // console.log(outFiles, genomes);
-                //mets les genomes dans l'ordre d'apparition du nom du fichier out
-                const file = outFiles[0];
-                const parts = file.replace('.out', '').split('_').map(part => part.trim());
-                ftpSelectedGenomes = parts;
-                //cache le selecteur de fichiers et affiche la chaîne directement
-                fileListDiv.style.display = 'none';
-                updateChainDivFTP(chainDiv, ftpSelectedGenomes);
-            } else if (outFiles.length === expectedFileCount) {
-                // Mode all vs all
-                fileListDiv.innerHTML = '<div style="margin-bottom:8px;color:#555;font-style:italic;">Select genomes in the desired order for the chain.</div>';
-                populateGenomeListFTP(genomes, fileListDiv, ftpSelectedGenomes, chainDiv);
-            } else {
-                // Mode chaîne
-                ftpSelectedGenomes = genomes;
-                updateChainDivFTP(chainDiv, ftpSelectedGenomes);
-            }
-        } catch (error) {
-            const urlParams = new URLSearchParams(window.location.search);
-            if(urlParams.has('id')){
-                console.log(urlParams.get('id'));
-                    fileListDiv.innerHTML = '<span style="color:red;">No files found in this folder. If you just launched a Synflow analysis, please wait a few minutes for the files to be available.</span>';
-            }else{
-                fileListDiv.innerHTML = `<span style="color:red;">Error fetching files: ${error.message}</span>`;
-            }
-        }
-    });
+		if (!folder) {
+			fileListDiv.innerHTML =
+				'<span style="color:red;">Please enter a valid FTP folder URL.</span>';
+			return;
+		}
 
-    //press enter is clicking the submit button
-    ftpInput.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') {
-            event.preventDefault(); // Empêche le comportement par défaut du formulaire
-            fetchButton.click();
-        }
-    });
+		// Vérification que le port est bien présent
+		if (folder.includes("localhost") && !folder.includes(":8080")) {
+			fileListDiv.innerHTML =
+				'<span style="color:red;">Port 8080 is missing from the URL.</span>';
+			return;
+		}
 
-    // Fonction pour afficher la chaîne sélectionnée
-    function updateChainDivFTP(chainDiv, genomes) {
-        if (genomes.length > 0) {
-            chainDiv.innerHTML = `<b>Selected chain :</b> <br>${genomes.join(' &rarr; ')}`;
-        } else {
-            chainDiv.innerHTML = '';
-        }
-    }
+		try {
+			const files = await fetchRemoteAllFileList(folder);
 
-    // Fonction pour afficher la liste des génomes et gérer la sélection
-    function populateGenomeListFTP(genomes, listDiv, selectedGenomes, chainDiv) {
-        listDiv.innerHTML = '';
-        genomes.forEach(genome => {
-            const genomeDiv = document.createElement('div');
-            genomeDiv.style.cursor = 'pointer';
-            genomeDiv.style.padding = '4px 8px';
-            genomeDiv.style.margin = '2px 0';
-            genomeDiv.style.borderRadius = '4px';
-            genomeDiv.style.transition = 'background 0.2s';
-            genomeDiv.classList.add('genome-item');
-            genomeDiv.dataset.fileName = genome;
-            genomeDiv.textContent = genome.replaceAll('-', ' ');
+			// Met à jour la matrice avec les fichiers récupérés
+			updateFileMatrix(files);
 
-            genomeDiv.addEventListener('click', () => {
-                const idx = selectedGenomes.indexOf(genome);
-                if (idx === -1) {
-                    selectedGenomes.push(genome);
-                    genomeDiv.style.background = 'grey';
-                    genomeDiv.style.color = '#fff';
-                } else {
-                    selectedGenomes.splice(idx, 1);
-                    genomeDiv.style.background = '';
-                    genomeDiv.style.color = '';
-                }
-                updateChainDivFTP(chainDiv, selectedGenomes);
-            });
+			if (files.length === 0) {
+				fileListDiv.innerHTML =
+					'<span style="color:red;">No .out files found in this folder.</span>';
+				return;
+			}
+			const genomes = extractAllGenomes(files);
+			const outFiles = Array.from(files).filter((file) => {
+				// Si c'est un objet File, utilise file.name, sinon utilise la chaîne directement
+				const fileName = typeof file === "string" ? file : file.name;
+				return fileName.endsWith(".out");
+			});
 
-            listDiv.appendChild(genomeDiv);
-        });
-    }
+			// Mode all vs all ou chaîne
+			const expectedFileCount = genomes.length * (genomes.length - 1);
 
-    // Handler du bouton Draw
-    drawButton.addEventListener('click', async () => {
+			if (outFiles.length === 1 && genomes.length === 2) {
+				// Mode chaîne avec 2 génomes
+				// console.log(outFiles, genomes);
+				//mets les genomes dans l'ordre d'apparition du nom du fichier out
+				const file = outFiles[0];
+				const parts = file
+					.replace(".out", "")
+					.split("_")
+					.map((part) => part.trim());
+				ftpSelectedGenomes = parts;
+				//cache le selecteur de fichiers et affiche la chaîne directement
+				fileListDiv.style.display = "none";
+				updateChainDivFTP(chainDiv, ftpSelectedGenomes);
+			} else if (outFiles.length === expectedFileCount) {
+				// Mode all vs all
+				fileListDiv.innerHTML =
+					'<div style="margin-bottom:8px;color:#555;font-style:italic;">Select genomes in the desired order for the chain.</div>';
+				populateGenomeListFTP(
+					genomes,
+					fileListDiv,
+					ftpSelectedGenomes,
+					chainDiv,
+				);
+			} else {
+				// Mode chaîne
+				ftpSelectedGenomes = genomes;
+				updateChainDivFTP(chainDiv, ftpSelectedGenomes);
+			}
+		} catch (error) {
+			const urlParams = new URLSearchParams(window.location.search);
+			if (urlParams.has("id")) {
+				console.log(urlParams.get("id"));
+				fileListDiv.innerHTML =
+					'<span style="color:red;">No files found in this folder. If you just launched a Synflow analysis, please wait a few minutes for the files to be available.</span>';
+			} else {
+				fileListDiv.innerHTML = `<span style="color:red;">Error fetching files: ${error.message}</span>`;
+			}
+		}
+	});
 
-        logActivity('Loading FTP files for selected genomes: ' + ftpSelectedGenomes.join(', '));
+	//press enter is clicking the submit button
+	ftpInput.addEventListener("keypress", (event) => {
+		if (event.key === "Enter") {
+			event.preventDefault(); // Empêche le comportement par défaut du formulaire
+			fetchButton.click();
+		}
+	});
 
-        // Lance le spinner
-        const target = document.getElementById('spinner');
-        spinner.setStep('Starting...', 10);
-        spinner.spin(target);
+	// Fonction pour afficher la chaîne sélectionnée
+	function updateChainDivFTP(chainDiv, genomes) {
+		if (genomes.length > 0) {
+			chainDiv.innerHTML = `<b>Selected chain :</b> <br>${genomes.join(" &rarr; ")}`;
+		} else {
+			chainDiv.innerHTML = "";
+		}
+	}
 
-        fileUploadMode = 'FTP';
+	// Fonction pour afficher la liste des génomes et gérer la sélection
+	function populateGenomeListFTP(genomes, listDiv, selectedGenomes, chainDiv) {
+		listDiv.innerHTML = "";
+		genomes.forEach((genome) => {
+			const genomeDiv = document.createElement("div");
+			genomeDiv.style.cursor = "pointer";
+			genomeDiv.style.padding = "4px 8px";
+			genomeDiv.style.margin = "2px 0";
+			genomeDiv.style.borderRadius = "4px";
+			genomeDiv.style.transition = "background 0.2s";
+			genomeDiv.classList.add("genome-item");
+			genomeDiv.dataset.fileName = genome;
+			genomeDiv.textContent = genome.replaceAll("-", " ");
 
-        if (ftpSelectedGenomes.length < 2) {
-            chainDiv.innerHTML = '<span style="color:red;">Please select at least 2 genomes to construct a chain.</span>';
-            return;
-        }
+			genomeDiv.addEventListener("click", () => {
+				const idx = selectedGenomes.indexOf(genome);
+				if (idx === -1) {
+					selectedGenomes.push(genome);
+					genomeDiv.style.background = "grey";
+					genomeDiv.style.color = "#fff";
+				} else {
+					selectedGenomes.splice(idx, 1);
+					genomeDiv.style.background = "";
+					genomeDiv.style.color = "";
+				}
+				updateChainDivFTP(chainDiv, selectedGenomes);
+			});
 
-        const folder = ftpInput.value.trim();
-        const allFiles = await fetchRemoteOutFileList(folder);
+			listDiv.appendChild(genomeDiv);
+		});
+	}
 
-        //nettoie les espaces autour des noms de fichiers
-        const allFilesTrimmed = new Set(allFiles.map(f => f.trim()));
+	// Handler du bouton Draw
+	drawButton.addEventListener("click", async () => {
+		logActivity(
+			"Loading FTP files for selected genomes: " +
+				ftpSelectedGenomes.join(", "),
+		);
 
-        // Construit la liste des fichiers nécessaires pour la chaîne
-        const neededFiles = [];
-        let missingFiles = [];
-        for (let i = 0; i < ftpSelectedGenomes.length - 1; i++) {
-            const fileName = `${ftpSelectedGenomes[i]}_${ftpSelectedGenomes[i+1]}.out`;
-            //nettoie les espaces autour des noms de fichiers
-            const fileNameTrimmed = fileName.trim();
-            if (allFilesTrimmed.has(fileNameTrimmed)) {
-                neededFiles.push(fileNameTrimmed);
-            } else {
-                missingFiles.push(fileNameTrimmed);
-            }
-        }
+		// Lance le spinner
+		const target = document.getElementById("spinner");
+		spinner.setStep("Starting...", 10);
+		spinner.spin(target);
 
-        // Affiche un message si des fichiers sont manquants
-        if (missingFiles.length > 0) {
-            chainDiv.innerHTML = `<span style="color:red;">Missing file(s) :<br>${missingFiles.join('<br>')}</span>`;
-            return;
-        }
+		fileUploadMode = "FTP";
 
-        // Télécharge les fichiers nécessaires et crée des objets File
-        spinner.setStep(`Downloading ${neededFiles.length} comparison files...`, 12);
-        const files = await Promise.all(neededFiles.map(async file => {
-            const folderWithSlash = folder.endsWith('/') ? folder : folder + '/';
-            const filePath = `${folderWithSlash}${file}`;
-            const response = await fetch(filePath);
-            const text = await response.text();
-            return new File([text], file, { type: 'text/plain' });
-        }));
+		if (ftpSelectedGenomes.length < 2) {
+			chainDiv.innerHTML =
+				'<span style="color:red;">Please select at least 2 genomes to construct a chain.</span>';
+			return;
+		}
 
-        spinner.setStep('Searching optional files...', 15);
-        //cherche les fichiers anchors, bed et jbrowse associés
-        await searchAdditionalFiles(ftpSelectedGenomes, files, folder);
+		const folder = ftpInput.value.trim();
+		const allFiles = await fetchRemoteOutFileList(folder);
 
-        // Simule un input file multiple pour handleFileUpload
-        const dataTransfer = new DataTransfer();
-        files.forEach(file => dataTransfer.items.add(file));
+		//nettoie les espaces autour des noms de fichiers
+		const allFilesTrimmed = new Set(allFiles.map((f) => f.trim()));
 
-        // Appelle la fonction de visualisation
-        const visualizationContainer = document.getElementById('viz');
-        visualizationContainer.innerHTML = '';
-        d3.select('#info').html('');
-        d3.select("#viz").call(zoom);
-        d3.select("#viz").append("g").attr("id", "zoomGroup");
-        handleFileUpload(dataTransfer.files, null, ftpSelectedGenomes, neededFiles);
-    });
+		// Construit la liste des fichiers nécessaires pour la chaîne
+		const neededFiles = [];
+		let missingFiles = [];
+		for (let i = 0; i < ftpSelectedGenomes.length - 1; i++) {
+			const fileName = `${ftpSelectedGenomes[i]}_${ftpSelectedGenomes[i + 1]}.out`;
+			//nettoie les espaces autour des noms de fichiers
+			const fileNameTrimmed = fileName.trim();
+			if (allFilesTrimmed.has(fileNameTrimmed)) {
+				neededFiles.push(fileNameTrimmed);
+			} else {
+				missingFiles.push(fileNameTrimmed);
+			}
+		}
 
-    // Partie droite : aide
-    const helpContainer = document.createElement('div');
-    helpContainer.style.flex = '0 0 45%';
-    helpContainer.style.padding = '15px';
-    helpContainer.style.backgroundColor = '#f8f9fa';
-    helpContainer.style.borderRadius = '5px';
-    helpContainer.style.border = '1px solid #dee2e6';
-    helpContainer.style.overflowY = 'auto';
+		// Affiche un message si des fichiers sont manquants
+		if (missingFiles.length > 0) {
+			chainDiv.innerHTML = `<span style="color:red;">Missing file(s) :<br>${missingFiles.join("<br>")}</span>`;
+			return;
+		}
 
-    helpContainer.innerHTML = `
+		// Télécharge les fichiers nécessaires et crée des objets File
+		spinner.setStep(
+			`Downloading ${neededFiles.length} comparison files...`,
+			12,
+		);
+		const files = await Promise.all(
+			neededFiles.map(async (file) => {
+				const folderWithSlash = folder.endsWith("/") ? folder : folder + "/";
+				const filePath = `${folderWithSlash}${file}`;
+				const response = await fetch(filePath);
+				const text = await response.text();
+				return new File([text], file, { type: "text/plain" });
+			}),
+		);
+
+		spinner.setStep("Searching optional files...", 15);
+		//cherche les fichiers anchors, bed et jbrowse associés
+		await searchAdditionalFiles(ftpSelectedGenomes, files, folder);
+
+		// Simule un input file multiple pour handleFileUpload
+		const dataTransfer = new DataTransfer();
+		files.forEach((file) => dataTransfer.items.add(file));
+
+		// Appelle la fonction de visualisation
+		const visualizationContainer = document.getElementById("viz");
+		visualizationContainer.innerHTML = "";
+		d3.select("#info").html("");
+		d3.select("#viz").call(zoom);
+		d3.select("#viz").append("g").attr("id", "zoomGroup");
+		handleFileUpload(dataTransfer.files, null, ftpSelectedGenomes, neededFiles);
+	});
+
+	// Partie droite : aide
+	const helpContainer = document.createElement("div");
+	helpContainer.style.flex = "0 0 45%";
+	helpContainer.style.padding = "15px";
+	helpContainer.style.backgroundColor = "#f8f9fa";
+	helpContainer.style.borderRadius = "5px";
+	helpContainer.style.border = "1px solid #dee2e6";
+	helpContainer.style.overflowY = "auto";
+
+	helpContainer.innerHTML = `
         <h5>FTP Import Help</h5>
         <div style="margin-top: 15px;">
             <ul style="padding-left: 20px;">
@@ -1195,67 +1236,48 @@ export function createFTPSection() {
         </div>
     `;
 
-    // Assemblage final
-    ftpSection.appendChild(formContainer);
-    ftpSection.appendChild(helpContainer);
+	// Assemblage final
+	ftpSection.appendChild(formContainer);
+	ftpSection.appendChild(helpContainer);
 
-    return ftpSection;
+	return ftpSection;
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 export function createToolkitContainer() {
-    //////////////////:
-    // TOOLKIT
-    ///////////////////
+	//////////////////:
+	// TOOLKIT
+	///////////////////
 
-    const pageWrapper = document.createElement("div");
-    pageWrapper.style.cssText = `
+	let synflowURL;
+
+	const pageWrapper = document.createElement("div");
+	pageWrapper.style.cssText = `
         display: flex;
         flex-direction: column;
         gap: 20px;
     `;
 
-    // Conteneur principal avec 2 colonnes
-    const mainContainer = document.createElement("div");
-    mainContainer.className = "toolkit-main-wrapper";
-    mainContainer.style.cssText = `
+	// Conteneur principal avec 2 colonnes
+	const mainContainer = document.createElement("div");
+	mainContainer.className = "toolkit-main-wrapper";
+	mainContainer.style.cssText = `
         display: flex !important;
         gap: 20px;
         flex-wrap: nowrap;
     `;
-    
-    // Colonne gauche : Toolkit
-    const toolkitSection = document.createElement("div");
-    toolkitSection.id = "toolkitContainer"; // L'ID que le toolkit cherche
-    toolkitSection.style.cssText = `
+
+	// Colonne gauche : Toolkit
+	const toolkitSection = document.createElement("div");
+	toolkitSection.id = "toolkitContainer"; // L'ID que le toolkit cherche
+	toolkitSection.style.cssText = `
         flex: 1;
         min-width: 400px;
     `;
-    
-    // Colonne droite : Help
-    const helpSection = document.createElement("div");
-    helpSection.id = "toolkit-help-section";
-    helpSection.style.cssText = `
+
+	// Colonne droite : Help
+	const helpSection = document.createElement("div");
+	helpSection.id = "toolkit-help-section";
+	helpSection.style.cssText = `
         flex: 0 0 500px;
         padding: 15px;
         background-color: #f8f9fa;
@@ -1263,13 +1285,13 @@ export function createToolkitContainer() {
         border: 1px solid #dee2e6;
         overflow-y: auto;
     `;
-    
-    // Contenu de l'aide        
-    helpSection.innerHTML = `
+
+	// Contenu de l'aide
+	helpSection.innerHTML = `
         <h5>About the workflow</h5>
         <div style="margin-top: 15px;">
-            <p>The <b>Synflow workflow</b> detects synteny and chromosomal rearrangements between two or more genome assemblies.</p>  
-            <p>See the 
+            <p>The <b>Synflow workflow</b> detects synteny and chromosomal rearrangements between two or more genome assemblies.</p>
+            <p>See the
                 <a href="https://gitlab.cirad.fr/agap/cluster/snakemake/synflow" target="_blank">Synflow workflow documentation</a> for more information.
             </p>
             <p>Note: At least 2 fasta genomes are required. All pairwise combinations are processed.</p>
@@ -1280,370 +1302,405 @@ export function createToolkitContainer() {
 
     `;
 
-    const consoleWrapper = document.createElement("div");
-    consoleWrapper.id = "console-wrapper";
-    consoleWrapper.style.cssText = `
+	const consoleWrapper = document.createElement("div");
+	consoleWrapper.id = "console-wrapper";
+	consoleWrapper.style.cssText = `
         width: 100%;
     `;
 
-    
-    // Assembler les colonnes
-    mainContainer.appendChild(toolkitSection);
-    mainContainer.appendChild(helpSection);
+	// Assembler les colonnes
+	mainContainer.appendChild(toolkitSection);
+	mainContainer.appendChild(helpSection);
 
-    pageWrapper.appendChild(mainContainer);
-    pageWrapper.appendChild(consoleWrapper);
+	pageWrapper.appendChild(mainContainer);
+	pageWrapper.appendChild(consoleWrapper);
 
-    document.body.appendChild(pageWrapper);
+	document.body.appendChild(pageWrapper);
 
+	//bouge la console quand elle arrive
+	const moveConsoleIfExists = () => {
+		const consoleDiv = document.getElementById("console");
+		if (consoleDiv && consoleDiv.parentElement !== consoleWrapper) {
+			consoleWrapper.appendChild(consoleDiv);
+		}
+	};
+	moveConsoleIfExists();
 
-    //bouge la console quand elle arrive
-    const moveConsoleIfExists = () => {
-        const consoleDiv = document.getElementById("console");
-        if (consoleDiv && consoleDiv.parentElement !== consoleWrapper) {
-            consoleWrapper.appendChild(consoleDiv);
-        }
-    };
-    moveConsoleIfExists();
+	const observer = new MutationObserver(() => {
+		moveConsoleIfExists();
+	});
 
-    const observer = new MutationObserver(() => {
-        moveConsoleIfExists();
-    });
+	observer.observe(document.body, {
+		childList: true,
+		subtree: true,
+	});
 
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
+	//charge le css de toolkit
+	const toolkitCSS = document.createElement("link");
+	toolkitCSS.rel = "stylesheet";
 
+	const baseURL = globalThis.location.origin;
+	const isDev = globalThis.location.pathname.startsWith("/synflow");
 
-    //charge le css de toolkit
-    const toolkitCSS = document.createElement("link");
-    toolkitCSS.rel = "stylesheet";
+	toolkitCSS.href = isDev
+		? `${baseURL}/synflow/toolkit/toolkit.css`
+		: `${baseURL}/toolkit/toolkit.css`;
 
-    const baseURL = globalThis.location.origin;
-    const isDev = globalThis.location.pathname.startsWith('/synflow');
+	document.head.appendChild(toolkitCSS);
 
-    toolkitCSS.href = isDev
-        ? `${baseURL}/synflow/toolkit/toolkit.css`
-        : `${baseURL}/toolkit/toolkit.css`;
+	mainContainer.style.display = "flex"; // Afficher le container
 
-    document.head.appendChild(toolkitCSS);
+	// Option pour générer le selecteur de service ou appeler un service spécifique
+	const generateSelect = false;
+	const serviceName = "synflow";
 
+	//init toolkit
+	toolkit.initToolkit(generateSelect, serviceName);
 
-        mainContainer.style.display = "flex"; // Afficher le container
+	//reception du toolkit path pour générer une url
+	document.addEventListener("ToolkitPathEvent", (event) => {
+		const toolkitPath = event.detail;
+		console.log("Toolkit Path:", toolkitPath);
 
-        // Option pour générer le selecteur de service ou appeler un service spécifique
-        const generateSelect = false;
-        const serviceName = 'synflow';
+		//exemple de path = /opt/projects/gemo.southgreen.fr/prod/tmp/toolkit_run/toolkit_D_kHW7cvKUZrzrn-AAAP/ref_querry.out
+		const toolkitID = toolkitPath.split("/")[7];
 
-        //init toolkit
-        toolkit.initToolkit(generateSelect, serviceName);
+		//genère une URL synflow pour acceder aux resultats
+		const baseURL = globalThis.location.origin;
 
-        //reception du toolkit path pour générer une url
-        document.addEventListener('ToolkitPathEvent', (event) => {
-            const toolkitPath = event.detail;
-            console.log('Toolkit Path:', toolkitPath);
+		if (globalThis.location.pathname.startsWith("/synflow")) {
+			// Sur la dev, il faut ajouter /synflow
+			synflowURL = `${baseURL}/synflow/?id=${toolkitID}`;
+		} else {
+			// Sur la prod, pas besoin
+			synflowURL = `${baseURL}/?id=${toolkitID}`;
+		}
 
-            //exemple de path = /opt/projects/gemo.southgreen.fr/prod/tmp/toolkit_run/toolkit_D_kHW7cvKUZrzrn-AAAP/ref_querry.out
-            const toolkitID = toolkitPath.split('/')[7];
+		// Créer et déclencher un événement personnalisé
+		event = new CustomEvent("consoleMessage", {
+			detail:
+				"Job is running, result will be available here for 10 days: " +
+				synflowURL,
+		});
+		document.dispatchEvent(event);
 
-            //genère une URL synflow pour acceder aux resultats
-            const baseURL = globalThis.location.origin;
-            let synflowURL;
-            if (globalThis.location.pathname.startsWith('/synflow')) {
-                // Sur la dev, il faut ajouter /synflow
-                synflowURL = `${baseURL}/synflow/?id=${toolkitID}`;
-            } else {
-                // Sur la prod, pas besoin
-                synflowURL = `${baseURL}/?id=${toolkitID}`;
-            }
-            
-            // Créer et déclencher un événement personnalisé
-            event = new CustomEvent('consoleMessage', { detail: 'Job is running, result will be available here for 10 days: ' + synflowURL });
-            document.dispatchEvent(event);
-
-            const consoleDiv = document.getElementById('console');
-            let jobMsg = document.getElementById('job-status-msg');
-            if (!jobMsg) {
-                jobMsg = document.createElement('div');
-                jobMsg.id = 'job-status-msg';
-                jobMsg.style.position = 'sticky'; // Fixe en haut de la console
-                jobMsg.style.top = '0';
-                jobMsg.style.zIndex = '10';
-                jobMsg.style.background = '#eaf7ea';
-                jobMsg.style.border = '1px solid #b2d8b2';
-                jobMsg.style.padding = '8px';
-                jobMsg.style.marginBottom = '8px';
-                jobMsg.style.borderRadius = '5px';
-                jobMsg.fontSize = 'small';
-                jobMsg.style.fontWeight = 'bold';
-                jobMsg.style.boxShadow = '0 2px 6px rgba(0,0,0,0.04)';
-                consoleDiv.prepend(jobMsg);
-            }
-            jobMsg.innerHTML = `Job is running, result will be available here for 10 days: <br>
+		const consoleDiv = document.getElementById("console");
+		let jobMsg = document.getElementById("job-status-msg");
+		if (!jobMsg) {
+			jobMsg = document.createElement("div");
+			jobMsg.id = "job-status-msg";
+			jobMsg.style.position = "sticky"; // Fixe en haut de la console
+			jobMsg.style.top = "0";
+			jobMsg.style.zIndex = "10";
+			jobMsg.style.background = "#eaf7ea";
+			jobMsg.style.border = "1px solid #b2d8b2";
+			jobMsg.style.padding = "8px";
+			jobMsg.style.marginBottom = "8px";
+			jobMsg.style.borderRadius = "5px";
+			jobMsg.fontSize = "small";
+			jobMsg.style.fontWeight = "bold";
+			jobMsg.style.boxShadow = "0 2px 6px rgba(0,0,0,0.04)";
+			consoleDiv.prepend(jobMsg);
+		}
+		jobMsg.innerHTML = `Job is running, result will be available here for 10 days: <br>
                 <a href="${synflowURL}" target="_blank">${synflowURL}</a>
                 <button id="copy-link-btn" style="margin-left:10px;padding:4px 10px;border-radius:4px;border:1px solid #b2d8b2;background:#fff;cursor:pointer;">Copy Link</button>`;
 
-            const copyBtn = document.getElementById('copy-link-btn');
-            copyBtn.addEventListener('click', (event) => {
-                logActivity('Copying Synflow URL to clipboard');
-                event.preventDefault();
-                navigator.clipboard.writeText(synflowURL)
-                    .then(() => {
-                        copyBtn.textContent = 'Copied!';
-                        setTimeout(() => { copyBtn.textContent = 'Copy Link'; }, 1500);
-                    })
-                    .catch(() => {
-                        copyBtn.textContent = 'Error';
-                        setTimeout(() => { copyBtn.textContent = 'Copy Link'; }, 1500);
-                    });
-            });
+		const copyBtn = document.getElementById("copy-link-btn");
+		copyBtn.addEventListener("click", (event) => {
+			logActivity("Copying Synflow URL to clipboard");
+			event.preventDefault();
+			navigator.clipboard
+				.writeText(synflowURL)
+				.then(() => {
+					copyBtn.textContent = "Copied!";
+					setTimeout(() => {
+						copyBtn.textContent = "Copy Link";
+					}, 1500);
+				})
+				.catch(() => {
+					copyBtn.textContent = "Error";
+					setTimeout(() => {
+						copyBtn.textContent = "Copy Link";
+					}, 1500);
+				});
+		});
+	});
 
-        });
+	//reception des resultats de toolkit
+	document.addEventListener("ToolkitResultEvent", (event) => {
+		const data = event.detail;
+		console.log("Data received in other script:", data);
 
-        //reception des resultats de toolkit
-        document.addEventListener('ToolkitResultEvent', (event) => {
-            const data = event.detail;
-            console.log('Data received in other script:', data);
+		//C'etait pour galaxy, c'est géré dans toolkit maintenant
+		//data to path
+		// data type = /opt/projects/gemo.southgreen.fr/prod/tmp/toolkit_run/toolkit_AmC0Yl-V3-bZ4f9OAAFq/ref_querry.txt
+		//path type = https://gemo.southgreen.fr/tmp/toolkit_run/toolkit_AmC0Yl-V3-bZ4f9OAAFq/ref_querry.txt
+		// const toolkitID = data.split('/')[7];
+		// const fileName = data.split('/')[8];
+		// const path = `https://gemo.southgreen.fr/tmp/toolkit_run/${toolkitID}/${fileName}`;
+		// console.log(path);
 
-            //C'etait pour galaxy, c'est géré dans toolkit maintenant
-            //data to path
-            // data type = /opt/projects/gemo.southgreen.fr/prod/tmp/toolkit_run/toolkit_AmC0Yl-V3-bZ4f9OAAFq/ref_querry.txt
-            //path type = https://gemo.southgreen.fr/tmp/toolkit_run/toolkit_AmC0Yl-V3-bZ4f9OAAFq/ref_querry.txt
-            // const toolkitID = data.split('/')[7];
-            // const fileName = data.split('/')[8];
-            // const path = `https://gemo.southgreen.fr/tmp/toolkit_run/${toolkitID}/${fileName}`;
-            // console.log(path);
+		const path = data;
 
-            const path = data;
+		// Extraction du toolkitID depuis le path
+		// Format attendu : https://.../toolkit_run/toolkit_XXX/filename.out
+		const pathParts = path.split("/");
+		const toolkitID = pathParts[pathParts.length - 2]; // toolkit_XXX
 
-            //affiche un bouton dans la console pour charger les fichiers dans le formulaire
-            const loadOutputButton = document.createElement('button');
-            loadOutputButton.textContent = 'Draw Output';
-            loadOutputButton.style.marginLeft = '10px';
-            loadOutputButton.style.marginTop = '10px';
-            loadOutputButton.style.display = 'block';
-            const consoleDiv = document.getElementById('console');
+		// Conteneur pour les boutons d'action
+		const buttonContainer = document.createElement("div");
+		buttonContainer.style.marginTop = "10px";
+		buttonContainer.style.marginLeft = "10px";
+		buttonContainer.style.display = "flex";
+		buttonContainer.style.gap = "10px";
+		buttonContainer.style.flexWrap = "wrap";
 
-            //scroll jusqu'en bas de la console    
-            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+		// Bouton "Download output files (.zip)"
+		const downloadButton = document.createElement("a");
+		downloadButton.textContent = "Download output files (.zip)";
+		downloadButton.href = `https://wsp1453.southgreen.fr/download-toolkit/${toolkitID}`;
+		downloadButton.style.display = "inline-block";
+		downloadButton.style.padding = "6px 12px";
+		downloadButton.style.backgroundColor = "#555";
+		downloadButton.style.color = "#fff";
+		downloadButton.style.textDecoration = "none";
+		downloadButton.style.borderRadius = "4px";
+		downloadButton.style.cursor = "pointer";
+		downloadButton.style.border = "none";
+		downloadButton.style.fontFamily = "inherit";
+		downloadButton.style.fontSize = "inherit";
+		downloadButton.setAttribute("download", `${toolkitID}_output.zip`);
 
+		// Bouton "Draw Output"
+		// const loadOutputButton = document.createElement("button");
+		// loadOutputButton.textContent = "Draw Output";
+		// loadOutputButton.style.display = "inline-block";
 
-            // event pour lancer le dessin des fichiers de sortie
-            loadOutputButton.addEventListener('click', async (event) => {
-                logActivity('Loading toolkit output file: ' + path);
-                //prevent default
-                event.preventDefault();
-                try {
+		const loadOutputButton = document.createElement("a");
+		loadOutputButton.textContent = "Draw output";
+		loadOutputButton.href = synflowURL;
+		loadOutputButton.style.display = "inline-block";
+		loadOutputButton.style.padding = "6px 12px";
+		loadOutputButton.style.backgroundColor = "#555";
+		loadOutputButton.style.color = "#fff";
+		loadOutputButton.style.textDecoration = "none";
+		loadOutputButton.style.borderRadius = "4px";
+		loadOutputButton.style.cursor = "pointer";
+		loadOutputButton.style.border = "none";
+		loadOutputButton.style.fontFamily = "inherit";
+		loadOutputButton.style.fontSize = "inherit";
 
-                    // Sélectionne et affiche l'onglet 'upload'
-                    const menuColumn = document.querySelector('[data-option="upload"]');
-                    if (menuColumn) menuColumn.click();
+		const consoleDiv = document.getElementById("console");
+		buttonContainer.appendChild(downloadButton);
+		buttonContainer.appendChild(loadOutputButton);
+		consoleDiv.appendChild(buttonContainer);
 
-                    const response = await fetch(path);
-                    const text = await response.text();
-                    const fileName = path.split('/').pop();
-                    const bandFile = new File([text], fileName, { type: 'text/plain' });
-                
-                
-                    // Creating DataTransfer objects to simulate file upload
-                    const bandDataTransfer = new DataTransfer();
-                
-                    // Add files to the DataTransfer objects
-                    bandDataTransfer.items.add(bandFile);
-                
-                    // Set the files to the input fields
-                    const bandInput = document.getElementById('band-files');
-                    bandInput.files = bandDataTransfer.files;
-                
-                    // Update the file lists
-                    updateFileList(bandInput);
-                } catch (error) {
-                    console.error('Error fetching the file:', error);
-                }
-            });
-        })
+		//scroll jusqu'en bas de la console
+		consoleDiv.scrollTop = consoleDiv.scrollHeight;
 
-    return pageWrapper;
+		// event pour lancer le dessin des fichiers de sortie
+		//loadOutputButton.addEventListener("click", async (event) => {
+		// 	logActivity("Loading toolkit output file: " + path);
+		// 	//prevent default
+		// 	event.preventDefault();
+		// 	try {
+		// 		// Sélectionne et affiche l'onglet 'upload'
+		// 		const menuColumn = document.querySelector('[data-option="upload"]');
+		// 		if (menuColumn) menuColumn.click();
+
+		// 		const response = await fetch(path);
+		// 		const text = await response.text();
+		// 		const fileName = path.split("/").pop();
+		// 		const bandFile = new File([text], fileName, { type: "text/plain" });
+
+		// 		// Creating DataTransfer objects to simulate file upload
+		// 		const bandDataTransfer = new DataTransfer();
+
+		// 		// Add files to the DataTransfer objects
+		// 		bandDataTransfer.items.add(bandFile);
+
+		// 		// Set the files to the input fields
+		// 		const bandInput = document.getElementById("band-files");
+		// 		bandInput.files = bandDataTransfer.files;
+
+		// 		// Update the file lists
+		// 		updateFileList(bandInput);
+		// 	} catch (error) {
+		// 		console.error("Error fetching the file:", error);
+		// 	}
+		// });
+	});
+
+	return pageWrapper;
 }
-
-
-
 
 export function updateFileList(inputElement) {
+	//reinitialise la liste des genomes
+	selectedGenomes = [];
+	updateChainDiv();
 
-    //reinitialise la liste des genomes
-    selectedGenomes = [];
-    updateChainDiv();
+	const files = inputElement.files;
+	const outFiles = Array.from(files).filter((file) =>
+		file.name.endsWith(".out"),
+	);
 
-    const files = inputElement.files;
-    const outFiles = Array.from(files).filter(file => file.name.endsWith('.out'));
+	//detecte le all vs all
+	const genomes = extractAllGenomes(outFiles.map((file) => file.name));
+	const expectedFileCount = genomes.length * (genomes.length - 1);
 
-    //detecte le all vs all
-    const genomes = extractAllGenomes(outFiles.map(file => file.name));
-    const expectedFileCount = genomes.length * (genomes.length - 1);
+	if (outFiles.length === expectedFileCount) {
+		// Mode all vs all
+		fileOrderMode = "allvsall";
+		console.log("All vs All mode detected with genomes: ", genomes);
+		//affiche un message pour selectionner les genomes dans l'ordre souhaité :
+		const allvsAllMessage = document.createElement("div");
+		allvsAllMessage.textContent =
+			"Select genomes in the desired order for the chain.";
+		allvsAllMessage.style.marginTop = "10px";
+		allvsAllMessage.style.fontSize = "0.9em";
+		allvsAllMessage.style.color = "#555";
+		allvsAllMessage.style.fontStyle = "italic";
+		allvsAllMessage.style.padding = "5px";
+		allvsAllMessage.style.backgroundColor = "#f9f9f9";
+		allvsAllMessage.style.border = "1px solid #ddd";
+		allvsAllMessage.style.borderRadius = "4px";
+		allvsAllMessage.style.textAlign = "center";
+		//affiche le selection des genomes
+		const fileListDiv = document.createElement("div");
+		fileListDiv.setAttribute("id", "existing-files-list");
+		fileListDiv.style.maxHeight = "180px";
+		fileListDiv.style.overflowY = "auto";
+		fileListDiv.style.border = "1px solid #ccc";
+		fileListDiv.style.padding = "5px";
 
+		//append à la fin de l'element inputElement
+		inputElement.parentNode.appendChild(allvsAllMessage);
+		inputElement.parentNode.appendChild(fileListDiv);
 
-    if (outFiles.length === expectedFileCount) {
-        // Mode all vs all
-        fileOrderMode = 'allvsall';
-        console.log("All vs All mode detected with genomes: ", genomes);
-        //affiche un message pour selectionner les genomes dans l'ordre souhaité : 
-        const allvsAllMessage = document.createElement('div');
-        allvsAllMessage.textContent = 'Select genomes in the desired order for the chain.';
-        allvsAllMessage.style.marginTop = '10px';
-        allvsAllMessage.style.fontSize = '0.9em';
-        allvsAllMessage.style.color = '#555';
-        allvsAllMessage.style.fontStyle = 'italic';
-        allvsAllMessage.style.padding = '5px';
-        allvsAllMessage.style.backgroundColor = '#f9f9f9';
-        allvsAllMessage.style.border = '1px solid #ddd';
-        allvsAllMessage.style.borderRadius = '4px';
-        allvsAllMessage.style.textAlign = 'center';
-        //affiche le selection des genomes
-        const fileListDiv = document.createElement('div');
-        fileListDiv.setAttribute('id', 'existing-files-list');
-        fileListDiv.style.maxHeight = '180px';
-        fileListDiv.style.overflowY = 'auto';
-        fileListDiv.style.border = '1px solid #ccc';
-        fileListDiv.style.padding = '5px';
+		populateGenomeList(genomes, fileListDiv);
+	} else {
+		// Mode chaîne
+		fileOrderMode = "chain";
+		console.log("Chain mode detected with genomes: ", genomes);
 
-        //append à la fin de l'element inputElement
-        inputElement.parentNode.appendChild(allvsAllMessage);
-        inputElement.parentNode.appendChild(fileListDiv);
-
-        populateGenomeList(genomes, fileListDiv);
-        
-    } else {
-        // Mode chaîne
-        fileOrderMode = 'chain';
-        console.log("Chain mode detected with genomes: ", genomes);
-
-        // Sélection ordonnée
-        selectedGenomes = genomes;
-        updateChainDiv();
-    }
+		// Sélection ordonnée
+		selectedGenomes = genomes;
+		updateChainDiv();
+	}
 }
 
-function populateGenomeList(genomes, listDiv){
-    genomes.forEach(genome => {
-        const genomeDiv = document.createElement('div');
-        genomeDiv.style.cursor = 'pointer';
-        genomeDiv.style.padding = '4px 8px';
-        genomeDiv.style.margin = '2px 0';
-        genomeDiv.style.borderRadius = '4px';
-        genomeDiv.style.transition = 'background 0.2s';
-        genomeDiv.classList.add('genome-item');
-        genomeDiv.dataset.fileName = genome; // vrai nom de fichier
+function populateGenomeList(genomes, listDiv) {
+	genomes.forEach((genome) => {
+		const genomeDiv = document.createElement("div");
+		genomeDiv.style.cursor = "pointer";
+		genomeDiv.style.padding = "4px 8px";
+		genomeDiv.style.margin = "2px 0";
+		genomeDiv.style.borderRadius = "4px";
+		genomeDiv.style.transition = "background 0.2s";
+		genomeDiv.classList.add("genome-item");
+		genomeDiv.dataset.fileName = genome; // vrai nom de fichier
 
-        //affiche le nom sans tiret et avec une majuscule en première lettre
-        genomeDiv.textContent = genome.replaceAll('-', ' ').replace(/^\w/, c => c.toUpperCase());
+		//affiche le nom sans tiret et avec une majuscule en première lettre
+		genomeDiv.textContent = genome
+			.replaceAll("-", " ")
+			.replace(/^\w/, (c) => c.toUpperCase());
 
-        genomeDiv.addEventListener('click', () => {
-            logActivity('Toggling genome selection: ' + genome);
-            const idx = selectedGenomes.indexOf(genome);
-            if (idx === -1) {
-                selectedGenomes.push(genome);
-                genomeDiv.style.background = 'grey';
-                genomeDiv.style.color = '#fff';
-            } else {
-                selectedGenomes.splice(idx, 1);
-                genomeDiv.style.background = '';
-                genomeDiv.style.color = '';
-            }
-            updateChainDiv();
-        });
+		genomeDiv.addEventListener("click", () => {
+			logActivity("Toggling genome selection: " + genome);
+			const idx = selectedGenomes.indexOf(genome);
+			if (idx === -1) {
+				selectedGenomes.push(genome);
+				genomeDiv.style.background = "grey";
+				genomeDiv.style.color = "#fff";
+			} else {
+				selectedGenomes.splice(idx, 1);
+				genomeDiv.style.background = "";
+				genomeDiv.style.color = "";
+			}
+			updateChainDiv();
+		});
 
-        listDiv.appendChild(genomeDiv);
-    });
+		listDiv.appendChild(genomeDiv);
+	});
 }
-
-
-
 
 async function readChromosomeLengths(file) {
-    try {
-        const text = await file.text();
-        const lengths = {};
-        const lines = text.split('\n');
-        lines.forEach(line => {
-            const parts = line.split('\t');
-            if (parts.length === 2) {
-                lengths[parts[0]] = +parts[1];
-            }
-        });
-        return lengths;
-    } catch (error) {
-        throw new Error(error);
-    }
+	try {
+		const text = await file.text();
+		const lengths = {};
+		const lines = text.split("\n");
+		lines.forEach((line) => {
+			const parts = line.split("\t");
+			if (parts.length === 2) {
+				lengths[parts[0]] = +parts[1];
+			}
+		});
+		return lengths;
+	} catch (error) {
+		throw new Error(error);
+	}
 }
 
 export let genomeLengths = {};
 
 export function loadAllChromosomeLengths(files) {
-    const lengthPromises = Array.from(files).map(file => {
-        const genome = file.name.replace('.chrlen', ''); // Extraire le nom du génome sans l'extension
-        return readChromosomeLengths(file).then(lengths => {
-            genomeLengths[genome] = lengths;
-        });
-    });
-    return Promise.all(lengthPromises);
+	const lengthPromises = Array.from(files).map((file) => {
+		const genome = file.name.replace(".chrlen", ""); // Extraire le nom du génome sans l'extension
+		return readChromosomeLengths(file).then((lengths) => {
+			genomeLengths[genome] = lengths;
+		});
+	});
+	return Promise.all(lengthPromises);
 }
 
 async function searchAdditionalFiles(selectedGenomes, files, folder) {
-    const folderWithSlash = folder.endsWith('/') ? folder : folder + '/';
+	const folderWithSlash = folder.endsWith("/") ? folder : folder + "/";
 
-    bedFiles = await Promise.all(selectedGenomes.map(async genome => {
-        const bedFilePath = `${folderWithSlash}${genome}.bed`;
-        try {
-            const response = await fetch(bedFilePath);
-            if (response.ok) {
-                const text = await response.text();
-                return new File([text], `${genome}.bed`, { type: 'text/plain' });
-            }
-        } catch (error) {
-            console.log(`Error fetching bed file for ${genome}:`, error);
-        }
-        return null;
-    }));
+	bedFiles = await Promise.all(
+		selectedGenomes.map(async (genome) => {
+			const bedFilePath = `${folderWithSlash}${genome}.bed`;
+			try {
+				const response = await fetch(bedFilePath);
+				if (response.ok) {
+					const text = await response.text();
+					return new File([text], `${genome}.bed`, { type: "text/plain" });
+				}
+			} catch (error) {
+				console.log(`Error fetching bed file for ${genome}:`, error);
+			}
+			return null;
+		}),
+	);
 
-    anchorsFiles = [];
-    await Promise.all(files.map(async file => {
-        const anchorsFileName = file.name.replace('.out', '.anchors');
-        const anchorsFilePath = `${folderWithSlash}${anchorsFileName}`;
-        try {
-            const response = await fetch(anchorsFilePath);
-            if (response.ok) {
-                const text = await response.text();
-                anchorsFiles.push(new File([text], anchorsFileName, { type: 'text/plain' }));
-            }
-        } catch (error) {
-            console.log(`Error fetching anchors file for ${file.name}:`, error);
-        }
-    }));
-    
-    const jbrowseFileName = 'jbrowse_link.json';
-    const jbrowseFilePath = `${folderWithSlash}${jbrowseFileName}`;
+	anchorsFiles = [];
+	await Promise.all(
+		files.map(async (file) => {
+			const anchorsFileName = file.name.replace(".out", ".anchors");
+			const anchorsFilePath = `${folderWithSlash}${anchorsFileName}`;
+			try {
+				const response = await fetch(anchorsFilePath);
+				if (response.ok) {
+					const text = await response.text();
+					anchorsFiles.push(
+						new File([text], anchorsFileName, { type: "text/plain" }),
+					);
+				}
+			} catch (error) {
+				console.log(`Error fetching anchors file for ${file.name}:`, error);
+			}
+		}),
+	);
 
-    try {
-        const jbrowseResponse = await fetch(jbrowseFilePath);
-        if (jbrowseResponse.ok) {
-            jbrowseLinks = await jbrowseResponse.json();
-        }
-    } catch (error) {
-        console.log('Error fetching jbrowse links:', error);
-    }
+	const jbrowseFileName = "jbrowse_link.json";
+	const jbrowseFilePath = `${folderWithSlash}${jbrowseFileName}`;
+
+	try {
+		const jbrowseResponse = await fetch(jbrowseFilePath);
+		if (jbrowseResponse.ok) {
+			jbrowseLinks = await jbrowseResponse.json();
+		}
+	} catch (error) {
+		console.log("Error fetching jbrowse links:", error);
+	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
