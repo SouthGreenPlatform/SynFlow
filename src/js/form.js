@@ -936,14 +936,33 @@ export function createFTPSection() {
 	});
 	formContainer.appendChild(exampleLink);
 
+	// Conteneur pour les boutons Fetch et Download
+	const buttonContainer = document.createElement("div");
+	buttonContainer.style.display = "flex";
+	buttonContainer.style.gap = "10px";
+	buttonContainer.style.flexWrap = "wrap";
+	buttonContainer.style.marginBottom = "10px";
+
 	// Bouton pour charger la liste des fichiers
 	const fetchButton = document.createElement("button");
 	fetchButton.setAttribute("type", "button");
 	fetchButton.setAttribute("id", "fetch-ftp-button");
 	fetchButton.classList.add("btn-simple");
 	fetchButton.textContent = "Fetch Files";
-	fetchButton.style.marginBottom = "10px";
-	formContainer.appendChild(fetchButton);
+	buttonContainer.appendChild(fetchButton);
+
+	// Bouton pour télécharger les fichiers toolkit (caché par défaut)
+	const downloadButton = document.createElement("a");
+	downloadButton.classList.add("btn-simple");
+	downloadButton.textContent = "Download output files (.zip)";
+	// downloadButton.style.display = "inline-block";
+	// downloadButton.style.padding = "6px 12px";
+	downloadButton.style.backgroundColor = "#555";
+	downloadButton.style.color = "#fff";
+	downloadButton.style.textDecoration = "none";
+	buttonContainer.appendChild(downloadButton);
+
+	formContainer.appendChild(buttonContainer);
 
 	// Liste des fichiers .out trouvés
 	const fileListDiv = document.createElement("div");
@@ -987,6 +1006,26 @@ export function createFTPSection() {
 		// Récupère la valeur brute sans transformation
 		const folder = ftpInput.value.trim();
 
+		// Vérification si c'est un résultat toolkit
+		const toolkitMatch = folder.match(/toolkit_run\/(toolkit_[^/]+)/);
+		const isToolkitResult = !!toolkitMatch;
+		//https://synflow.southgreen.fr/tmp/toolkit_run/toolkit_Q31YnGycMEjD5lXjAAGq
+		// toolkitID est à la fin de l'url. pas toolkit_run
+		const toolkitID = toolkitMatch ? toolkitMatch[1] : null;
+
+		console.log(toolkitMatch, toolkitID);
+
+		if (isToolkitResult && toolkitID) {
+			downloadButton.href = `https://wsp1453.southgreen.fr/download-toolkit/${toolkitID}`;
+			downloadButton.style.display = "inline-block";
+			downloadButton.style.backgroundColor = "#555";
+			downloadButton.style.color = "#fff";
+			downloadButton.style.pointerEvents = "none";
+			downloadButton.title = "Output files not yet available";
+		} else {
+			downloadButton.style.display = "none";
+		}
+
 		if (!folder.startsWith("http")) {
 			fileListDiv.innerHTML =
 				'<span style="color:red;">Must start with http:// or https://</span>';
@@ -1018,6 +1057,13 @@ export function createFTPSection() {
 
 			// Met à jour la matrice avec les fichiers récupérés
 			updateFileMatrix(files);
+
+			// Active le bouton download si des fichiers sont trouvés et que c'est un toolkit
+			if (isToolkitResult && files.length > 0) {
+				downloadButton.style.backgroundColor = "#555";
+				downloadButton.style.pointerEvents = "auto";
+				downloadButton.title = "";
+			}
 
 			if (files.length === 0) {
 				fileListDiv.innerHTML =
