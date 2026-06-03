@@ -6,3 +6,6 @@ data/*
 bank/*
 tmp/*
 volumes
+src/js/._form.js
+src/js/._draw.js
+toolkit/._services.json
