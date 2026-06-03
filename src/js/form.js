@@ -1346,6 +1346,16 @@ export function createToolkitContainer() {
             <p>You can input your email to receive a notification when the analysis is complete. Results will be available for 10 days.</p>
         </div>
 
+        <h5 style="margin-top: 20px;">Computing resources</h5>
+        <div style="margin-top: 10px; padding: 12px; background-color: #f8f9fa; border-radius: 5px; border-left: 4px solid #6c757d;">
+            <p style="margin: 0; font-size: 0.9em; color: #495057;">
+                <i class="fas fa-server" style="color: #6c757d; margin-right: 6px;"></i>
+                Analysis runs on the <a href="https://isdm.umontpellier.fr/infrastructures/" target="_blank" style="color: #495057; text-decoration: underline;"><b>ISDM MESO HPC cluster</b></a>.
+                Execution time depends on current cluster load and job queue.
+                During peak usage, your job may wait in queue before starting.
+            </p>
+        </div>
+
     `;
 
 	const consoleWrapper = document.createElement("div");
