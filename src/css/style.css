@@ -575,3 +575,33 @@
     align-items: center;
     gap: 8px;
 }
+
+/* Tag de processus pour les comparaisons toolkit */
+.process-tag {
+    display: inline-block;
+    padding: 2px 5px;
+    background-color: #e9ecef;
+    color: #495057;
+    font-size: 0.75em;
+    border-radius: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+/* Conteneur empilé : badge au-dessus de la flèche */
+.process-stack {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    vertical-align: bottom;
+    margin: 0 0px;
+}
+
+.process-stack .process-tag {
+    margin: 5px 0 1px 0;
+}
+
+.process-stack .process-arrow {
+    font-size: 1em;
+    line-height: 1;
+}

@@ -75,11 +75,24 @@ export function stopRenderTimer(extra = {}) {
                     deviceMemory: navigator.deviceMemory || null
                 };
             } catch (e) {console.warn('Failed to collect environment info', e); }
+            // Collecte mémoire heap (Chrome/Edge uniquement)
+            let memory = {};
+            try {
+                if (performance.memory) {
+                    memory = {
+                        memoryUsed: performance.memory.usedJSHeapSize,
+                        memoryTotal: performance.memory.totalJSHeapSize,
+                        memoryLimit: performance.memory.jsHeapSizeLimit
+                    };
+                }
+            } catch (e) { console.warn('Failed to collect memory info', e); }
+
             const metric = {
                 ts: Date.now(),
                 durationMs,
                 context: { ...ctx, ...extra},
-                env
+                env,
+                ...memory
             };
 
         // persist metric locally

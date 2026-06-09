@@ -993,6 +993,7 @@ export function createFTPSection() {
 
 	// Sélection ordonnée
 	let ftpSelectedGenomes = [];
+	let comparisonSources = {};
 
 	fetchButton.addEventListener("click", async () => {
 		logActivity("Fetching files from FTP: " + ftpInput.value.trim());
@@ -1001,6 +1002,7 @@ export function createFTPSection() {
 		fileListDiv.style.display = "block";
 
 		ftpSelectedGenomes = [];
+		comparisonSources = {};
 		chainDiv.innerHTML = "";
 
 		// Récupère la valeur brute sans transformation
@@ -1058,6 +1060,21 @@ export function createFTPSection() {
 			// Met à jour la matrice avec les fichiers récupérés
 			updateFileMatrix(files);
 
+			// Récupère le stdout.txt si c'est un résultat toolkit
+			if (isToolkitResult) {
+				try {
+					const logUrl = folder.replace(/\/$/, "") + "/stdout.log";
+					const logResponse = await fetch(logUrl);
+					if (logResponse.ok) {
+						const logText = await logResponse.text();
+						comparisonSources = parseComparisonSources(logText);
+						console.log("Comparison sources:", comparisonSources);
+					}
+				} catch (e) {
+					console.log("No stdout.txt found or parse error", e);
+				}
+			}
+
 			// Active le bouton download si des fichiers sont trouvés et que c'est un toolkit
 			if (isToolkitResult && files.length > 0) {
 				downloadButton.style.backgroundColor = "#555";
@@ -1092,7 +1109,7 @@ export function createFTPSection() {
 				ftpSelectedGenomes = parts;
 				//cache le selecteur de fichiers et affiche la chaîne directement
 				fileListDiv.style.display = "none";
-				updateChainDivFTP(chainDiv, ftpSelectedGenomes);
+				updateChainDivFTP(chainDiv, ftpSelectedGenomes, comparisonSources);
 			} else if (outFiles.length === expectedFileCount) {
 				// Mode all vs all
 				fileListDiv.innerHTML =
@@ -1102,11 +1119,12 @@ export function createFTPSection() {
 					fileListDiv,
 					ftpSelectedGenomes,
 					chainDiv,
+					comparisonSources,
 				);
 			} else {
 				// Mode chaîne
 				ftpSelectedGenomes = genomes;
-				updateChainDivFTP(chainDiv, ftpSelectedGenomes);
+				updateChainDivFTP(chainDiv, ftpSelectedGenomes, comparisonSources);
 			}
 		} catch (error) {
 			const urlParams = new URLSearchParams(window.location.search);
@@ -1128,17 +1146,59 @@ export function createFTPSection() {
 		}
 	});
 
-	// Fonction pour afficher la chaîne sélectionnée
-	function updateChainDivFTP(chainDiv, genomes) {
+	// Parse le stdout.txt pour extraire les sources de comparaison
+	function parseComparisonSources(logText) {
+		const sources = {};
+		const lines = logText.split("\n");
+		let inSection = false;
+		for (const line of lines) {
+			if (line.includes("Comparison sources:")) {
+				inSection = true;
+				continue;
+			}
+			if (inSection) {
+				if (!line.trim() || !line.includes(":")) {
+					break;
+				}
+				const [pair, process] = line.split(":").map((s) => s.trim());
+				if (pair && process) {
+					sources[pair] = process;
+				}
+			}
+		}
+		return sources;
+	}
+
+	// Fonction pour afficher la chaîne sélectionnée avec tags de processus
+	function updateChainDivFTP(chainDiv, genomes, sources = {}) {
 		if (genomes.length > 0) {
-			chainDiv.innerHTML = `<b>Selected chain :</b> <br>${genomes.join(" &rarr; ")}`;
+			let html = "<b>Selected chain :</b> <br>";
+			for (let i = 0; i < genomes.length; i++) {
+				html += genomes[i];
+				if (i < genomes.length - 1) {
+					const pair = `${genomes[i]}_${genomes[i + 1]}`;
+					const process = sources[pair] || "";
+					if (process) {
+						html += ` <span class="process-stack"><span class="process-tag">${process}</span><span class="process-arrow">&rarr;</span></span> `;
+					} else {
+						html += " &rarr; ";
+					}
+				}
+			}
+			chainDiv.innerHTML = html;
 		} else {
 			chainDiv.innerHTML = "";
 		}
 	}
 
 	// Fonction pour afficher la liste des génomes et gérer la sélection
-	function populateGenomeListFTP(genomes, listDiv, selectedGenomes, chainDiv) {
+	function populateGenomeListFTP(
+		genomes,
+		listDiv,
+		selectedGenomes,
+		chainDiv,
+		sources = {},
+	) {
 		listDiv.innerHTML = "";
 		genomes.forEach((genome) => {
 			const genomeDiv = document.createElement("div");
@@ -1162,7 +1222,7 @@ export function createFTPSection() {
 					genomeDiv.style.background = "";
 					genomeDiv.style.color = "";
 				}
-				updateChainDivFTP(chainDiv, selectedGenomes);
+				updateChainDivFTP(chainDiv, selectedGenomes, sources);
 			});
 
 			listDiv.appendChild(genomeDiv);
