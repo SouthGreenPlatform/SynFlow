@@ -541,10 +541,7 @@ export function generateForm(selectedService) {
 			if (fastaInput && fastaInput.files.length > 0) {
 				const validExts = [".fasta", ".fsa", ".fa", ".fna", ".faa"];
 				const invalid = Array.from(fastaInput.files).filter(
-					(f) =>
-						!validExts.some((ext) =>
-							f.name.toLowerCase().endsWith(ext),
-						),
+					(f) => !validExts.some((ext) => f.name.toLowerCase().endsWith(ext)),
 				);
 				if (invalid.length > 0) {
 					messages.push(
@@ -557,10 +554,7 @@ export function generateForm(selectedService) {
 			if (gffInput && gffInput.files.length > 0) {
 				const validExts = [".gff", ".gff3"];
 				const invalid = Array.from(gffInput.files).filter(
-					(f) =>
-						!validExts.some((ext) =>
-							f.name.toLowerCase().endsWith(ext),
-						),
+					(f) => !validExts.some((ext) => f.name.toLowerCase().endsWith(ext)),
 				);
 				if (invalid.length > 0) {
 					messages.push(
@@ -590,14 +584,10 @@ export function generateForm(selectedService) {
 					(name) => !fastaNames.includes(name),
 				);
 				if (unmatchedFasta.length > 0) {
-					messages.push(
-						`FASTA without GFF: ${unmatchedFasta.join(", ")}`,
-					);
+					messages.push(`FASTA without GFF: ${unmatchedFasta.join(", ")}`);
 				}
 				if (unmatchedGff.length > 0) {
-					messages.push(
-						`GFF without FASTA: ${unmatchedGff.join(", ")}`,
-					);
+					messages.push(`GFF without FASTA: ${unmatchedGff.join(", ")}`);
 				}
 			}
 
@@ -607,7 +597,11 @@ export function generateForm(selectedService) {
 					"File validation errors. Please fix the following issues:\n\n" +
 					messages.join("\n\n");
 				if (
-					messages.some((m) => m.includes("FASTA without GFF") || m.includes("GFF without FASTA"))
+					messages.some(
+						(m) =>
+							m.includes("FASTA without GFF") ||
+							m.includes("GFF without FASTA"),
+					)
 				) {
 					fullMsg +=
 						"\n\nEach FASTA file must have a corresponding GFF file with the same base name (case-sensitive).\nExample: refgenome.fasta ↔ refgenome.gff";
@@ -623,13 +617,12 @@ export function generateForm(selectedService) {
 					newErrorDiv.style.border = "1px solid #ffc107";
 					newErrorDiv.style.borderRadius = "4px";
 					newErrorDiv.style.fontSize = "0.9em";
-					newErrorDiv.style.whiteSpace = "pre-line";
 					formContainer.insertBefore(newErrorDiv, submitBtn);
 				}
 				const currentErrorDiv = document.getElementById(
 					"file-validation-error",
 				);
-				currentErrorDiv.textContent = fullMsg;
+				currentErrorDiv.innerHTML = fullMsg.replace(/\n/g, "<br>");
 				currentErrorDiv.style.display = "block";
 				currentErrorDiv.style.color = "red";
 				submitBtn.disabled = true;
@@ -644,10 +637,8 @@ export function generateForm(selectedService) {
 		}
 
 		// Ajouter les event listeners sur les inputs file[]
-		if (fastaInput)
-			fastaInput.addEventListener("change", validateAllFiles);
-		if (gffInput)
-			gffInput.addEventListener("change", validateAllFiles);
+		if (fastaInput) fastaInput.addEventListener("change", validateAllFiles);
+		if (gffInput) gffInput.addEventListener("change", validateAllFiles);
 
 		if (advancedDefinitions) {
 			const advancedText = document.createElement("p");
