@@ -1402,19 +1402,30 @@ export function createToolkitContainer() {
             </p>
             <p>Note: At least 2 fasta genomes are required. All pairwise combinations are processed.</p>
             <p>The <code>GFF3 files</code> is optional but required when any two genomes have different chromosome counts (triggers MCScanX).</p>
-            <p>The <code>Method</code> parameter applies only to the SyRI pipeline (same chromosome count pairs).</p>
+
+            <div style="margin-top: 10px; padding: 12px; background-color: #f8f9fa; border-radius: 5px; border-left: 4px solid #6c757d;">
+            	<p style="margin: 0; font-size: 0.9em; color: #495057;">
+                  <i class="fas fa-info-circle" style="color: #6c757d;"></i>
+                  <b>File naming:</b> When providing GFF3 files, each GFF file must correspond to exactly one FASTA file with the same base name (case-sensitive).
+                  Example: <code>refgenome.fasta</code> must be paired with <code>refgenome.gff</code>.
+              </p>
+            </div>
+
+            <br/><p>The <code>Method</code> parameter applies only to the SyRI pipeline (same chromosome count pairs).</p>
             <p>You can input your email to receive a notification when the analysis is complete. Results will be available for 10 days.</p>
+
+            <div style="margin-top: 10px; padding: 12px; background-color: #f8f9fa; border-radius: 5px; border-left: 4px solid #6c757d;">
+                <p style="margin: 0; font-size: 0.9em; color: #495057;">
+                    <i class="fas fa-server" style="color: #6c757d; margin-right: 6px;"></i>
+                    <b>Computing resources:</b> Analysis runs on the <a href="https://isdm.umontpellier.fr/infrastructures/" target="_blank" style="color: #6c757d; text-decoration: underline;"><b>ISDM MESO HPC cluster</b></a>.
+                    Execution time depends on current cluster load and job queue.
+                    During peak usage, your job may wait in queue before starting.
+                </p>
+            </div>
+
         </div>
 
-        <h5 style="margin-top: 20px;">Computing resources</h5>
-        <div style="margin-top: 10px; padding: 12px; background-color: #f8f9fa; border-radius: 5px; border-left: 4px solid #6c757d;">
-            <p style="margin: 0; font-size: 0.9em; color: #495057;">
-                <i class="fas fa-server" style="color: #6c757d; margin-right: 6px;"></i>
-                Analysis runs on the <a href="https://isdm.umontpellier.fr/infrastructures/" target="_blank" style="color: #495057; text-decoration: underline;"><b>ISDM MESO HPC cluster</b></a>.
-                Execution time depends on current cluster load and job queue.
-                During peak usage, your job may wait in queue before starting.
-            </p>
-        </div>
+
 
     `;
 
