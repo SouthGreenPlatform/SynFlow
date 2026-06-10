@@ -346,6 +346,9 @@ function createFieldElements(field) {
 		input.type = "file";
 		input.name = field.name;
 		input.multiple = true;
+		if (field.accept) {
+			input.accept = field.accept;
+		}
 	} else {
 		input = document.createElement("input");
 		input.type = "text";
@@ -528,49 +531,87 @@ export function generateForm(selectedService) {
 			}
 		});
 
-		// Fonction de validation FASTA/GFF
-		function validateFileCorrespondence() {
+		// Fonction de validation complète (extensions + correspondance FASTA/GFF)
+		function validateAllFiles() {
 			const errorDiv = document.getElementById("file-validation-error");
 			const submitBtn = document.getElementById("submitBtn");
+			const messages = [];
 
-			// Si pas de FASTA ou pas de GFF, pas de validation nécessaire
-			if (
-				!fastaInput ||
-				!gffInput ||
-				fastaInput.files.length === 0 ||
-				gffInput.files.length === 0
-			) {
-				if (errorDiv) errorDiv.style.display = "none";
-				if (submitBtn) submitBtn.disabled = false;
-				return;
+			// Validation extensions FASTA
+			if (fastaInput && fastaInput.files.length > 0) {
+				const validExts = [".fasta", ".fsa", ".fa", ".fna", ".faa"];
+				const invalid = Array.from(fastaInput.files).filter(
+					(f) =>
+						!validExts.some((ext) =>
+							f.name.toLowerCase().endsWith(ext),
+						),
+				);
+				if (invalid.length > 0) {
+					messages.push(
+						`Invalid FASTA extension(s): ${invalid.map((f) => f.name).join(", ")}\nAllowed: ${validExts.join(", ")}`,
+					);
+				}
 			}
 
-			const getBaseName = (filename) => filename.replace(/\.[^/.]+$/, "");
-			const fastaNames = Array.from(fastaInput.files).map((f) =>
-				getBaseName(f.name),
-			);
-			const gffNames = Array.from(gffInput.files).map((f) =>
-				getBaseName(f.name),
-			);
+			// Validation extensions GFF
+			if (gffInput && gffInput.files.length > 0) {
+				const validExts = [".gff", ".gff3"];
+				const invalid = Array.from(gffInput.files).filter(
+					(f) =>
+						!validExts.some((ext) =>
+							f.name.toLowerCase().endsWith(ext),
+						),
+				);
+				if (invalid.length > 0) {
+					messages.push(
+						`Invalid GFF extension(s): ${invalid.map((f) => f.name).join(", ")}\nAllowed: ${validExts.join(", ")}`,
+					);
+				}
+			}
 
-			// Vérification bidirectionnelle (sensible à la casse)
-			const unmatchedFasta = fastaNames.filter(
-				(name) => !gffNames.includes(name),
-			);
-			const unmatchedGff = gffNames.filter(
-				(name) => !fastaNames.includes(name),
-			);
-
-			if (unmatchedFasta.length > 0 || unmatchedGff.length > 0) {
-				let msg =
-					"File name mismatch. Each FASTA file must have a corresponding GFF file with the same base name:\n\n";
+			// Validation correspondance FASTA/GFF (seulement si les deux sont fournis)
+			if (
+				fastaInput &&
+				gffInput &&
+				fastaInput.files.length > 0 &&
+				gffInput.files.length > 0
+			) {
+				const getBaseName = (filename) => filename.replace(/\.[^/.]+$/, "");
+				const fastaNames = Array.from(fastaInput.files).map((f) =>
+					getBaseName(f.name),
+				);
+				const gffNames = Array.from(gffInput.files).map((f) =>
+					getBaseName(f.name),
+				);
+				const unmatchedFasta = fastaNames.filter(
+					(name) => !gffNames.includes(name),
+				);
+				const unmatchedGff = gffNames.filter(
+					(name) => !fastaNames.includes(name),
+				);
 				if (unmatchedFasta.length > 0) {
-					msg += `FASTA without GFF: ${unmatchedFasta.join(", ")}\n`;
+					messages.push(
+						`FASTA without GFF: ${unmatchedFasta.join(", ")}`,
+					);
 				}
 				if (unmatchedGff.length > 0) {
-					msg += `GFF without FASTA: ${unmatchedGff.join(", ")}\n`;
+					messages.push(
+						`GFF without FASTA: ${unmatchedGff.join(", ")}`,
+					);
 				}
-				msg += "\nExample: refgenome.fasta ↔ refgenome.gff";
+			}
+
+			// Affichage résultat
+			if (messages.length > 0) {
+				let fullMsg =
+					"File validation errors. Please fix the following issues:\n\n" +
+					messages.join("\n\n");
+				if (
+					messages.some((m) => m.includes("FASTA without GFF") || m.includes("GFF without FASTA"))
+				) {
+					fullMsg +=
+						"\n\nEach FASTA file must have a corresponding GFF file with the same base name (case-sensitive).\nExample: refgenome.fasta ↔ refgenome.gff";
+				}
 
 				if (!errorDiv) {
 					const newErrorDiv = document.createElement("div");
@@ -588,9 +629,8 @@ export function generateForm(selectedService) {
 				const currentErrorDiv = document.getElementById(
 					"file-validation-error",
 				);
-				currentErrorDiv.textContent = msg;
+				currentErrorDiv.textContent = fullMsg;
 				currentErrorDiv.style.display = "block";
-				//message en rouge
 				currentErrorDiv.style.color = "red";
 				submitBtn.disabled = true;
 				submitBtn.style.opacity = "0.5";
@@ -605,9 +645,9 @@ export function generateForm(selectedService) {
 
 		// Ajouter les event listeners sur les inputs file[]
 		if (fastaInput)
-			fastaInput.addEventListener("change", validateFileCorrespondence);
+			fastaInput.addEventListener("change", validateAllFiles);
 		if (gffInput)
-			gffInput.addEventListener("change", validateFileCorrespondence);
+			gffInput.addEventListener("change", validateAllFiles);
 
 		if (advancedDefinitions) {
 			const advancedText = document.createElement("p");

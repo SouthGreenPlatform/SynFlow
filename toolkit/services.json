@@ -47,6 +47,7 @@
 						"tooltip": "Genomes assemblies, minimum 2 genomes required",
 						"type": "file[]",
 						"flag": "-i",
+						"accept": ".fasta,.fsa,.fa,.fna,.faa",
 						"default": [
 							"/NAS/muse/web/HUBs/coffea/opal/C21.fasta",
 							"/NAS/muse/web/HUBs/coffea/opal/DH.fasta"
@@ -59,6 +60,7 @@
 						"tooltip": "Gene annotation, required only for MCScanX",
 						"type": "file[]",
 						"flag": "-g",
+						"accept": ".gff,.gff3",
 						"required": false
 					},
 					{
