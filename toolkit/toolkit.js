@@ -1,4 +1,4 @@
-import { logActivity } from "../src/js/main.js";
+import { logActivity, showNotification } from "../src/js/main.js";
 
 // Déclarer la variable socket globalement pour qu'elle soit accessible partout dans le script
 let socket = null;
@@ -130,6 +130,7 @@ export function initSocketConnection() {
 	// Gérer les erreurs de connexion
 	socket.on("connect_error", (error) => {
 		// Afficher l'erreur de connexion
+		showNotification('Unable to connect to the analysis server. Please refresh the page.', 'error');
 		console.error("Erreur de connexion à Socket.IO :", error);
 	});
 
@@ -545,7 +546,7 @@ export function generateForm(selectedService) {
 				);
 				if (invalid.length > 0) {
 					messages.push(
-						`Invalid FASTA extension(s): ${invalid.map((f) => f.name).join(", ")}\nAllowed: ${validExts.join(", ")}`,
+						`Invalid FASTA extension(s): ${invalid.map((f) => f.name).join(", ")}<br>Allowed: ${validExts.join(", ")}`,
 					);
 				}
 			}
@@ -558,8 +559,36 @@ export function generateForm(selectedService) {
 				);
 				if (invalid.length > 0) {
 					messages.push(
-						`Invalid GFF extension(s): ${invalid.map((f) => f.name).join(", ")}\nAllowed: ${validExts.join(", ")}`,
+						`Invalid GFF extension(s): ${invalid.map((f) => f.name).join(", ")}<br>Allowed: ${validExts.join(", ")}`,
 					);
+				}
+			}
+
+			// Validation : au moins 2 fichiers FASTA
+			if (fastaInput && fastaInput.files.length > 0 && fastaInput.files.length < 2) {
+				messages.push("Please select at least 2 FASTA files for comparison.");
+			}
+
+			// Validation : taille totale maximale (500 MB)
+			const MAX_TOTAL_SIZE = 500 * 1024 * 1024;
+			let totalSize = 0;
+			if (fastaInput) totalSize += Array.from(fastaInput.files).reduce((sum, f) => sum + f.size, 0);
+			if (gffInput) totalSize += Array.from(gffInput.files).reduce((sum, f) => sum + f.size, 0);
+			if (totalSize > MAX_TOTAL_SIZE) {
+				messages.push(`Total file size exceeds 500 MB limit (${(totalSize / (1024 * 1024)).toFixed(1)} MB).`);
+			}
+
+			// Validation : format FASTA basique (header >)
+			if (fastaInput) {
+				for (const file of fastaInput.files) {
+					const text = file.name.endsWith('.gz') ? '' : file.slice(0, 4096).text();
+					if (text && typeof text.then === 'function') {
+						text.then((content) => {
+							if (!content.trim().startsWith('>')) {
+								showNotification(`${file.name} does not appear to be a valid FASTA file.`, 'warning');
+							}
+						}).catch(() => {});
+					}
 				}
 			}
 
@@ -695,9 +724,17 @@ export function generateForm(selectedService) {
 					(field.type === "file" && field.files.length === 0) ||
 					(field.type !== "file" && !field.value)
 				) {
-					alert(`Please fill the required field: ${field.name}`);
+					showNotification(`Please fill the required field: ${field.name}`, 'warning');
 					return;
 				}
+			}
+
+			// Validation finale avant soumission
+			validateAllFiles();
+			const errorDiv = document.getElementById("file-validation-error");
+			if (errorDiv && errorDiv.style.display !== "none") {
+				showNotification("Please fix the file validation errors before submitting.", 'warning');
+				return;
 			}
 
 			addToConsole("Sending files...");
@@ -777,11 +814,11 @@ function submitForm() {
 		.then((response) => {
 			if (!response.ok) {
 				return response.json().then((data) => {
-					if (data.message) {
-						socket.emit("consoleMessage", `UPLOAD: ${data.message}`);
-					}
+					const errorMsg = data.message || "Upload failed";
+					showNotification(`Upload failed: ${errorMsg}`, 'error');
+					addToConsole(`UPLOAD: ${errorMsg}`);
 					console.error("Cannot upload:", data);
-					throw new Error("Upload failed");
+					throw new Error(errorMsg);
 				});
 			}
 			return response.json();
@@ -789,13 +826,16 @@ function submitForm() {
 		.then((data) => {
 			addToConsole("Files uploaded successfully:");
 			addToConsole(JSON.stringify(data, null, 2));
+			showNotification("Files uploaded successfully. Analysis is starting...", 'success');
 			try {
 				socket.emit("runService", selectedService, serviceData, data);
 			} catch (error) {
+				showNotification("Error running service: " + error.message, 'error');
 				addToConsole("Error running service: " + error.message);
 			}
 		})
 		.catch((error) => {
+			showNotification(`Connection error: ${error.message}`, 'error');
 			addToConsole(`Connection error: ${error.message}`);
 		});
 }

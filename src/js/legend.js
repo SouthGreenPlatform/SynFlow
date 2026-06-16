@@ -1,4 +1,4 @@
-import { logActivity } from "./main.js";
+import { logActivity, showNotification } from "./main.js";
 import { uniqueGenomes, setBandColorMode } from "./process.js";
 import { jbrowseLinks } from "./form.js";
 import { bandeTypeColors, currentBandTypeColors, updateBandColors, drawMiniChromosome } from "./draw.js";
@@ -678,7 +678,7 @@ function configJBrowse() {
         });
 
         if (hasError) {
-            alert("Some URLs are invalid. Please fix them before saving.");
+            showNotification("Some URLs are invalid. Please fix them before saving.", 'error');
             return; // Ne ferme pas la popup
         }
 

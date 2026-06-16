@@ -950,7 +950,7 @@ export function findUniqueGenomes(bandFileNames) {
     }
 
     if (pairs.length === 0) {
-        alert('Error: No valid band files found. Please check your input files.');
+        showNotification('Error: No valid band files found. Please check your input files.', 'error');
         stopRenderTimer();
         return null;
     }
@@ -964,7 +964,7 @@ export function findUniqueGenomes(bandFileNames) {
     }
 
     if (!start) {
-        alert("Error: Unable to find a unique starting genome. Please check your band files.");
+        showNotification("Error: Unable to find a unique starting genome. Please check your band files.", 'error');
         console.log("Adjacency:", Object.fromEntries(adjacency.entries()));
         stopRenderTimer();
         return null;
@@ -984,7 +984,7 @@ export function findUniqueGenomes(bandFileNames) {
     }
 
     if (result.length !== pairs.length + 1) {
-        alert('Error: Unable to reconstruct the full genome chain. Please check your band files.');
+        showNotification('Error: Unable to reconstruct the full genome chain. Please check your band files.', 'error');
         console.log('Expected chain length:', pairs.length + 1, 'Got:', result.length);
         stopRenderTimer();
         return null;
@@ -1003,7 +1003,7 @@ function handleFileUpload(bandFiles, bedFiles, orderedGenomes = null, orderedFil
     const outFiles = bandFileNames.filter(name => name.endsWith('.out'));
     spinner.setStep(`Preparing ${outFiles.length} file${outFiles.length > 1 ? 's' : ''}...`, 20);
     if (outFiles.length === 0) {
-        alert('No valid band files (.out) found. Please upload the correct files.');
+        showNotification('No valid band files (.out) found. Please upload the correct files.', 'error');
         stopRenderTimer();
         return;
     }
@@ -1017,7 +1017,7 @@ function handleFileUpload(bandFiles, bedFiles, orderedGenomes = null, orderedFil
 
     // Vérifier si tous les fichiers de bandes nécessaires sont présents
     if (!uniqueGenomes || uniqueGenomes.length < 2) {
-        alert('Some band files are missing. Please ensure all necessary files are uploaded.');
+        showNotification('Some band files are missing. Please ensure all necessary files are uploaded.', 'error');
         stopRenderTimer();
         return;
     }
@@ -1034,7 +1034,7 @@ function handleFileUpload(bandFiles, bedFiles, orderedGenomes = null, orderedFil
         
     // Vérifier si tous les fichiers de bandes nécessaires sont présents et dans l'ordre
     if (orderedFiles.length !== outFiles.length) {
-        alert('Some band files are missing. Please ensure all necessary files are uploaded.');
+        showNotification('Some band files are missing. Please ensure all necessary files are uploaded.', 'error');
         stopRenderTimer();
         return;
     }
