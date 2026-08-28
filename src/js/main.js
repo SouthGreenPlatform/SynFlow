@@ -30,7 +30,7 @@ export function sendMetric(metric) {
 // Système de notifications toast
 const notifications = [];
 
-export function showNotification(message, type = 'error', duration = 0) {
+export function showNotification(message, type = 'error', duration = 10000) {
     const container = getNotificationContainer();
     const toast = createToastElement(message, type);
     container.appendChild(toast);
