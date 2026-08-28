@@ -1586,53 +1586,63 @@ export function createToolkitContainer() {
 		const pathParts = path.split("/");
 		const toolkitID = pathParts[pathParts.length - 2]; // toolkit_XXX
 
-		// Conteneur pour les boutons d'action
-		const buttonContainer = document.createElement("div");
-		buttonContainer.style.marginTop = "10px";
-		buttonContainer.style.marginLeft = "10px";
-		buttonContainer.style.display = "flex";
-		buttonContainer.style.gap = "10px";
-		buttonContainer.style.flexWrap = "wrap";
-
-		// Bouton "Download output files (.zip)"
-		const downloadButton = document.createElement("a");
-		downloadButton.textContent = "Download output files (.zip)";
-		downloadButton.href = `https://wsp1453.southgreen.fr/download-toolkit/${toolkitID}`;
-		downloadButton.style.display = "inline-block";
-		downloadButton.style.padding = "6px 12px";
-		downloadButton.style.backgroundColor = "#555";
-		downloadButton.style.color = "#fff";
-		downloadButton.style.textDecoration = "none";
-		downloadButton.style.borderRadius = "4px";
-		downloadButton.style.cursor = "pointer";
-		downloadButton.style.border = "none";
-		downloadButton.style.fontFamily = "inherit";
-		downloadButton.style.fontSize = "inherit";
-		downloadButton.setAttribute("download", `${toolkitID}_output.zip`);
-
-		// Bouton "Draw Output"
-		// const loadOutputButton = document.createElement("button");
-		// loadOutputButton.textContent = "Draw Output";
-		// loadOutputButton.style.display = "inline-block";
-
-		const loadOutputButton = document.createElement("a");
-		loadOutputButton.textContent = "Draw output";
-		loadOutputButton.href = synflowURL;
-		loadOutputButton.style.display = "inline-block";
-		loadOutputButton.style.padding = "6px 12px";
-		loadOutputButton.style.backgroundColor = "#555";
-		loadOutputButton.style.color = "#fff";
-		loadOutputButton.style.textDecoration = "none";
-		loadOutputButton.style.borderRadius = "4px";
-		loadOutputButton.style.cursor = "pointer";
-		loadOutputButton.style.border = "none";
-		loadOutputButton.style.fontFamily = "inherit";
-		loadOutputButton.style.fontSize = "inherit";
-
 		const consoleDiv = document.getElementById("console");
-		buttonContainer.appendChild(downloadButton);
-		buttonContainer.appendChild(loadOutputButton);
-		consoleDiv.appendChild(buttonContainer);
+		let buttonContainer = document.getElementById("job-result-actions");
+		let downloadButton;
+		let loadOutputButton;
+
+		if (!buttonContainer) {
+			buttonContainer = document.createElement("div");
+			buttonContainer.id = "job-result-actions";
+			buttonContainer.style.marginTop = "10px";
+			buttonContainer.style.marginLeft = "10px";
+			buttonContainer.style.display = "flex";
+			buttonContainer.style.gap = "10px";
+			buttonContainer.style.flexWrap = "wrap";
+
+			downloadButton = document.createElement("a");
+			downloadButton.textContent = "Download output files (.zip)";
+			downloadButton.style.display = "inline-block";
+			downloadButton.style.padding = "6px 12px";
+			downloadButton.style.backgroundColor = "#555";
+			downloadButton.style.color = "#fff";
+			downloadButton.style.textDecoration = "none";
+			downloadButton.style.borderRadius = "4px";
+			downloadButton.style.cursor = "pointer";
+			downloadButton.style.border = "none";
+			downloadButton.style.fontFamily = "inherit";
+			downloadButton.style.fontSize = "inherit";
+			buttonContainer.appendChild(downloadButton);
+
+			loadOutputButton = document.createElement("a");
+			loadOutputButton.textContent = "Draw output";
+			loadOutputButton.style.display = "inline-block";
+			loadOutputButton.style.padding = "6px 12px";
+			loadOutputButton.style.backgroundColor = "#555";
+			loadOutputButton.style.color = "#fff";
+			loadOutputButton.style.textDecoration = "none";
+			loadOutputButton.style.borderRadius = "4px";
+			loadOutputButton.style.cursor = "pointer";
+			loadOutputButton.style.border = "none";
+			loadOutputButton.style.fontFamily = "inherit";
+			loadOutputButton.style.fontSize = "inherit";
+			buttonContainer.appendChild(loadOutputButton);
+			// Les actions restent hors du flux de logs afin que les messages
+			// successifs de la console ne puissent pas les masquer ou les remplacer.
+			consoleWrapper.appendChild(buttonContainer);
+		} else {
+			downloadButton = buttonContainer.querySelector("[data-job-download]");
+			loadOutputButton = buttonContainer.querySelector("[data-job-draw]");
+			if (buttonContainer.parentElement !== consoleWrapper) {
+				consoleWrapper.appendChild(buttonContainer);
+			}
+		}
+
+		downloadButton.dataset.jobDownload = "true";
+		loadOutputButton.dataset.jobDraw = "true";
+		downloadButton.href = `https://wsp1453.southgreen.fr/download-toolkit/${toolkitID}`;
+		downloadButton.setAttribute("download", `${toolkitID}_output.zip`);
+		loadOutputButton.href = synflowURL;
 
 		//scroll jusqu'en bas de la console
 		consoleDiv.scrollTop = consoleDiv.scrollHeight;
