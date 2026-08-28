@@ -1502,7 +1502,17 @@ export function createToolkitContainer() {
 			jobMsg.style.fontSize = "small";
 			jobMsg.style.fontWeight = "bold";
 			jobMsg.style.boxShadow = "0 2px 6px rgba(0,0,0,0.04)";
-			consoleDiv.prepend(jobMsg);
+			const consoleWrapper = document.getElementById("console-wrapper");
+			if (consoleWrapper && consoleDiv.parentElement === consoleWrapper) {
+				consoleWrapper.insertBefore(jobMsg, consoleDiv);
+			} else {
+				consoleDiv.parentElement?.insertBefore(jobMsg, consoleDiv);
+			}
+		} else {
+			const consoleWrapper = document.getElementById("console-wrapper");
+			if (consoleWrapper && consoleDiv.parentElement === consoleWrapper && jobMsg.nextElementSibling !== consoleDiv) {
+				consoleWrapper.insertBefore(jobMsg, consoleDiv);
+			}
 		}
 
 		const styles = {
@@ -1522,6 +1532,14 @@ export function createToolkitContainer() {
 			? `<button id="copy-link-btn" style="margin-left:10px;padding:4px 10px;border-radius:4px;border:1px solid ${border};background:#fff;cursor:pointer;">Copy Link</button>`
 			: "";
 		jobMsg.innerHTML = `${message}${linkMarkup}${copyMarkup}`;
+		if (status === "starting") {
+			const spinner = document.createElement("span");
+			spinner.id = "job-status-spinner";
+			spinner.style.cssText = "display:inline-block;width:13px;height:13px;margin-right:8px;border:3px solid #9ec5fe;border-top-color:#084298;border-radius:50%;vertical-align:-2px;animation:job-status-spin .8s linear infinite;";
+			const style = document.createElement("style");
+			style.textContent = "@keyframes job-status-spin { to { transform: rotate(360deg); } }";
+			jobMsg.prepend(spinner, style);
+		}
 
 		const copyBtn = jobMsg.querySelector("#copy-link-btn");
 		if (copyBtn) {
@@ -1558,6 +1576,10 @@ export function createToolkitContainer() {
 		}
 
 		updateJobStatus("starting", "Job started. Waiting for result files. Results will be available here for 10 days:");
+	});
+
+	document.addEventListener("JobSubmittedEvent", () => {
+		updateJobStatus("starting", "Submitting analysis. Please wait...");
 	});
 
 	document.addEventListener("JobErrorEvent", (event) => {
@@ -1627,14 +1649,15 @@ export function createToolkitContainer() {
 			loadOutputButton.style.fontFamily = "inherit";
 			loadOutputButton.style.fontSize = "inherit";
 			buttonContainer.appendChild(loadOutputButton);
-			// Les actions restent hors du flux de logs afin que les messages
-			// successifs de la console ne puissent pas les masquer ou les remplacer.
-			consoleWrapper.appendChild(buttonContainer);
+			// Les actions sont regroupées dans l'encart de statut, hors du flux de logs.
+			const jobMsg = document.getElementById("job-status-msg");
+			(jobMsg || consoleWrapper).appendChild(buttonContainer);
 		} else {
 			downloadButton = buttonContainer.querySelector("[data-job-download]");
 			loadOutputButton = buttonContainer.querySelector("[data-job-draw]");
 			if (buttonContainer.parentElement !== consoleWrapper) {
-				consoleWrapper.appendChild(buttonContainer);
+				const jobMsg = document.getElementById("job-status-msg");
+				(jobMsg || consoleWrapper).appendChild(buttonContainer);
 			}
 		}
 

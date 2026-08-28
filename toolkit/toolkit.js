@@ -7,6 +7,40 @@ let servicesData = {}; // Contiendra les services et databases
 let databasesData = {}; // Stocke les databases séparément
 let serviceName = ""; // Nom du service sélectionné
 
+function setJobConsoleLoading(isLoading, message = "Analysis is starting...") {
+	const wrapper = document.getElementById("console-wrapper");
+	if (!wrapper) return;
+	let loading = document.getElementById("job-console-spinner");
+	if (!isLoading) { loading?.remove(); return; }
+	if (!loading) {
+		loading = document.createElement("div");
+		loading.id = "job-console-spinner";
+		loading.style.cssText = "display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px;color:#084298;background:#eaf3ff;border:1px solid #9ec5fe;border-radius:5px;font-weight:bold;";
+		const indicator = document.createElement("span");
+		indicator.style.cssText = "width:16px;height:16px;border:3px solid #9ec5fe;border-top-color:#084298;border-radius:50%;animation:job-console-spin .8s linear infinite;";
+		const text = document.createElement("span");
+		const style = document.createElement("style");
+		style.textContent = "@keyframes job-console-spin { to { transform: rotate(360deg); } }";
+		loading.append(indicator, text, style);
+		wrapper.appendChild(loading);
+	}
+	loading.querySelector("span:nth-child(2)").textContent = message;
+}
+
+function setSubmitButtonLoading(isLoading) {
+	const button = document.getElementById("submitBtn");
+	if (!button) return;
+	button.disabled = isLoading;
+	button.textContent = isLoading ? "Submitting..." : "Submit";
+	button.style.opacity = isLoading ? "0.5" : "1";
+	button.style.cursor = isLoading ? "not-allowed" : "pointer";
+}
+
+function resetJobSubmission() {
+	setJobConsoleLoading(false);
+	setSubmitButtonLoading(false);
+}
+
 /**
  * Fonction pour initier toolkit
  * @param {boolean} generateSelect - Booléen pour déterminer si l'on génère le selecteur de service ou pas
@@ -122,7 +156,7 @@ export function initSocketConnection() {
 	socket.emit("clientInfo", { url: globalThis.location.href });
 
 	// Écouter les messages du serveur
-	socket.on("consoleMessage", function (message) {
+		socket.on("consoleMessage", function (message) {
 		// Ajouter le message à la console
 		addToConsole(`<pre>${message}<pre>`);
 
@@ -130,6 +164,7 @@ export function initSocketConnection() {
 		// les erreurs connues vers l'interface qui affiche l'état du job.
 		const errorMessage = String(message);
 		if (/\b(error|erreur|failed|failure)\b/i.test(errorMessage)) {
+			resetJobSubmission();
 			const event = new CustomEvent("JobErrorEvent", {
 				detail: errorMessage,
 			});
@@ -151,6 +186,7 @@ export function initSocketConnection() {
 	});
 
 	socket.on("outputResult", (data) => {
+		resetJobSubmission();
 		// Ajouter le message à la console
 		console.log(`${data}`);
 		const toolkitID = data.split("/")[7];
@@ -162,6 +198,7 @@ export function initSocketConnection() {
 	});
 
 	socket.on("outputResultOpal", (data) => {
+		resetJobSubmission();
 		// Ajouter le message à la console
 		console.log(`${data}`);
 		//transforme le path en URL
@@ -748,6 +785,9 @@ export function generateForm(selectedService) {
 			}
 
 			addToConsole("Sending files...");
+			setSubmitButtonLoading(true);
+			showNotification("Your analysis has been submitted and is starting.", "info");
+			document.dispatchEvent(new CustomEvent("JobSubmittedEvent"));
 			submitForm();
 			console.log("Bouton cliqué !");
 		};
@@ -826,6 +866,7 @@ function submitForm() {
 				return response.json().then((data) => {
 					const errorMsg = data.message || "Upload failed";
 					showNotification(`Upload failed: ${errorMsg}`, 'error');
+					resetJobSubmission();
 					addToConsole(`UPLOAD: ${errorMsg}`);
 					console.error("Cannot upload:", data);
 					throw new Error(errorMsg);
@@ -846,6 +887,7 @@ function submitForm() {
 		})
 		.catch((error) => {
 			showNotification(`Connection error: ${error.message}`, 'error');
+			resetJobSubmission();
 			addToConsole(`Connection error: ${error.message}`);
 		});
 }
