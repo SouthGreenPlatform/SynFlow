@@ -183,8 +183,29 @@ input[type="range"] {
 }
 
 .stats-panel {
+	display: flex;
+	align-items: center;
+	min-height: 96px;
   padding: 20px;
   margin-bottom: 24px;
+}
+
+.stat-card {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.stat-label {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--muted);
+}
+
+.stat-value {
+	font-size: 30px;
+	line-height: 1;
+	color: var(--accent-strong);
 }
 
 .charts-grid {
