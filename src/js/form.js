@@ -1485,6 +1485,60 @@ export function createToolkitContainer() {
 	toolkit.initToolkit(generateSelect, serviceName);
 
 	//reception du toolkit path pour générer une url
+	const updateJobStatus = (status, message, url = synflowURL) => {
+		const consoleDiv = document.getElementById("console");
+		if (!consoleDiv) return;
+
+		let jobMsg = document.getElementById("job-status-msg");
+		if (!jobMsg) {
+			jobMsg = document.createElement("div");
+			jobMsg.id = "job-status-msg";
+			jobMsg.style.position = "sticky";
+			jobMsg.style.top = "0";
+			jobMsg.style.zIndex = "10";
+			jobMsg.style.padding = "8px";
+			jobMsg.style.marginBottom = "8px";
+			jobMsg.style.borderRadius = "5px";
+			jobMsg.style.fontSize = "small";
+			jobMsg.style.fontWeight = "bold";
+			jobMsg.style.boxShadow = "0 2px 6px rgba(0,0,0,0.04)";
+			consoleDiv.prepend(jobMsg);
+		}
+
+		const styles = {
+			starting: ["#eaf3ff", "#9ec5fe", "#084298"],
+			completed: ["#eaf7ea", "#b2d8b2", "#146c2e"],
+			error: ["#f8d7da", "#f5c6cb", "#721c24"],
+		};
+		const [background, border, color] = styles[status] || styles.error;
+		jobMsg.style.background = background;
+		jobMsg.style.border = `1px solid ${border}`;
+		jobMsg.style.color = color;
+
+		const linkMarkup = url
+			? `<br><a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`
+			: "";
+		const copyMarkup = url && status !== "error"
+			? `<button id="copy-link-btn" style="margin-left:10px;padding:4px 10px;border-radius:4px;border:1px solid ${border};background:#fff;cursor:pointer;">Copy Link</button>`
+			: "";
+		jobMsg.innerHTML = `${message}${linkMarkup}${copyMarkup}`;
+
+		const copyBtn = jobMsg.querySelector("#copy-link-btn");
+		if (copyBtn) {
+			copyBtn.addEventListener("click", (event) => {
+				logActivity("Copying Synflow URL to clipboard");
+				event.preventDefault();
+				navigator.clipboard.writeText(url).then(() => {
+					copyBtn.textContent = "Copied!";
+					setTimeout(() => { copyBtn.textContent = "Copy Link"; }, 1500);
+				}).catch(() => {
+					copyBtn.textContent = "Error";
+					setTimeout(() => { copyBtn.textContent = "Copy Link"; }, 1500);
+				});
+			});
+		}
+	};
+
 	document.addEventListener("ToolkitPathEvent", (event) => {
 		const toolkitPath = event.detail;
 		console.log("Toolkit Path:", toolkitPath);
@@ -1503,61 +1557,18 @@ export function createToolkitContainer() {
 			synflowURL = `${baseURL}/?id=${toolkitID}`;
 		}
 
-		// Créer et déclencher un événement personnalisé
-		event = new CustomEvent("consoleMessage", {
-			detail:
-				"Job is running, result will be available here for 10 days: " +
-				synflowURL,
-		});
-		document.dispatchEvent(event);
+		updateJobStatus("starting", "Job started. Waiting for result files. Results will be available here for 10 days:");
+	});
 
-		const consoleDiv = document.getElementById("console");
-		let jobMsg = document.getElementById("job-status-msg");
-		if (!jobMsg) {
-			jobMsg = document.createElement("div");
-			jobMsg.id = "job-status-msg";
-			jobMsg.style.position = "sticky"; // Fixe en haut de la console
-			jobMsg.style.top = "0";
-			jobMsg.style.zIndex = "10";
-			jobMsg.style.background = "#eaf7ea";
-			jobMsg.style.border = "1px solid #b2d8b2";
-			jobMsg.style.padding = "8px";
-			jobMsg.style.marginBottom = "8px";
-			jobMsg.style.borderRadius = "5px";
-			jobMsg.fontSize = "small";
-			jobMsg.style.fontWeight = "bold";
-			jobMsg.style.boxShadow = "0 2px 6px rgba(0,0,0,0.04)";
-			consoleDiv.prepend(jobMsg);
-		}
-		jobMsg.innerHTML = `Job is running, result will be available here for 10 days: <br>
-                <a href="${synflowURL}" target="_blank">${synflowURL}</a>
-                <button id="copy-link-btn" style="margin-left:10px;padding:4px 10px;border-radius:4px;border:1px solid #b2d8b2;background:#fff;cursor:pointer;">Copy Link</button>`;
-
-		const copyBtn = document.getElementById("copy-link-btn");
-		copyBtn.addEventListener("click", (event) => {
-			logActivity("Copying Synflow URL to clipboard");
-			event.preventDefault();
-			navigator.clipboard
-				.writeText(synflowURL)
-				.then(() => {
-					copyBtn.textContent = "Copied!";
-					setTimeout(() => {
-						copyBtn.textContent = "Copy Link";
-					}, 1500);
-				})
-				.catch(() => {
-					copyBtn.textContent = "Error";
-					setTimeout(() => {
-						copyBtn.textContent = "Copy Link";
-					}, 1500);
-				});
-		});
+	document.addEventListener("JobErrorEvent", (event) => {
+		updateJobStatus("error", `Job failed: ${event.detail}`, null);
 	});
 
 	//reception des resultats de toolkit
 	document.addEventListener("ToolkitResultEvent", (event) => {
 		const data = event.detail;
 		console.log("Data received in other script:", data);
+		updateJobStatus("completed", "Job completed. Results are available here for 10 days:");
 
 		//C'etait pour galaxy, c'est géré dans toolkit maintenant
 		//data to path

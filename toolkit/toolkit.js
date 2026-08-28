@@ -125,6 +125,16 @@ export function initSocketConnection() {
 	socket.on("consoleMessage", function (message) {
 		// Ajouter le message à la console
 		addToConsole(`<pre>${message}<pre>`);
+
+		// Le serveur n'expose pas d'événement d'erreur dédié. On relaie donc
+		// les erreurs connues vers l'interface qui affiche l'état du job.
+		const errorMessage = String(message);
+		if (/\b(error|erreur|failed|failure)\b/i.test(errorMessage)) {
+			const event = new CustomEvent("JobErrorEvent", {
+				detail: errorMessage,
+			});
+			document.dispatchEvent(event);
+		}
 	});
 
 	// Gérer les erreurs de connexion
