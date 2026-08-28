@@ -1075,24 +1075,27 @@ export function createFTPSection() {
 				}
 			}
 
-			// Active le bouton download si des fichiers sont trouvés et que c'est un toolkit
-			if (isToolkitResult && files.length > 0) {
+			const outFiles = Array.from(files).filter((file) => {
+				const fileName = typeof file === "string" ? file : file.name;
+				return fileName.endsWith(".out");
+			});
+
+			// Active le bouton download si des fichiers .out sont trouvés et que c'est un toolkit
+			if (isToolkitResult && outFiles.length > 0) {
 				downloadButton.style.backgroundColor = "#555";
 				downloadButton.style.pointerEvents = "auto";
 				downloadButton.title = "";
 			}
 
-			if (files.length === 0) {
+			if (outFiles.length === 0) {
 				fileListDiv.innerHTML =
-					'<span style="color:red;">No .out files found in this folder.</span>';
+					'<span style="color:red;">No .out files found in this folder.</span>' +
+					(isToolkitResult
+						? '<br><span style="color:#084298;">The job may still be running. Please click "Fetch Files" again later to check for the results.</span>'
+						: "");
 				return;
 			}
 			const genomes = extractAllGenomes(files);
-			const outFiles = Array.from(files).filter((file) => {
-				// Si c'est un objet File, utilise file.name, sinon utilise la chaîne directement
-				const fileName = typeof file === "string" ? file : file.name;
-				return fileName.endsWith(".out");
-			});
 
 			// Mode all vs all ou chaîne
 			const expectedFileCount = genomes.length * (genomes.length - 1);
