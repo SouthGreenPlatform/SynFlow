@@ -39,11 +39,11 @@ function createConsentBanner() {
     banner.innerHTML = `
         <div>
             <h2 id="analytics-consent-title">Help us improve SynFlow</h2>
-            <p>We use Google Analytics to understand how SynFlow is used and improve the service. Analytics cookies are optional.</p>
+            <p>We use cookies to improve your experience and understand how our website is used. You can accept or decline optional cookies.</p>
         </div>
         <div class="analytics-consent-actions">
             <button type="button" data-consent="reject">Reject</button>
-            <button type="button" data-consent="accept">Accept analytics</button>
+            <button type="button" data-consent="accept">Accept</button>
         </div>
     `;
 
