@@ -1,4 +1,68 @@
+// Replace this value with the GA4 Measurement ID for the SynFlow property.
+const GA4_MEASUREMENT_ID = 'G-51SCJBYX22';
+const CONSENT_STORAGE_KEY = 'synflow-analytics-consent';
+
+function hasAnalyticsConsent() {
+    return localStorage.getItem(CONSENT_STORAGE_KEY) === 'granted';
+}
+
+function loadGoogleAnalytics() {
+    if (!GA4_MEASUREMENT_ID || GA4_MEASUREMENT_ID === 'G-XXXXXXXXXX' || window.gtag) {
+        return;
+    }
+
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function gtag() { window.dataLayer.push(arguments); };
+    window.gtag('js', new Date());
+    window.gtag('config', GA4_MEASUREMENT_ID, { send_page_view: true });
+
+    const script = document.createElement('script');
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(GA4_MEASUREMENT_ID)}`;
+    document.head.appendChild(script);
+}
+
+function trackEvent(eventName, parameters = {}) {
+    if (hasAnalyticsConsent() && typeof window.gtag === 'function') {
+        window.gtag('event', eventName, parameters);
+    }
+}
+
+function createConsentBanner() {
+    if (document.getElementById('analytics-consent-banner')) return;
+
+    const banner = document.createElement('aside');
+    banner.id = 'analytics-consent-banner';
+    banner.className = 'analytics-consent-banner';
+    banner.setAttribute('role', 'dialog');
+    banner.setAttribute('aria-labelledby', 'analytics-consent-title');
+    banner.innerHTML = `
+        <div>
+            <h2 id="analytics-consent-title">Help us improve SynFlow</h2>
+            <p>We use Google Analytics to understand how SynFlow is used and improve the service. Analytics cookies are optional.</p>
+        </div>
+        <div class="analytics-consent-actions">
+            <button type="button" data-consent="reject">Reject</button>
+            <button type="button" data-consent="accept">Accept analytics</button>
+        </div>
+    `;
+
+    banner.querySelector('[data-consent="accept"]').addEventListener('click', () => {
+        localStorage.setItem(CONSENT_STORAGE_KEY, 'granted');
+        loadGoogleAnalytics();
+        banner.remove();
+    });
+    banner.querySelector('[data-consent="reject"]').addEventListener('click', () => {
+        localStorage.setItem(CONSENT_STORAGE_KEY, 'denied');
+        banner.remove();
+    });
+    document.body.appendChild(banner);
+}
+
 export function setupAnalytics() {
+    if (hasAnalyticsConsent()) loadGoogleAnalytics();
+    else if (!localStorage.getItem(CONSENT_STORAGE_KEY)) createConsentBanner();
+
     // Initialisation des analytics
     let analyticsData = {
         features: {},
@@ -13,6 +77,7 @@ export function setupAnalytics() {
         }
         analyticsData.features[featureName]++;
         analyticsData.interactions++;
+        trackEvent('feature_used', { feature_name: featureName });
     }
 
     // Création du bouton de feedback
@@ -21,7 +86,7 @@ export function setupAnalytics() {
         feedbackButton.innerHTML = '<i class="fas fa-comment-alt"></i> Feedback';
         feedbackButton.classList.add('feedback-button');
         feedbackButton.onclick = showFeedbackForm;
-        
+
         document.querySelector('#main-container').appendChild(feedbackButton);
     }
 
@@ -36,7 +101,7 @@ export function setupAnalytics() {
                     <div class="rating">
                         <span>Satisfaction :</span>
                         <div class="stars">
-                            ${new Array(5).fill().map((_, i) => 
+                            ${new Array(5).fill().map((_, i) =>
                                 `<i class="far fa-star" data-rating="${i + 1}"></i>`
                             ).join('')}
                         </div>
@@ -54,7 +119,7 @@ export function setupAnalytics() {
 
         // Gestion des événements
         modal.querySelector('.close-feedback').onclick = () => modal.remove();
-        
+
         // Gestion des étoiles
         const stars = modal.querySelectorAll('.stars i');
         stars.forEach(star => {
@@ -77,7 +142,7 @@ export function setupAnalytics() {
             e.preventDefault();
             const rating = modal.querySelectorAll('.fas.fa-star').length;
             const feedback = modal.querySelector('textarea').value;
-            
+
             // Envoyer les données
             submitFeedback({
                 rating,
@@ -112,10 +177,10 @@ export function setupAnalytics() {
 		.map(([feature, count]) => `  * ${feature}: ${count} times`)
 		.join('\n')}
 	`;
-			
+
 			// Créer l'URL mailto
 			const mailtoUrl = `mailto:marilyne.summo@cirad.fr?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-			
+
 			// Ouvrir le client mail par défaut
 			globalThis.location.href = mailtoUrl;
 
