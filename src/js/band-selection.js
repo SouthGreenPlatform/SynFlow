@@ -1,6 +1,6 @@
 import { globalMaxChromosomeLengths, allParsedData, genomeColors, uniqueGenomes } from './process.js';
 import { showInfoPanel, showInfoUpdatedMessage, createSummarySection, createDetailedTable, createTableBadges, initializeTableFiltering, createZoomedSyntenyView } from './info.js';
-import { getLinesInRange, createAnchorsSection, drawMiniChromosome } from './draw.js';
+import { getLinesInRange, createAnchorsSection, drawMiniChromosome, updateChromosomeHeatmapColor } from './draw.js';
 import { logActivity } from './main.js';
 
 // Set pour stocker les bandes sélectionnées
@@ -579,6 +579,7 @@ function applySettingsWithScope(settings, genome, chromBase, scope, chromEl) {
         }
         if ('color' in settings) {
             globalThis.chromDisplaySettings[chromKeyThis].color = settings.color;
+            updateChromosomeHeatmapColor(genome, base, settings.color);
         }
         // apply to this chrom instances
         applyChromosomeDisplaySettings(chromEl, globalThis.chromDisplaySettings[chromKeyThis], genome, base);
@@ -589,6 +590,11 @@ function applySettingsWithScope(settings, genome, chromBase, scope, chromEl) {
         }
         if ('color' in settings) {
             globalThis.genomeDisplaySettings[genome].color = settings.color;
+            document.querySelectorAll(`path.chrom[data-genome="${genome}"]`).forEach(el => {
+                const name = el.dataset.chromName || '';
+                const base = name.split('_ref')[0].split('_query')[0] || name;
+                updateChromosomeHeatmapColor(genome, base, settings.color);
+            });
         }
         // apply to all chromosomes of this genome, respecting overrides
         const elems = document.querySelectorAll(`path.chrom[data-genome="${genome}"]`);
@@ -674,6 +680,10 @@ function applyChromosomeDisplaySettings(chromEl, settings, genome, chromBase) {
         const mode = settings.mode || 'filled';
         const color = settings.color || ((genomeColors?.[genome]) ? genomeColors[genome] : '#000000');
         const gradientId = `gradient-${genome}-${base}`;
+
+        if (Object.prototype.hasOwnProperty.call(settings, 'color')) {
+            updateChromosomeHeatmapColor(genome, base, color);
+        }
 
         // Apply to all matching chromosome path elements (ref and query variants)
     const selector = `path.chrom[data-genome="${genome}"][data-chrom-name^="${base}"]`;

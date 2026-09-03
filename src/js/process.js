@@ -909,6 +909,7 @@ export function calculateAnnotationDensity(data, genomeName, binSize = 20000) {
             const offset = ((bin - minBin) / range) * 100;
             gradient.append('stop')
                 .attr('offset', `${offset}%`)
+                .attr('data-density', density)
                 .attr('stop-color', colorScale(density));
         });
     });

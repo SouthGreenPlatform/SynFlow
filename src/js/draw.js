@@ -805,6 +805,7 @@ function drawSNPDensityHeatmap(
 			gradient
 				.append("stop")
 				.attr("offset", `${(i + 1) * (100 / numBins)}%`)
+				.attr("data-density", density)
 				.attr("stop-color", colorScale(density));
 		});
 
@@ -821,6 +822,27 @@ function drawSNPDensityHeatmap(
 		monChromColor.style("stroke", chromColor);
 		monChromColor.style("fill", `url(#${gradientId})`);
 	}
+}
+
+// Re-colors an existing density gradient while preserving its density values.
+export function updateChromosomeHeatmapColor(genome, chromBase, color) {
+	if (!genome || !chromBase || !color) return;
+	[`gradient-${genome}-${chromBase}`, `grad-${chromBase}`].forEach((gradientId) => {
+		const gradient = d3.select(`#${CSS.escape(gradientId)}`);
+		if (gradient.empty()) return;
+		const stops = gradient.selectAll("stop");
+		const densities = [];
+		stops.each(function () {
+			const value = Number.parseFloat(this.getAttribute("data-density"));
+			if (Number.isFinite(value)) densities.push(value);
+		});
+		const maxDensity = d3.max(densities) || 1;
+		const colorScale = d3.scaleSequential(d3.interpolateRgb("#ffffff", color)).domain([0, maxDensity]);
+		stops.each(function () {
+			const density = Number.parseFloat(this.getAttribute("data-density"));
+			if (Number.isFinite(density)) d3.select(this).attr("stop-color", colorScale(density));
+		});
+	});
 }
 
 export function drawCorrespondenceBands(
