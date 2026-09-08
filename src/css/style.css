@@ -642,6 +642,106 @@
 .analytics-consent-actions button { padding: .5rem .8rem; border: 1px solid #6b7280; border-radius: 5px; cursor: pointer; }
 .analytics-consent-actions [data-consent="accept"] { color: #fff; background: #2563eb; border-color: #2563eb; }
 
+.chrom-appearance-menu {
+	width: 390px;
+	max-width: calc(100vw - 32px);
+	max-height: calc(100vh - 32px);
+	overflow: auto;
+	box-sizing: border-box;
+	overflow-wrap: anywhere;
+}
+
+.chrom-appearance-scope {
+	margin: 8px 0 14px;
+	padding: 10px 12px;
+	border: 1px solid #d8dee6;
+	border-radius: 6px;
+	background: #f5f7fa;
+}
+
+.chrom-appearance-scope legend {
+	font-size: 13px;
+	font-weight: 600;
+	width: auto;
+	float: none;
+	margin: 0;
+}
+
+.chrom-appearance-scope label {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 5px 0;
+	cursor: pointer;
+}
+
+.chrom-appearance-summary {
+	font-size: 12px;
+	color: #59636e;
+	margin-top: 6px;
+}
+
+.chrom-appearance-menu .display-setting-row {
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+.chrom-appearance-menu .display-setting-row > .context-menu-item {
+	flex-basis: auto;
+}
+
+.chrom-appearance-menu .mode-thumb {
+	border: 2px solid transparent;
+	border-radius: 6px;
+	background: #f5f7fa;
+}
+
+.chrom-appearance-menu .mode-thumb[aria-pressed="true"] {
+	border-color: #2563eb;
+	background: #eff6ff;
+}
+
+.chrom-appearance-menu .mode-thumb:focus-visible {
+	outline: 2px solid #2563eb;
+	outline-offset: 2px;
+}
+
+.chrom-appearance-menu .mode-thumb:disabled {
+	opacity: .45;
+	cursor: not-allowed !important;
+}
+
+.display-setting-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 6px;
+}
+
+.display-setting-row > .context-menu-item {
+	flex: 0 0 46px;
+	margin: 0 !important;
+}
+
+.display-setting-row .color-picker-container {
+	margin: 0;
+}
+
+.menu-section-separator {
+	height: 1px;
+	margin: 8px 0;
+	background: #e5e7eb;
+}
+
+@media (max-width: 640px) {
+	.display-setting-row {
+		align-items: flex-start;
+	}
+	.display-setting-row .mode-thumb {
+		padding: 2px;
+	}
+}
+
 @media (max-width: 640px) {
     .analytics-consent-banner { flex-direction: column; align-items: stretch; }
     .analytics-consent-actions { justify-content: flex-end; }

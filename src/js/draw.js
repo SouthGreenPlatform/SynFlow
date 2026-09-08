@@ -330,7 +330,7 @@ export function drawMiniChromosome(genome, svg, options = {}) {
 		} else if (mode === "heatmap") {
 			if (
 				document.getElementById(gradientId) ||
-				document.querySelector(`linearGradient[id="${gradientId}"]`)
+				document.querySelector(`linearGradient[id="${CSS.escape(gradientId)}"]`)
 			) {
 				p.attr("fill", `url(#${gradientId})`).attr("stroke", color);
 			} else {
@@ -361,7 +361,7 @@ export function drawMiniChromosome(genome, svg, options = {}) {
 			} else if (mode === "heatmap") {
 				if (
 					document.getElementById(gradientId) ||
-					document.querySelector(`linearGradient[id="${gradientId}"]`)
+					document.querySelector(`linearGradient[id="${CSS.escape(gradientId)}"]`)
 				) {
 					pathEl.setAttribute("fill", `url(#${gradientId})`);
 					pathEl.setAttribute("stroke", color);
@@ -658,13 +658,13 @@ function drawChromPathNoArm(
 		.html(function (event, d) {
 			return `
                 <strong>Genome:</strong> <span>${genome}</span><br>
-                <strong>Chromosome:</strong> <span>${chromName.split("_ref")[0].split("_query")[0]}</span><br>
+                <strong>Chromosome:</strong> <span>${chromName.replace(/_(ref|query)$/, "")}</span><br>
             `;
 		});
 
 	svg.call(tip);
 
-	const gradientId = `gradient-${genome}-${chromName.split("_ref")[0].split("_query")[0]}`; // Générer un ID de gradient unique
+	const gradientId = `gradient-${genome}-${chromName.replace(/_(ref|query)$/, "")}`; // Générer un ID de gradient unique
 
 	// Déterminer la couleur selon le mode
 	let chromColor;
@@ -678,7 +678,7 @@ function drawChromPathNoArm(
 
 	// Determine initial fill/stroke according to any overrides (per-chrom or per-genome)
 	const chromNameAttr = chromName || "";
-	const chromBase = chromNameAttr.split("_ref")[0].split("_query")[0];
+	const chromBase = chromNameAttr.replace(/_(ref|query)$/, "");
 	const chromKey = `${genome}|${chromBase}`;
 
 	let initFill = null;
@@ -791,7 +791,7 @@ function drawSNPDensityHeatmap(
 		const numBins = chrDensity.length;
 
 		// Créer le gradient linéaire
-		const gradientId = `grad-${chr}`;
+		const gradientId = `gradient-${refGenome}-${chr}`;
 		const gradient = svgGroup
 			.append("defs")
 			.append("linearGradient")
@@ -1469,7 +1469,7 @@ export function updateBandColors() {
 		const genome = chromEl.attr("data-genome");
 		// Determine base color and mode, but allow per-chrom overrides (globalThis.chromDisplaySettings)
 		const chromNameAttr = chromEl.attr("data-chrom-name") || "";
-		const chromBase = chromNameAttr.split("_ref")[0].split("_query")[0];
+		const chromBase = chromNameAttr.replace(/_(ref|query)$/, "");
 		const chromKey = `${genome}|${chromBase}`;
 
 		let override =
@@ -1497,7 +1497,7 @@ export function updateBandColors() {
 			} else if (mode === "heatmap") {
 				if (
 					document.getElementById(gradientId) ||
-					document.querySelector(`linearGradient[id="${gradientId}"]`)
+					document.querySelector(`linearGradient[id="${CSS.escape(gradientId)}"]`)
 				) {
 					chromEl.style("fill", `url(#${gradientId})`);
 				} else {
@@ -1522,7 +1522,7 @@ export function updateBandColors() {
 			} else if (mode === "heatmap") {
 				if (
 					document.getElementById(gradientId) ||
-					document.querySelector(`linearGradient[id="${gradientId}"]`)
+					document.querySelector(`linearGradient[id="${CSS.escape(gradientId)}"]`)
 				) {
 					chromEl.style("fill", `url(#${gradientId})`);
 				} else {
@@ -1542,27 +1542,20 @@ export function updateBandColors() {
 		}
 	});
 
-	// Recolorer les gradients SNP
-	d3.selectAll("linearGradient").each(function () {
-		const gradEl = d3.select(this);
-		const gradId = gradEl.attr("id");
-		// On suppose que l'id contient le numéro du chromosome
-		const match = gradId && gradId.match(/grad-(\d+)/);
-		if (match) {
-			const chromIndex = Number.parseInt(match[1], 10) - 1;
-			let chromColor;
-			if (bandColorMode !== undefined && bandColorMode === "byChrom") {
-				chromColor = generateColor(chromIndex >= 0 ? chromIndex : 0);
-			} else {
-				chromColor = genomeColors[refGenome];
-			}
-			// On pourrait ici modifier les stops du gradient si besoin
-			gradEl.selectAll("stop").attr("stop-color", chromColor);
+	// Re-apply heatmap colors only to known chromosome gradients.
+	d3.selectAll("path.chrom").each(function () {
+		const chromEl = this;
+		const genome = chromEl.getAttribute("data-genome");
+		const chromName = chromEl.getAttribute("data-chrom-name") || "";
+		const chromBase = chromName.replace(/_(ref|query)$/, "");
+		const key = `${genome}|${chromBase}`;
+		const override = globalThis.chromDisplaySettings?.[key];
+		const genomeSetting = globalThis.genomeDisplaySettings?.[genome];
+		const setting = override || genomeSetting;
+		if (setting?.mode === "heatmap") {
+			const color = setting.color || genomeColors?.[genome];
+			updateChromosomeHeatmapColor(genome, chromBase, color);
 		}
-		//applique le gradient aux chromosomes
-		const monChromColor = d3.selectAll("#" + match[1] + "_ref.chrom");
-		monChromColor.style("stroke", chromColor);
-		monChromColor.style("fill", `url(#${gradId})`);
 	});
 
 	// Recolorer les cases du chromcontroler
