@@ -14,9 +14,24 @@ function closeContextMenu() {
         contextMenu = null;
     }
     if (_docClickHandler) {
-        document.removeEventListener('click', _docClickHandler);
+        document.removeEventListener('pointerdown', _docClickHandler);
         _docClickHandler = null;
     }
+}
+
+function positionContextMenuOnRight(menu, x, y) {
+    const gap = 14;
+    const margin = 8;
+    const bounds = menu.getBoundingClientRect();
+    let left = x + gap;
+    let top = y - Math.min(24, bounds.height / 4);
+    if (left + bounds.width > window.innerWidth - margin) {
+        left = x - bounds.width - gap;
+    }
+    left = Math.max(margin, Math.min(left, window.innerWidth - bounds.width - margin));
+    top = Math.max(margin, Math.min(top, window.innerHeight - bounds.height - margin));
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
 }
 
 function getCurrentGenomeMode(genome) {
@@ -43,6 +58,7 @@ export function createContextMenu(x, y, band) {
 
     contextMenu = document.createElement('div');
     contextMenu.className = 'context-menu';
+    contextMenu.classList.add('band-selection-menu');
     contextMenu.style.left = `${x}px`;
     contextMenu.style.top = `${y}px`;
     contextMenu.style.position = 'fixed';  // Ensure fixed positioning for dragging
@@ -102,19 +118,39 @@ export function createContextMenu(x, y, band) {
     // Close (X) button
     const closeBtn = document.createElement('button');
     closeBtn.setAttribute('type', 'button');
+    closeBtn.className = 'context-menu-close';
     closeBtn.setAttribute('aria-label', 'Close');
     closeBtn.innerHTML = '&times;';
-    closeBtn.style.cssText = 'position:absolute; top:2px; right:8px; border:none; background:transparent; font-size:16px; cursor:pointer;';
     closeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         closeContextMenu();
     });
     contextMenu.appendChild(closeBtn);
 
-    // Item de sélection similaire
+    const bandType = band.dataset.type || 'Band';
+    const bandLength = Number.parseInt(band.dataset.length, 10);
+    const formatLength = value => {
+        if (!Number.isFinite(value)) return 'unknown length';
+        if (value >= 1000000) return `${(value / 1000000).toFixed(1)} Mb`;
+        if (value >= 1000) return `${Math.round(value / 1000)} kb`;
+        return `${value} bp`;
+    };
+
+    const heading = document.createElement('div');
+    heading.className = 'context-menu-heading';
+    heading.innerHTML = `<strong>${bandType} band</strong><span>${formatLength(bandLength)}</span>`;
+
+    const bandSummary = document.createElement('div');
+    bandSummary.className = 'band-menu-summary';
+    bandSummary.textContent = `${band.dataset.refGenome || 'Unknown genome'} ${band.dataset.ref || ''} → ${band.dataset.queryGenome || 'Unknown genome'} ${band.dataset.query || ''}`;
+
+    const selectionTitle = document.createElement('div');
+    selectionTitle.className = 'context-menu-section-title';
+    selectionTitle.textContent = 'Selection';
+
     const similarItem = document.createElement('div');
-    similarItem.className = 'context-menu-item';
-    similarItem.innerHTML = '<i class="fas fa-object-group"></i> Slide to select similar bands';
+    similarItem.className = 'band-menu-control-label';
+    similarItem.innerHTML = '<i class="fas fa-object-group"></i> Select similar bands';
 
     // Container pour le slider
     const sliderContainer = document.createElement('div');
@@ -128,44 +164,58 @@ export function createContextMenu(x, y, band) {
     slider.style.width = '100%';
 
     const sliderValue = document.createElement('div');
-    sliderValue.textContent = 'Distance: 100kb';
+    sliderValue.textContent = 'Maximum distance: 100 kb';
+    slider.setAttribute('aria-label', 'Maximum distance for similar bands');
+    slider.setAttribute('aria-valuetext', '100 kb');
+    const selectionStatus = document.createElement('div');
+    selectionStatus.className = 'band-menu-status';
+    const updateSelectionStatus = () => {
+        const count = selectedBands.size;
+        selectionStatus.textContent = `${count} band${count === 1 ? '' : 's'} selected`;
+    };
     slider.oninput = () => {
         const val = Number.parseInt(slider.value);
-        sliderValue.textContent = `Distance: ${val >= 1000000 ? (val/1000000).toFixed(1) + 'Mb' : (val/1000).toFixed(0) + 'kb'}`;
+        const formatted = formatLength(val);
+        sliderValue.textContent = `Maximum distance: ${formatted}`;
+        slider.setAttribute('aria-valuetext', formatted);
         selectSimilarBands(band, val);
+        updateSelectionStatus();
     };
 
     sliderContainer.appendChild(sliderValue);
     sliderContainer.appendChild(slider);
+    sliderContainer.appendChild(selectionStatus);
+    updateSelectionStatus();
 
-    // Color picker
+    const appearanceTitle = document.createElement('div');
+    appearanceTitle.className = 'context-menu-section-title';
+    appearanceTitle.textContent = 'Appearance';
+
     const colorContainer = document.createElement('div');
     colorContainer.className = 'color-picker-container';
     const colorPicker = document.createElement('input');
     colorPicker.type = 'color';
 	//value = couleur actuelle de la bande
 	//<path d=" M2422.94544,100 C2422.94544,155 2082.47711,155 2082.47711,210 L2090.94569,210 C2090.94569,155 2431.10569,155 2431.10569,100 Z " fill="#008000" opacity="1" display="null" class="band band-selected" data-length="816025" data-pos="intra" data-type="TRANS" data-ref-genome="e-glaucum" data-ref="chr04" data-ref-num="4" data-query-num="4" data-query="chr04" data-query-genome="e-ventricosum" data-ref-start="39067289" data-ref-end="39883314" data-query-start="5020456" data-query-end="5867314"></path>
-	colorPicker.value = band.getAttribute('fill');
+    colorPicker.value = /^#[0-9a-f]{6}$/i.test(band.getAttribute('fill') || '') ? band.getAttribute('fill') : '#008000';
+    colorPicker.setAttribute('aria-label', 'Band color');
     colorPicker.onchange = () => {
         colorSelectedBands(colorPicker.value);
     };
 
     const colorLabel = document.createElement('label');
-    colorLabel.textContent = 'Color: ';
+    colorLabel.textContent = 'Band color';
     colorContainer.appendChild(colorLabel);
     colorContainer.appendChild(colorPicker);
 
-    // Bouton de mise à jour des infos
-    const updateInfoBtn = document.createElement('div');
-    updateInfoBtn.style.cursor = 'pointer';
-    updateInfoBtn.className = 'context-menu-item';
-    updateInfoBtn.innerHTML = '<i class="fas fa-sync"></i> Update info panel for selected bands';
-    updateInfoBtn.onmouseover = () => {
-        updateInfoBtn.style.backgroundColor = '#f0f0f0';
-    };
-    updateInfoBtn.onmouseout = () => {
-        updateInfoBtn.style.backgroundColor = '';
-    };
+    const informationTitle = document.createElement('div');
+    informationTitle.className = 'context-menu-section-title';
+    informationTitle.textContent = 'Information';
+
+    const updateInfoBtn = document.createElement('button');
+    updateInfoBtn.type = 'button';
+    updateInfoBtn.className = 'context-menu-item band-menu-action';
+    updateInfoBtn.innerHTML = '<i class="fas fa-sync"></i> Update information panel';
     updateInfoBtn.onclick = () => {
         logActivity('Updated info panel for selected bands');
         updateInfoForSelectedBands();
@@ -173,16 +223,10 @@ export function createContextMenu(x, y, band) {
     };
 
     //ajoute un goto vers la section block details et la section synteny view
-    const gotoBlockDetails = document.createElement('div');
-    gotoBlockDetails.style.cursor = 'pointer';
-    gotoBlockDetails.className = 'context-menu-item';
-    gotoBlockDetails.innerHTML = '<i class="fas fa-info-circle"></i> Go to Block Details';
-    gotoBlockDetails.onmouseover = () => {
-        gotoBlockDetails.style.backgroundColor = '#f0f0f0';
-    };
-    gotoBlockDetails.onmouseout = () => {
-        gotoBlockDetails.style.backgroundColor = '';
-    };
+    const gotoBlockDetails = document.createElement('button');
+    gotoBlockDetails.type = 'button';
+    gotoBlockDetails.className = 'context-menu-item band-menu-action';
+    gotoBlockDetails.innerHTML = '<i class="fas fa-info-circle"></i> View block details';
     gotoBlockDetails.onclick = () => {
         logActivity('Navigated to Block Details from context menu');
         // Try to scroll to the Info panel and activate the "details" tab.
@@ -198,16 +242,10 @@ export function createContextMenu(x, y, band) {
         closeContextMenu();
     };
 
-    const gotoSyntenyView = document.createElement('div');
-    gotoSyntenyView.style.cursor = 'pointer';
-    gotoSyntenyView.className = 'context-menu-item';
-    gotoSyntenyView.innerHTML = '<i class="fas fa-project-diagram"></i> Go to Synteny View';
-    gotoSyntenyView.onmouseover = () => {
-        gotoSyntenyView.style.backgroundColor = '#f0f0f0';
-    };
-    gotoSyntenyView.onmouseout = () => {
-        gotoSyntenyView.style.backgroundColor = '';
-    };
+    const gotoSyntenyView = document.createElement('button');
+    gotoSyntenyView.type = 'button';
+    gotoSyntenyView.className = 'context-menu-item band-menu-action';
+    gotoSyntenyView.innerHTML = '<i class="fas fa-project-diagram"></i> View synteny';
     gotoSyntenyView.onclick = () => {
         logActivity('Navigated to Synteny View from context menu');
         // Scroll to the Info panel and activate the "anchors" (synteny) tab if available.
@@ -223,17 +261,23 @@ export function createContextMenu(x, y, band) {
     };
 
     // Assemblage du menu
+    contextMenu.appendChild(heading);
+    contextMenu.appendChild(bandSummary);
+    contextMenu.appendChild(appearanceTitle);
+    contextMenu.appendChild(colorContainer);
+    contextMenu.appendChild(selectionTitle);
     contextMenu.appendChild(similarItem);
     contextMenu.appendChild(sliderContainer);
     const separator = document.createElement('div');
     separator.className = 'context-menu-separator';
     contextMenu.appendChild(separator);
-    contextMenu.appendChild(colorContainer);
+    contextMenu.appendChild(informationTitle);
     contextMenu.appendChild(updateInfoBtn);
     contextMenu.appendChild(gotoBlockDetails);
     contextMenu.appendChild(gotoSyntenyView);
 
     document.body.appendChild(contextMenu);
+    positionContextMenuOnRight(contextMenu, x, y);
 
     // Prevent clicks inside the menu from closing it by stopping propagation
     contextMenu.addEventListener('click', (e) => e.stopPropagation());
@@ -246,7 +290,7 @@ export function createContextMenu(x, y, band) {
             closeContextMenu();
         }
     };
-    document.addEventListener('click', _docClickHandler);
+    document.addEventListener('pointerdown', _docClickHandler);
 }
 
 // Créer et afficher le menu contextuel pour un chromosome
@@ -321,9 +365,7 @@ export function createChromContextMenu(x, y, chromEl) {
 
 	// Ajouter le titre
 	const title = document.createElement('div');
-	title.className = 'context-menu-item';
-	title.style.marginBottom = '8px';
-	title.style.marginRight = '24px'; // espace pour le bouton close
+	title.className = 'context-menu-heading';
 	title.textContent = `${genome} - ${chromBase}`;
 	contextMenu.appendChild(title);
 
@@ -334,9 +376,9 @@ export function createChromContextMenu(x, y, chromEl) {
     // Close (X) button
     const closeBtn = document.createElement('button');
     closeBtn.setAttribute('type', 'button');
+    closeBtn.className = 'context-menu-close';
     closeBtn.setAttribute('aria-label', 'Close');
     closeBtn.innerHTML = '&times;';
-    closeBtn.style.cssText = 'position:absolute; top:2px; right:8px; border:none; background:transparent; font-size:16px; cursor:pointer;';
     closeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         closeContextMenu();
@@ -600,9 +642,7 @@ export function createChromContextMenu(x, y, chromEl) {
     refreshControls();
 
     document.body.appendChild(contextMenu);
-    const menuBounds = contextMenu.getBoundingClientRect();
-    contextMenu.style.left = `${Math.max(8, Math.min(x, window.innerWidth - menuBounds.width - 8))}px`;
-    contextMenu.style.top = `${Math.max(8, Math.min(y, window.innerHeight - menuBounds.height - 8))}px`;
+    positionContextMenuOnRight(contextMenu, x, y);
 
     // stop propagation from menu itself
     contextMenu.addEventListener('click', (e) => e.stopPropagation());
@@ -615,7 +655,7 @@ export function createChromContextMenu(x, y, chromEl) {
             closeContextMenu();
         }
     };
-    document.addEventListener('click', _docClickHandler);
+    document.addEventListener('pointerdown', _docClickHandler);
 }
 
 // Apply settings according to scope
