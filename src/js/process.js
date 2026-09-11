@@ -16,6 +16,8 @@ let orderedFileObjects = []; // Défini globalement
 let previousChromosomePositions = null;
 export let globalMaxChromosomeLengths = {};
 let currentFile; // Défini globalement
+// Etat persistant de visibilité, indépendant du DOM du contrôleur.
+const chromosomeVisibility = new Map();
 const CHUNK_SIZE = 20000; // Nombre de lignes à traiter à la fois
 let numGenomes; //nombre de génomes à traiter
 export let scale = 100000; // diviseur pour la taille des chromosomes
@@ -144,6 +146,7 @@ function resetGlobals() {
     currentFile = null;
     numGenomes = null;
     allParsedData = [];
+    chromosomeVisibility.clear();
     resetDrawGlobals(); // Réinitialiser currentYOffset
 
     // Clear any per-chrom or per-genome display overrides stored on window to avoid leaking between sessions
@@ -478,8 +481,8 @@ function updateChromosomesOrder(newOrder, targetGenome = null) {
     refGenome = uniqueGenomes[0];
     queryGenome = uniqueGenomes[1];
 
-    // Relancer le traitement depuis le début
-    readFileInChunks(currentFile, true);
+    // Les données sont déjà en mémoire : repositionner sans reparsing.
+    redrawFromParsedData();
 }
 
 //Fonction d'animation du swap des chromosomes
@@ -531,6 +534,35 @@ function animateSwap(container) {
             });
         }, 300);
     });
+}
+
+// Repositionnement rapide : les fichiers ont déjà été parsés, il est donc
+// inutile de les relire après une modification de l'ordre des chromosomes.
+function redrawFromParsedData() {
+    if (!allParsedData.length) return;
+
+    resetDrawGlobals();
+    d3.select('#zoomGroup').selectAll('*:not(defs)').remove();
+    isFirstDraw = true;
+
+    allParsedData.forEach((parsedSet, index) => {
+        refGenome = parsedSet.refGenome;
+        queryGenome = parsedSet.queryGenome;
+        const chromPositions = drawChromosomes(
+            genomeData,
+            globalMaxChromosomeLengths,
+            refGenome,
+            queryGenome,
+            index === 0,
+            scale,
+        );
+        drawCorrespondenceBands(parsedSet.data, chromPositions, index === 0, scale);
+    });
+
+    isFirstDraw = false;
+    updateChromControler();
+    updateBandsVisibility();
+    try { spinner.stop(); } catch (e) { console.warn('Failed to stop spinner after fast redraw', e); }
 }
 
 
@@ -629,7 +661,7 @@ function updateChromControler() {
             queryGenome = uniqueGenomes[1];
             globalMaxChromosomeLengths = calculateGlobalMaxChromosomeLengths(genomeData);
             scale = calculateScale(globalMaxChromosomeLengths);
-            readFileInChunks(currentFile, true);
+            redrawFromParsedData();
         });
 
         headerRow.appendChild(col);
@@ -662,6 +694,11 @@ function updateChromControler() {
             chromCell.dataset.genome = genome;
             chromCell.dataset.position = i;
             chromCell.dataset.visible = 'true';
+            const visibilityKey = `${genome}|${chrom ? chrom.name : `empty-${i}`}`;
+            const isVisible = chromosomeVisibility.get(visibilityKey) !== false;
+            chromCell.dataset.visible = String(isVisible);
+            chromCell.setAttribute('aria-pressed', String(isVisible));
+            chromCell.classList.add('chromosome-cell');
             chromCell.textContent = chrom ? chrom.name : '-';
             chromCell.dataset.id = chrom ? `${genome}-${chrom.name}` : `empty-${i}`;
             const positionCells = positionCellsMap.get(i) || [];
@@ -672,7 +709,10 @@ function updateChromControler() {
             chromCell.addEventListener('click', (e) => {
                 if (e.target === chromCell) { // Vérifier que le clic est sur la cellule
                     const isVisible = chromCell.dataset.visible === 'true';
-                    chromCell.dataset.visible = !isVisible;
+                    const nextVisible = !isVisible;
+                    chromCell.dataset.visible = String(nextVisible);
+                    chromCell.setAttribute('aria-pressed', String(nextVisible));
+                    chromosomeVisibility.set(`${genome}|${chrom ? chrom.name : `empty-${i}`}`, nextVisible);
                     
                     logActivity(`${isVisible ? 'Hide' : 'Show'} chromosome ${chrom ? chrom.name : '-'} of genome ${genome}`);
 
@@ -748,7 +788,7 @@ function updateChromControler() {
                             queryGenome = uniqueGenomes[1];
                             globalMaxChromosomeLengths = calculateGlobalMaxChromosomeLengths(genomeData);
                             scale = calculateScale(globalMaxChromosomeLengths);
-                            readFileInChunks(currentFile, true);
+                            redrawFromParsedData();
                         }
                     }
                 } catch {

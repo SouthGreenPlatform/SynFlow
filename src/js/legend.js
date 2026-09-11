@@ -902,13 +902,13 @@ export function updateBandsVisibility() {
         .map(icon => icon.getAttribute('data-type'));
         
     // Chromosomes visibles - utiliser les chromCells
-    const chromCells = document.querySelectorAll('[data-genome][data-position]');
-    const visibleChromosomes = Array.from(chromCells)
-        .filter(cell => cell.dataset.visible === 'true')
-        .map(cell => ({
-            genome: cell.dataset.genome,
-            position: cell.dataset.position
-        }));
+    const chromCells = document.querySelectorAll('#chrom-controler [data-genome][data-position]');
+    const visibleChromosomes = new Set();
+    chromCells.forEach(cell => {
+        if (cell.dataset.visible === 'true') {
+            visibleChromosomes.add(`${cell.dataset.genome}|${cell.dataset.position}`);
+        }
+    });
 
     // Définir les dépendances des types
     const typeDependencies = {
@@ -925,9 +925,7 @@ export function updateBandsVisibility() {
         const chromGenome = chrom.attr('data-genome');
         const chromNum = chrom.attr('data-chrom-num');
         
-        const isVisible = visibleChromosomes.some(vc => 
-            vc.genome === chromGenome && vc.position === chromNum
-        );
+        const isVisible = visibleChromosomes.has(`${chromGenome}|${chromNum}`);
         chrom.attr('display', isVisible ? null : 'none');
     });
 
@@ -943,11 +941,8 @@ export function updateBandsVisibility() {
         const bandLength = parseInt(band.attr('data-length'));
 
         // Vérifier si les deux chromosomes sont visibles
-        const isVisibleChrom = visibleChromosomes.some(vc => 
-            vc.genome === bandRefGenome && vc.position === bandRefNum
-        ) && visibleChromosomes.some(vc => 
-            vc.genome === bandQueryGenome && vc.position === bandQueryNum
-        );
+        const isVisibleChrom = visibleChromosomes.has(`${bandRefGenome}|${bandRefNum}`) &&
+            visibleChromosomes.has(`${bandQueryGenome}|${bandQueryNum}`);
 
         const isVisibleBandType = selectedTypes.some(type => type === bandType) || 
             (typeDependencies[bandType] && 
@@ -970,9 +965,7 @@ export function updateBandsVisibility() {
         const chromGenome = title.attr('data-genome');
         const chromNum = title.attr('data-chrom-num');
         
-        const isVisible = visibleChromosomes.some(vc => 
-            vc.genome === chromGenome && vc.position === chromNum
-        );
+        const isVisible = visibleChromosomes.has(`${chromGenome}|${chromNum}`);
         title.attr('display', isVisible ? null : 'none');
     });
 }
