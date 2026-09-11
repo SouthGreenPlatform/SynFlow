@@ -1,3 +1,4 @@
+import { insertAtBoundary, bindLayoutDrag } from './chromosome-order.js';
 import { drawChromosomes, drawStackedChromosomes, drawCorrespondenceBands, resetDrawGlobals, drawMiniChromosome, zoom } from './draw.js';
 import { generateBandTypeFilters, createSlider, createLengthChart, updateBandsVisibility, showControlPanel, invalidateBandVisibilityIndex } from './legend.js';
 import { Spinner } from './spin.js';
@@ -487,8 +488,8 @@ function updateChromosomesOrder(newOrder, targetGenome = null) {
 }
 
 //Fonction d'animation du swap des chromosomes
-function animateSwap(container) {
-    logActivity('Animating chromosome swap');
+function animateReorder(container, emptyIds = new Map()) {
+    logActivity('Animating chromosome insertion');
     // Sauvegarder les positions initiales (utilise le nom du chromosome comme clé stable)
     const oldCells = Array.from(container.querySelectorAll('[draggable="true"]'));
     const positions = new Map();
@@ -502,6 +503,11 @@ function animateSwap(container) {
 
     // Redraw
     updateChromControler();
+
+    container.querySelectorAll('[data-genome]').forEach(cell => {
+        const key = JSON.stringify([cell.dataset.genome, Number(cell.dataset.position)]);
+        if (emptyIds.has(key)) cell.dataset.id = emptyIds.get(key);
+    });
 
     // Récupérer les nouvelles cellules après redraw
     const newCells = Array.from(container.querySelectorAll('[draggable="true"]'));
@@ -575,7 +581,7 @@ function redrawFromParsedData({ rebuildController = true } = {}) {
 ////////////////////////////////////////
 // rempli la div chrom-controler
 // Variable globale pour suivre le drag en cours
-let currentDrag = null;
+
 function updateChromControler() {
     const chromControlerDiv = document.getElementById('chrom-controler');
     const scrollLeft = chromControlerDiv.scrollLeft;
@@ -590,7 +596,7 @@ function updateChromControler() {
     grid.style.display = 'grid';
     grid.style.gridTemplateColumns = `repeat(${maxChromCount + 1}, 1fr)`;
     grid.style.gap = '8px';
-    const positionCellsMap = new Map();
+
 
     // --- EN-TÊTES ---
     const headerRow = document.createElement('div');
@@ -608,66 +614,7 @@ function updateChromControler() {
         col.style.cursor = 'grab';
         col.setAttribute('draggable', 'true');
         col.dataset.position = i;
-        positionCellsMap.set(i, [col]);
 
-        //drag and drop colonne
-        col.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('col-drag', i);
-            col.classList.add('dragging');
-            const positionCells = positionCellsMap.get(i) || [];
-            positionCells.forEach(cell => cell.classList.add('drag-col'));
-        });
-
-        col.addEventListener('dragend', () => {
-            col.classList.remove('dragging');
-            const positionCells = positionCellsMap.get(i) || [];
-            positionCells.forEach(cell => cell.classList.remove('drag-col'));
-        });
-
-        col.addEventListener('dragover', (e) => {
-            if (e.dataTransfer.types.includes('col-drag')) {
-                e.preventDefault();
-                col.classList.add('drop-target');
-            }
-        });
-
-        col.addEventListener('dragleave', () => {
-            col.classList.remove('drop-target');
-        });
-
-        col.addEventListener('drop', (e) => {
-            logActivity('Chromosome controller : swapping columns ' + e.dataTransfer.getData('col-drag') + ' and ' + i);
-            e.preventDefault();
-            col.classList.remove('drop-target');
-            const dragCells = document.querySelectorAll('.drag-col');
-            dragCells.forEach(cell => {
-                cell.classList.remove('drag-col');
-            });
-
-            const fromPos = Number.parseInt(e.dataTransfer.getData('col-drag'));
-            const toPos = i;
-            if (fromPos === toPos) return;
-
-            for (const genome in genomeData) {
-                const temp = genomeData[genome][fromPos];
-                genomeData[genome][fromPos] = genomeData[genome][toPos];
-                genomeData[genome][toPos] = temp;
-            }
-            const chromControlerDiv = document.getElementById('chrom-controler');
-            animateSwap(chromControlerDiv);
-            // Lance le spinner
-            const target = document.getElementById('spinner');
-            spinner.spin(target); 
-            // Redraw complet
-            resetDrawGlobals();
-            d3.select('#zoomGroup').selectAll('*:not(defs)').remove();
-            currentFile = orderedFileObjects[0];
-            refGenome = uniqueGenomes[0];
-            queryGenome = uniqueGenomes[1];
-            globalMaxChromosomeLengths = calculateGlobalMaxChromosomeLengths(genomeData);
-            scale = calculateScale(globalMaxChromosomeLengths);
-            redrawFromParsedData({ rebuildController: false });
-        });
 
         headerRow.appendChild(col);
     }
@@ -705,12 +652,10 @@ function updateChromControler() {
             chromCell.setAttribute('aria-pressed', String(isVisible));
             chromCell.classList.add('chromosome-cell');
             chromCell.textContent = chrom ? chrom.name : '-';
-            chromCell.dataset.id = chrom ? `${genome}-${chrom.name}` : `empty-${i}`;
+            chromCell.dataset.id = chrom ? `${genome}-${chrom.name}` : JSON.stringify([genome, "empty", i]);
             chromCell.style.opacity = isVisible ? '1' : '0.5';
             chromCell.style.backgroundColor = isVisible ? 'white' : '#f5f5f5';
-            const positionCells = positionCellsMap.get(i) || [];
-            positionCells.push(chromCell);
-            positionCellsMap.set(i, positionCells);
+
 
             //click pour show/hide
             chromCell.addEventListener('click', (e) => {
@@ -737,81 +682,35 @@ function updateChromControler() {
                 }
             });
 
-            chromCell.addEventListener('dragstart', (e) => {
-                currentDrag = { genome, pos: i };
-                e.dataTransfer.setData('chrom-drag', JSON.stringify(currentDrag));
-                chromCell.classList.add('dragging');
-            });
-
-            chromCell.addEventListener('dragenter', (e) => {
-                if (e.dataTransfer.types.includes('chrom-drag') && currentDrag?.genome === genome) {
-                    chromCell.classList.add('drop-target');
-                }
-            });
-
-            chromCell.addEventListener('dragover', (e) => {
-                if (e.dataTransfer.types.includes('chrom-drag')) {
-                    e.preventDefault();
-                }
-            });
-
-            chromCell.addEventListener('dragleave', () => chromCell.classList.remove('drop-target'));
-
-            // Dans le dragend event (juste le nettoyage)
-            chromCell.addEventListener('dragend', () => {
-                chromCell.classList.remove('dragging', 'drop-target');
-                currentDrag = null;
-            });
-
-            // Dans le drop event (faire le swap et le redraw)
-            chromCell.addEventListener('drop', (e) => {
-                logActivity('Chromosome controller : swapping column numbers ' + currentDrag?.pos + ' and ' + i + ' for genome ' + genome);
-                e.preventDefault();
-                chromCell.classList.remove('drop-target');
-
-                try {
-                    const dragData = JSON.parse(e.dataTransfer.getData('chrom-drag'));
-                    if (dragData.genome === genome) {
-                        const fromPos = Number.parseInt(dragData.pos, 10);
-                        const toPos = Number.parseInt(chromCell.dataset.position, 10);
-
-                        if (!Number.isNaN(fromPos) && !Number.isNaN(toPos) && fromPos !== toPos) {
-                            // Swap dans genomeData
-                            const temp = genomeData[genome][fromPos];
-                            genomeData[genome][fromPos] = genomeData[genome][toPos];
-                            genomeData[genome][toPos] = temp;
-                            
-                            // Anime le changement
-                            const chromControlerDiv = document.getElementById('chrom-controler');
-                            animateSwap(chromControlerDiv);
-
-                            // Lance le spinner
-                            const target = document.getElementById('spinner');
-                            spinner.spin(target); 
-                            
-                            // Redraw complet
-                            resetDrawGlobals();
-                            d3.select('#zoomGroup').selectAll('*:not(defs)').remove();
-                            currentFile = orderedFileObjects[0];
-                            refGenome = uniqueGenomes[0];
-                            queryGenome = uniqueGenomes[1];
-                            globalMaxChromosomeLengths = calculateGlobalMaxChromosomeLengths(genomeData);
-                            scale = calculateScale(globalMaxChromosomeLengths);
-                            redrawFromParsedData({ rebuildController: false });
-                        }
-                    }
-                } catch {
-                    // Ignore les erreurs
-                }
-                currentDrag = null;
-            });
-
             row.appendChild(chromCell);
         }
         grid.appendChild(row);
     });
 
     chromControlerDiv.appendChild(grid);
+    bindLayoutDrag(chromControlerDiv, grid, ({ genome, source, boundary }) => {
+        const order = Array.from({ length: maxChromCount }, (_, index) => index + 1);
+        const reordered = insertAtBoundary(order, source, boundary);
+        if (reordered === order) return;
+        const affectedGenomes = genome === undefined ? genomes : [genome];
+        // Keep the animation identity of empty slots as they move too.
+        const emptyIds = new Map();
+        affectedGenomes.forEach(name => {
+            const previous = genomeData[name];
+            grid.querySelectorAll('[data-genome]').forEach(cell => {
+                if (cell.dataset.genome === name && !previous[cell.dataset.position]) {
+                    emptyIds.set(JSON.stringify([name, reordered.indexOf(Number(cell.dataset.position)) + 1]), cell.dataset.id);
+                }
+            });
+            genomeData[name] = Object.fromEntries(reordered.map((position, index) => [index + 1, previous[position]]));
+        });
+        logActivity('Chromosome controller: inserting position ' + (source + 1) + ' at boundary ' + boundary);
+        animateReorder(chromControlerDiv, emptyIds);
+        spinner.spin(document.getElementById('spinner'));
+        globalMaxChromosomeLengths = calculateGlobalMaxChromosomeLengths(genomeData);
+        scale = calculateScale(globalMaxChromosomeLengths);
+        redrawFromParsedData({ rebuildController: false });
+    });
     chromControlerDiv.scrollLeft = scrollLeft;
 }
 

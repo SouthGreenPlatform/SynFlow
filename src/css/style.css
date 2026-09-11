@@ -229,6 +229,32 @@
 }
 
 /* drag and drop chromosome controler */
+#chrom-controler {
+    position: relative;
+}
+
+#chrom-controler .chrom-insertion-marker {
+    position: absolute;
+    width: 3px;
+    background: #0288d1;
+    transform: translateX(-50%);
+    pointer-events: none;
+    z-index: 20;
+}
+
+#chrom-controler .chrom-insertion-marker::before,
+#chrom-controler .chrom-insertion-marker::after {
+    content: '';
+    position: absolute;
+    width: 9px;
+    height: 3px;
+    left: -3px;
+    background: #0288d1;
+}
+
+#chrom-controler .chrom-insertion-marker::before { top: 0; }
+#chrom-controler .chrom-insertion-marker::after { bottom: 0; }
+
 #chrom-controler div[draggable="true"] {
 	transition:
 		background 0.2s,

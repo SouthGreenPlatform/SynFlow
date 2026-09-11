@@ -74,7 +74,7 @@ driverObj = driver({
 		},
 
 		{ element: '#control-panel-content', popover: { title: 'Control Panel', description: 'Use the control panel to customize your visualization options.', side: "left", align: 'start' }},
-		{ element: '#chrom-control-content', popover: { title: 'Chromosome layout', description: 'Here you can reorder chromosomes by switching their positions. You can also click on chromosome to hide them in the visualization area.', side: "top", align: 'start' }},
+		{ element: '#chrom-control-content', popover: { title: 'Chromosome layout', description: 'Drag a chromosome within its row, or a column header onto another header. Drop on the left or right half to insert before or after: the blue line marks the destination. Empty cells can also be moved. Click a chromosome to hide or show it.', side: "top", align: 'start' }},
 		{ element: '#viz', popover: { title: 'Visualization Area', description: 'This area displays the visualization results. You can click on a chromosome or a band to open contextual menus for more options.', side: "top", align: 'start' }},
 		{ element: '#info-panel', popover: { title: 'Info Section', description: 'Info panel provides additional details and synteny view for the selected band.', side: "top", align: 'start' }},
 		{ popover: { title: 'Thank You', description: 'Now feel free to explore SynFlow on your own!' } }
