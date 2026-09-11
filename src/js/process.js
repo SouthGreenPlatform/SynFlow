@@ -1,5 +1,5 @@
 import { drawChromosomes, drawStackedChromosomes, drawCorrespondenceBands, resetDrawGlobals, drawMiniChromosome, zoom } from './draw.js';
-import { generateBandTypeFilters, createSlider, createLengthChart, updateBandsVisibility, showControlPanel } from './legend.js';
+import { generateBandTypeFilters, createSlider, createLengthChart, updateBandsVisibility, showControlPanel, invalidateBandVisibilityIndex } from './legend.js';
 import { Spinner } from './spin.js';
 import { fileOrderMode, fileUploadMode, hideForm, setSelectedGenomes } from './form.js';
 import { logActivity, sendMetric } from './main.js';
@@ -147,6 +147,7 @@ function resetGlobals() {
     numGenomes = null;
     allParsedData = [];
     chromosomeVisibility.clear();
+    invalidateBandVisibilityIndex();
     resetDrawGlobals(); // Réinitialiser currentYOffset
 
     // Clear any per-chrom or per-genome display overrides stored on window to avoid leaking between sessions
@@ -542,6 +543,7 @@ function redrawFromParsedData() {
     if (!allParsedData.length) return;
 
     resetDrawGlobals();
+    invalidateBandVisibilityIndex();
     d3.select('#zoomGroup').selectAll('*:not(defs)').remove();
     isFirstDraw = true;
 
@@ -724,7 +726,9 @@ function updateChromControler() {
                         chromCell.style.backgroundColor = 'white';
                     }
                     
-                    updateBandsVisibility();
+                    updateBandsVisibility({
+                        changedChromosome: { genome, position: i }
+                    });
                 }
             });
 

@@ -3,6 +3,28 @@ import { uniqueGenomes, setBandColorMode } from "./process.js";
 import { jbrowseLinks } from "./form.js";
 import { bandeTypeColors, currentBandTypeColors, updateBandColors, drawMiniChromosome } from "./draw.js";
 
+// Index paresseux des bandes par chromosome. Les éléments SVG sont indexés
+// après le rendu et l'index est invalidé avant chaque reconstruction.
+const bandVisibilityIndex = new Map();
+
+export function invalidateBandVisibilityIndex() {
+    bandVisibilityIndex.clear();
+}
+
+function getBandVisibilityIndex() {
+    if (bandVisibilityIndex.size > 0) return bandVisibilityIndex;
+
+    document.querySelectorAll('#zoomGroup path.band').forEach(path => {
+        const refKey = `${path.dataset.refGenome}|${path.dataset.refNum}`;
+        const queryKey = `${path.dataset.queryGenome}|${path.dataset.queryNum}`;
+        for (const key of new Set([refKey, queryKey])) {
+            if (!bandVisibilityIndex.has(key)) bandVisibilityIndex.set(key, new Set());
+            bandVisibilityIndex.get(key).add(path);
+        }
+    });
+    return bandVisibilityIndex;
+}
+
 //Fonction pour les contrôles et paramètres
 export function createControlPanel() {
     const controlPanel = document.createElement('div');
@@ -891,7 +913,7 @@ export function generateBandTypeFilters() {
 }
 
 
-export function updateBandsVisibility() {
+export function updateBandsVisibility(options = {}) {
     const showIntra = !document.getElementById('intrachromosomal-filter').classList.contains('fa-eye-slash');
     const showInter = !document.getElementById('interchromosomal-filter').classList.contains('fa-eye-slash');
 
@@ -929,9 +951,19 @@ export function updateBandsVisibility() {
         chrom.attr('display', isVisible ? null : 'none');
     });
 
+    // Une action ciblée ne visite que les bandes liées au chromosome changé.
+    // Les filtres globaux conservent le parcours complet.
+    let bandsToUpdate;
+    if (options.changedChromosome) {
+        const { genome, position } = options.changedChromosome;
+        bandsToUpdate = getBandVisibilityIndex().get(`${genome}|${position}`) || new Set();
+    } else {
+        bandsToUpdate = document.querySelectorAll('#zoomGroup path.band');
+    }
+
     // Mise à jour de la visibilité des bandes
-    d3.selectAll('path.band').each(function() {
-        const band = d3.select(this);
+    bandsToUpdate.forEach(function(path) {
+        const band = d3.select(path);
         const bandPosType = band.attr('data-pos');
         const bandType = band.attr('data-type');
         const bandRefGenome = band.attr('data-ref-genome');
