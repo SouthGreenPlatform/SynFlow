@@ -539,7 +539,7 @@ function animateSwap(container) {
 
 // Repositionnement rapide : les fichiers ont déjà été parsés, il est donc
 // inutile de les relire après une modification de l'ordre des chromosomes.
-function redrawFromParsedData() {
+function redrawFromParsedData({ rebuildController = true } = {}) {
     if (!allParsedData.length) return;
 
     resetDrawGlobals();
@@ -562,7 +562,9 @@ function redrawFromParsedData() {
     });
 
     isFirstDraw = false;
-    updateChromControler();
+    if (rebuildController) {
+        updateChromControler();
+    }
     updateBandsVisibility();
     try { spinner.stop(); } catch (e) { console.warn('Failed to stop spinner after fast redraw', e); }
 }
@@ -576,6 +578,7 @@ function redrawFromParsedData() {
 let currentDrag = null;
 function updateChromControler() {
     const chromControlerDiv = document.getElementById('chrom-controler');
+    const scrollLeft = chromControlerDiv.scrollLeft;
     chromControlerDiv.innerHTML = '';
     chromControlerDiv.style.overflowX = 'auto';
 
@@ -663,7 +666,7 @@ function updateChromControler() {
             queryGenome = uniqueGenomes[1];
             globalMaxChromosomeLengths = calculateGlobalMaxChromosomeLengths(genomeData);
             scale = calculateScale(globalMaxChromosomeLengths);
-            redrawFromParsedData();
+            redrawFromParsedData({ rebuildController: false });
         });
 
         headerRow.appendChild(col);
@@ -703,6 +706,8 @@ function updateChromControler() {
             chromCell.classList.add('chromosome-cell');
             chromCell.textContent = chrom ? chrom.name : '-';
             chromCell.dataset.id = chrom ? `${genome}-${chrom.name}` : `empty-${i}`;
+            chromCell.style.opacity = isVisible ? '1' : '0.5';
+            chromCell.style.backgroundColor = isVisible ? 'white' : '#f5f5f5';
             const positionCells = positionCellsMap.get(i) || [];
             positionCells.push(chromCell);
             positionCellsMap.set(i, positionCells);
@@ -792,7 +797,7 @@ function updateChromControler() {
                             queryGenome = uniqueGenomes[1];
                             globalMaxChromosomeLengths = calculateGlobalMaxChromosomeLengths(genomeData);
                             scale = calculateScale(globalMaxChromosomeLengths);
-                            redrawFromParsedData();
+                            redrawFromParsedData({ rebuildController: false });
                         }
                     }
                 } catch {
@@ -807,6 +812,7 @@ function updateChromControler() {
     });
 
     chromControlerDiv.appendChild(grid);
+    chromControlerDiv.scrollLeft = scrollLeft;
 }
 
 
