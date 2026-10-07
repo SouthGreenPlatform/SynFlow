@@ -418,6 +418,7 @@ app.use((error, req, res, next) => {
 });
 
 const localWorkflowWorkingPath = '/var/www/html/synflow/data/comparisons';
+const localWorkflowOutputPath = '/data/comparisons';
 
 function buildLocalWorkflowInvocation(uploadedFiles, params, uploadId) {
     if (typeof uploadId !== 'string' || !/^\d+-\d+$/.test(uploadId)) {
@@ -551,7 +552,7 @@ function runLocalWorkflow(socket, formData) {
             return;
         }
 
-        const outputDir = path.join(localWorkflowWorkingPath, toolkitID);
+        const outputDir = path.join(localWorkflowOutputPath, toolkitID);
         fs.readdir(outputDir, (error, files) => {
             if (error) {
                 emitLocalWorkflowError(socket, error);
