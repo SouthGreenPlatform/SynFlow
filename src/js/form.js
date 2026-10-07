@@ -1005,54 +1005,50 @@ export function createFTPSection() {
 		comparisonSources = {};
 		chainDiv.innerHTML = "";
 
-		// Récupère la valeur brute sans transformation
 		const folder = ftpInput.value.trim();
-
-		// Vérification si c'est un résultat toolkit
-		const toolkitMatch = folder.match(/toolkit_run\/(toolkit_[^/]+)/);
-		const isToolkitResult = !!toolkitMatch;
-		//https://synflow.southgreen.fr/tmp/toolkit_run/toolkit_Q31YnGycMEjD5lXjAAGq
-		// toolkitID est à la fin de l'url. pas toolkit_run
-		const toolkitID = toolkitMatch ? toolkitMatch[1] : null;
-
-		console.log(toolkitMatch, toolkitID);
-
-		if (isToolkitResult && toolkitID) {
-			downloadButton.href = `https://wsp1453.southgreen.fr/download-toolkit/${toolkitID}`;
-			downloadButton.style.display = "inline-block";
-			downloadButton.style.backgroundColor = "#555";
-			downloadButton.style.color = "#fff";
-			downloadButton.style.pointerEvents = "none";
-			downloadButton.title = "Output files not yet available";
-		} else {
-			downloadButton.style.display = "none";
-		}
-
-		if (!folder.startsWith("http")) {
+		// Parse the folder URL and recognize only same-origin result directories.
+		let folderURL;
+		try {
+			folderURL = new URL(folder);
+		} catch {
 			fileListDiv.innerHTML =
-				'<span style="color:red;">Must start with http:// or https://</span>';
+				'<span style="color:red;">Please enter a valid HTTP(S) folder URL.</span>';
 			return;
 		}
-
-		// Bloque les data: et javascript:
-		if (folder.includes("data:") || folder.includes("javascript:")) {
+		if (!["http:", "https:"].includes(folderURL.protocol)) {
 			fileListDiv.innerHTML =
 				'<span style="color:red;">Invalid URL scheme</span>';
 			return;
 		}
 
-		if (!folder) {
+		const toolkitMatch = folderURL.origin === globalThis.location.origin
+			? folderURL.pathname.match(/^\/data\/comparisons\/([A-Za-z0-9_-]+)\/?$/)
+			: null;
+		const toolkitID = toolkitMatch ? toolkitMatch[1] : null;
+		const isToolkitResult = !!toolkitID;
+		const openedFromToolkitResult = new URLSearchParams(globalThis.location.search).has("id");
+		if (openedFromToolkitResult && (!isToolkitResult || folderURL.origin !== globalThis.location.origin)) {
 			fileListDiv.innerHTML =
-				'<span style="color:red;">Please enter a valid FTP folder URL.</span>';
+				'<span style="color:red;">Result folders must use this page origin and a valid toolkit ID.</span>';
 			return;
 		}
 
-		// Vérification que le port est bien présent
-		if (folder.includes("localhost") && !folder.includes(":8080")) {
-			fileListDiv.innerHTML =
-				'<span style="color:red;">Port 8080 is missing from the URL.</span>';
-			return;
+		if (isToolkitResult) {
+			downloadButton.href = new URL(
+				`/download-toolkit/${encodeURIComponent(toolkitID)}`,
+				globalThis.location.origin,
+			).toString();
+			downloadButton.style.display = "none";
+			downloadButton.style.backgroundColor = "#555";
+			downloadButton.style.color = "#fff";
+			downloadButton.style.pointerEvents = "none";
+			downloadButton.title = "Output files not yet available";
+		} else {
+			downloadButton.removeAttribute("href");
+			downloadButton.style.display = "none";
+			downloadButton.style.pointerEvents = "none";
 		}
+
 
 		try {
 			const files = await fetchRemoteAllFileList(folder);
@@ -1063,7 +1059,7 @@ export function createFTPSection() {
 			// Récupère le stdout.txt si c'est un résultat toolkit
 			if (isToolkitResult) {
 				try {
-					const logUrl = folder.replace(/\/$/, "") + "/stdout.log";
+					const logUrl = folder.replace(/\/$/, "") + "/stdout.txt";
 					const logResponse = await fetch(logUrl);
 					if (logResponse.ok) {
 						const logText = await logResponse.text();
@@ -1082,6 +1078,7 @@ export function createFTPSection() {
 
 			// Active le bouton download si des fichiers .out sont trouvés et que c'est un toolkit
 			if (isToolkitResult && outFiles.length > 0) {
+				downloadButton.style.display = "inline-block";
 				downloadButton.style.backgroundColor = "#555";
 				downloadButton.style.pointerEvents = "auto";
 				downloadButton.title = "";
@@ -1415,14 +1412,12 @@ export function createToolkitContainer() {
             </div>
 
             <br/><p>The <code>Method</code> parameter applies only to the SyRI pipeline (same chromosome count pairs).</p>
-            <p>You can input your email to receive a notification when the analysis is complete. Results will be available for 10 days.</p>
+            <p>Results are produced inside the SynFlow container and remain available in its mounted comparisons volume.</p>
 
             <div style="margin-top: 10px; padding: 12px; background-color: #f8f9fa; border-radius: 5px; border-left: 4px solid #6c757d;">
                 <p style="margin: 0; font-size: 0.9em; color: #495057;">
                     <i class="fas fa-server" style="color: #6c757d; margin-right: 6px;"></i>
-                    <b>Computing resources:</b> Analysis runs on the <a href="https://isdm.umontpellier.fr/infrastructures/" target="_blank" style="color: #6c757d; text-decoration: underline;"><b>ISDM MESO HPC cluster</b></a>.
-                    Execution time depends on current cluster load and job queue.
-                    During peak usage, your job may wait in queue before starting.
+                    <b>Computing resources:</b> The local Snakemake workflow uses <code>SNAKEMAKE_CORES</code> configured for the container.
                 </p>
             </div>
 
@@ -1561,22 +1556,18 @@ export function createToolkitContainer() {
 	};
 
 	document.addEventListener("ToolkitPathEvent", (event) => {
-		const toolkitPath = event.detail;
-		console.log("Toolkit Path:", toolkitPath);
-
-		//exemple de path = /opt/projects/gemo.southgreen.fr/prod/tmp/toolkit_run/toolkit_D_kHW7cvKUZrzrn-AAAP/ref_querry.out
-		const toolkitID = toolkitPath.split("/")[7];
-
-		//genère une URL synflow pour acceder aux resultats
-		const baseURL = globalThis.location.origin;
-
-		if (globalThis.location.pathname.startsWith("/synflow")) {
-			// Sur la dev, il faut ajouter /synflow
-			synflowURL = `${baseURL}/synflow/?id=${toolkitID}`;
-		} else {
-			// Sur la prod, pas besoin
-			synflowURL = `${baseURL}/?id=${toolkitID}`;
+		const toolkitID = String(event.detail);
+		if (!/^[A-Za-z0-9_-]+$/.test(toolkitID)) {
+			updateJobStatus("error", "Job failed: Invalid toolkit ID", null);
+			return;
 		}
+		console.log("Toolkit ID:", toolkitID);
+
+		const encodedToolkitID = encodeURIComponent(toolkitID);
+		const baseURL = globalThis.location.origin;
+		synflowURL = globalThis.location.pathname.startsWith("/synflow")
+			? `${baseURL}/synflow/?id=${encodedToolkitID}`
+			: `${baseURL}/?id=${encodedToolkitID}`;
 
 		updateJobStatus("starting", "Job started. Waiting for result files. Results will be available here for 10 days:");
 	});
@@ -1591,25 +1582,19 @@ export function createToolkitContainer() {
 
 	//reception des resultats de toolkit
 	document.addEventListener("ToolkitResultEvent", (event) => {
-		const data = event.detail;
-		console.log("Data received in other script:", data);
+		const toolkitID = String(event.detail);
+		if (!/^[A-Za-z0-9_-]+$/.test(toolkitID)) {
+			updateJobStatus("error", "Job failed: Invalid toolkit ID", null);
+			return;
+		}
+		console.log("Toolkit ID received:", toolkitID);
+
+		const encodedToolkitID = encodeURIComponent(toolkitID);
+		const baseURL = globalThis.location.origin;
+		synflowURL = globalThis.location.pathname.startsWith("/synflow")
+			? `${baseURL}/synflow/?id=${encodedToolkitID}`
+			: `${baseURL}/?id=${encodedToolkitID}`;
 		updateJobStatus("completed", "Job completed. Results are available here for 10 days:");
-
-		//C'etait pour galaxy, c'est géré dans toolkit maintenant
-		//data to path
-		// data type = /opt/projects/gemo.southgreen.fr/prod/tmp/toolkit_run/toolkit_AmC0Yl-V3-bZ4f9OAAFq/ref_querry.txt
-		//path type = https://gemo.southgreen.fr/tmp/toolkit_run/toolkit_AmC0Yl-V3-bZ4f9OAAFq/ref_querry.txt
-		// const toolkitID = data.split('/')[7];
-		// const fileName = data.split('/')[8];
-		// const path = `https://gemo.southgreen.fr/tmp/toolkit_run/${toolkitID}/${fileName}`;
-		// console.log(path);
-
-		const path = data;
-
-		// Extraction du toolkitID depuis le path
-		// Format attendu : https://.../toolkit_run/toolkit_XXX/filename.out
-		const pathParts = path.split("/");
-		const toolkitID = pathParts[pathParts.length - 2]; // toolkit_XXX
 
 		const consoleDiv = document.getElementById("console");
 		let buttonContainer = document.getElementById("job-result-actions");
@@ -1666,7 +1651,10 @@ export function createToolkitContainer() {
 
 		downloadButton.dataset.jobDownload = "true";
 		loadOutputButton.dataset.jobDraw = "true";
-		downloadButton.href = `https://wsp1453.southgreen.fr/download-toolkit/${toolkitID}`;
+		downloadButton.href = new URL(
+			"/download-toolkit/" + encodeURIComponent(toolkitID),
+			globalThis.location.origin,
+		).toString();
 		downloadButton.setAttribute("download", `${toolkitID}_output.zip`);
 		loadOutputButton.href = synflowURL;
 

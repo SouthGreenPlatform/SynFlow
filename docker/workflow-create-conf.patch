@@ -1,0 +1,56 @@
+diff --git a/create_conf.py b/create_conf.py
+--- a/create_conf.py
++++ b/create_conf.py
+@@ -19,11 +19,13 @@
+     description="Create config file and execute Snakemake workflow", 
+     formatter_class=argparse.ArgumentDefaultsHelpFormatter
+ )
+-parser.add_argument("-i","--input", help="fasta file",action="append") 
+-parser.add_argument("-g","--gff", help="gff3 file (optional, must match fasta prefix)", action="append")
++parser.add_argument("-i","--input", help="fasta file",action="append", nargs="+")
++parser.add_argument("-g","--gff", help="gff3 file (optional, must match fasta prefix)", action="append", nargs="+")
+ parser.add_argument("-m", "--method", help="Alignment method", choices=["nucmer", "minimap2"], default="nucmer")
+ parser.add_argument("-u", "--uuid", help="Unique ID", default=".")
+ args = parser.parse_args()
++args.input = [file for group in (args.input or []) for file in group]
++args.gff = [file for group in (args.gff or []) for file in group]
+ 
+ 
+ input_dir=os.path.abspath(os.path.join("/data/input", args.uuid))
+@@ -44,6 +46,18 @@
+     print(msg, end=end, flush=True)
+     stdout_f.write(msg + ("" if end is None else end))
+     stdout_f.flush()
++
++def read_snakemake_cores():
++    raw_value = os.environ.get("SNAKEMAKE_CORES", "4")
++    try:
++        cores = int(raw_value)
++    except (TypeError, ValueError):
++        cores = 0
++    if not re.fullmatch(r"\d+", raw_value) or cores <= 0:
++        print_and_log("Error: SNAKEMAKE_CORES must be a positive integer")
++        sys.exit(2)
++    print_and_log(f"Using {cores} Snakemake core(s)")
++    return cores
+ 
+ def clean_genome_name(name):
+     """Clean genome name to avoid issues with Snakemake wildcards"""
+@@ -183,6 +197,8 @@
+     return process.returncode
+ 
+ 
++snakemake_cores = read_snakemake_cores()
++
+ # Validate and process input files
+ print("Processing input files...")
+ genomes_data = validate_file_pairs(args.input, args.gff)
+@@ -245,7 +261,7 @@
+ 
+ cmd = [
+     "snakemake", 
+-    "--cores", "4",
++    "--cores", str(snakemake_cores),
+     "--snakefile", "/app/workflow/Snakefile",  
+     "--configfile", config_path,
+     "--printshellcmds",

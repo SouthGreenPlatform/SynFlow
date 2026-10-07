@@ -19,7 +19,7 @@ docker pull ghcr.io/southgreenplatform/synflow:latest
 
 ```bash
 
-docker run -d --name synflow -p 8080:80 -p 3031:3031  -e SNAKEMAKE_CORES=4  ghcr.io/southgreenplatform/synflow:latest
+docker run -d --name synflow -p 8080:80 -e SNAKEMAKE_CORES=4 ghcr.io/southgreenplatform/synflow:latest
 
 ```
 Then open your browser and navigate to:
@@ -28,7 +28,7 @@ Then open your browser and navigate to:
 http://localhost:8080
 ```
 
-**Using your own data**
+Nginx is the public façade: it serves the interface and relays uploads, downloads, and Socket.IO traffic to the internal Node.js service. Port `3031` is not published. Set `SNAKEMAKE_CORES` to choose the number of local Snakemake cores.
 
 If you want to modify the list shown in the Existing file section, you can create a JSON configuration file as illustrated in the example:
 ```json
@@ -39,7 +39,7 @@ If you want to modify the list shown in the Existing file section, you can creat
 ```
 In the Docker command, you need to add a CONFIG_FILE_PATH environment variable using the -e option and mount the new volume using the -v option.
 ```bash
-docker run -d --name synflow  -p 8080:80 -p 3031:3031  -v  $(pwd)/config.json:/data/config.json -e CONFIG_FILE_PATH=/data/config.json  -e SNAKEMAKE_CORES=4  ghcr.io/southgreenplatform/synflow:latest
+docker run -d --name synflow -p 8080:80 -v  $(pwd)/config.json:/data/config.json -e CONFIG_FILE_PATH=/data/config.json -e SNAKEMAKE_CORES=4 ghcr.io/southgreenplatform/synflow:latest
 ```
 
 **Support**

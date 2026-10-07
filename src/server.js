@@ -4,7 +4,7 @@ const https = require('https');
 const path = require('path');
 const express = require('express');
 const { Server } = require('socket.io');
-const { execFile } = require('child_process');
+const { execFile, spawn } = require('child_process');
 const archiver = require('archiver');
 
 const app = express();
@@ -36,6 +36,9 @@ app.use(function (req, res, next) {
 // Endpoint pour télécharger les fichiers de sortie du toolkit en ZIP
 app.get('/download-toolkit/:toolkitID', (req, res) => {
     const toolkitID = req.params.toolkitID;
+    if (!/^[A-Za-z0-9_-]+$/.test(toolkitID)) {
+        return res.status(400).send('Invalid toolkit ID');
+    }
     const toolkitWorkingPath = '/var/www/html/synflow/data/comparisons/';
     const dir = path.join(toolkitWorkingPath, toolkitID);
     
@@ -361,7 +364,8 @@ app.post('/upload', assignUploadId, upload.any(), (req, res) => {
     res.json({
         message: 'Fichiers et paramètres envoyés avec succès',
         files: uploadedFiles,
-        params: params
+        params: params,
+        uploadId: req.uploadId
     });
 });
 
@@ -413,6 +417,155 @@ app.use((error, req, res, next) => {
     });
 });
 
+const localWorkflowWorkingPath = '/var/www/html/synflow/data/comparisons';
+
+function buildLocalWorkflowInvocation(uploadedFiles, params, uploadId) {
+    if (typeof uploadId !== 'string' || !/^\d+-\d+$/.test(uploadId)) {
+        throw new Error('Invalid upload ID');
+    }
+
+    if (!Array.isArray(uploadedFiles)) {
+        throw new Error('Invalid uploaded files');
+    }
+
+    const unsupportedFile = uploadedFiles.find(file => !['inputs', 'gff'].includes(file?.fieldname));
+    if (unsupportedFile) {
+        throw new Error(`Invalid uploaded file field: ${unsupportedFile.fieldname}`);
+    }
+
+    const validateUploadedPath = (file, fieldname) => {
+        if (!file || file.fieldname !== fieldname || !isSafePath(file.path)) {
+            throw new Error(`Invalid ${fieldname} file path`);
+        }
+
+        const filePath = path.resolve(file.path);
+        const fileName = path.basename(filePath);
+        if (
+            path.dirname(filePath) !== localWorkflowWorkingPath ||
+            !fileName.startsWith(`${uploadId}_`) ||
+            !fs.existsSync(filePath) ||
+            !fs.statSync(filePath).isFile()
+        ) {
+            throw new Error(`Invalid ${fieldname} file path`);
+        }
+
+        return filePath;
+    };
+
+    const fastaFiles = uploadedFiles
+        .filter(file => file.fieldname === 'inputs')
+        .map(file => validateUploadedPath(file, 'inputs'));
+    if (fastaFiles.length < 2) {
+        throw new Error('At least two FASTA files are required');
+    }
+
+    const gffFiles = uploadedFiles
+        .filter(file => file.fieldname === 'gff')
+        .map(file => {
+            const filePath = validateUploadedPath(file, 'gff');
+            if (!/\.(?:gff|gff3)$/i.test(filePath)) {
+                throw new Error('Invalid gff file path');
+            }
+            return filePath;
+        });
+
+    const workflow = params?.workflow;
+    if (!['nucmer', 'minimap2'].includes(workflow)) {
+        throw new Error('Invalid workflow');
+    }
+
+    const toolkitID = `toolkit_${uploadId}`;
+    const args = [
+        '/app/workflow/create_conf.py',
+        '-i',
+        ...fastaFiles,
+    ];
+    if (gffFiles.length > 0) {
+        args.push('-g', ...gffFiles);
+    }
+    args.push('-m', workflow, '-u', toolkitID);
+
+    return {
+        toolkitID,
+        binary: '/opt/conda/envs/synflow/bin/python',
+        args,
+    };
+}
+
+function emitLocalWorkflowError(socket, error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Error: ${message}`);
+    socket.emit('consoleMessage', `Error: ${message}`);
+}
+
+function runLocalWorkflow(socket, formData) {
+    let invocation;
+    try {
+        invocation = buildLocalWorkflowInvocation(
+            formData?.files,
+            formData?.params,
+            formData?.uploadId,
+        );
+    } catch (error) {
+        emitLocalWorkflowError(socket, error);
+        return;
+    }
+
+    const { toolkitID, binary, args } = invocation;
+    socket.emit('toolkitPath', toolkitID);
+
+    const env = {
+        ...process.env,
+        PATH: `/opt/conda/envs/synflow/bin:${process.env.PATH || ''}`,
+    };
+
+    let child;
+    try {
+        child = spawn(binary, args, {
+            cwd: '/app/workflow',
+            env,
+        });
+    } catch (error) {
+        emitLocalWorkflowError(socket, error);
+        return;
+    }
+
+    let terminalError = false;
+    const relayOutput = (chunk) => {
+        process.stdout.write(chunk);
+        socket.emit('consoleMessage', chunk.toString());
+    };
+    child.stdout.on('data', relayOutput);
+    child.stderr.on('data', relayOutput);
+    child.once('error', (error) => {
+        terminalError = true;
+        emitLocalWorkflowError(socket, error);
+    });
+    child.once('close', (code, signal) => {
+        if (terminalError) return;
+        if (code !== 0) {
+            emitLocalWorkflowError(
+                socket,
+                new Error(`Workflow exited with code ${code ?? 'null'}${signal ? ` (${signal})` : ''}`),
+            );
+            return;
+        }
+
+        const outputDir = path.join(localWorkflowWorkingPath, toolkitID);
+        fs.readdir(outputDir, (error, files) => {
+            if (error) {
+                emitLocalWorkflowError(socket, error);
+                return;
+            }
+            if (!files.some(file => file.endsWith('.out'))) {
+                emitLocalWorkflowError(socket, new Error('No output files found'));
+                return;
+            }
+            socket.emit('outputResult', toolkitID);
+        });
+    });
+}
+
 
 io.on('connection', socket => {
 	console.log( `\n\nNouveau visiteur : *** ${socket.id}` );
@@ -426,51 +579,6 @@ io.on('connection', socket => {
     });
 
 
-// .___________.  ______     ______    __       __  ___  __  .___________.
-// |           | /  __  \   /  __  \  |  |     |  |/  / |  | |           |
-// `---|  |----`|  |  |  | |  |  |  | |  |     |  '  /  |  | `---|  |----`
-//     |  |     |  |  |  | |  |  |  | |  |     |    <   |  |     |  |     
-//     |  |     |  `--'  | |  `--'  | |  `----.|  .  \  |  |     |  |     
-//     |__|      \______/   \______/  |_______||__|\__\ |__|     |__|     
-                                                                       
-    //repertoire de travail pour toolkit
-    const toolkitWorkingPath = '/var/www/html/synflow/data/comparisons/';
-    const toolkitAnalysisDir = toolkitWorkingPath + 'toolkit_' + socket.id +'/';
-    fs.mkdirSync(toolkitAnalysisDir);
-
-    const path = require('path');  // Utilisé pour extraire le nom de fichier
-    
-    // Récupérer les fichiers de sortie dans le repertoire d'analyse
-    // paramètre : toolkitID (ex: toolkit_123456789)
-    socket.on('getToolkitFiles', (toolkitID) => {
-        console.log('Getting toolkit files for ID:', toolkitID);
-        const dir = toolkitWorkingPath +'/'+ toolkitID + '/';
-        //recupère la liste des fichiers dans le repertoire d'analyse
-        fs.readdir(dir, (err, files) => {
-            if (err) {
-                console.error(`Erreur lors de la lecture du répertoire : ${err}`);
-                socket.emit('consoleMessage', `Erreur lors de la lecture du répertoire : ${err}`);
-                return;
-            }
-            console.log(`Fichiers dans le répertoire d'analyse : ${files}`);
-            // Filtrer les fichiers pour ne garder que ceux qui ont l'extension .out
-            // Liste des extensions d'intérêt
-            const validExtensions = ['.out', '.bed', '.anchors'];
-
-            const outputFiles = files.filter(file =>
-                validExtensions.some(ext => file.endsWith(ext))
-            );
-            if (outputFiles.length > 0) {
-                // Si des fichiers de sortie sont trouvés, les envoyer au client
-                const outputFilePaths = outputFiles.map(file => path.join(dir, file));
-                console.log(`Fichiers de sortie trouvés : ${outputFilePaths}`);
-                socket.emit('toolkitFilesResults', outputFilePaths);
-            } else {
-                console.log('Aucun fichier de sortie trouvé.');
-                socket.emit('consoleMessage', 'Aucun fichier de sortie trouvé.');
-            }
-        });
-    });
 
     
     // .______       __    __  .__   __. 
@@ -482,6 +590,10 @@ io.on('connection', socket => {
                                   
     // Gestion générique pour n'importe quel service
     socket.on('runService', (serviceName, serviceData, formData) => {
+        if (serviceName === 'synflow') {
+            return runLocalWorkflow(socket, formData);
+        }
+
         console.log(`[${getCurrentTimestamp()}] Lancement du service : ${serviceName}`);
         console.log('formData:', formData);
         console.log('serviceData:', serviceData);
@@ -501,9 +613,11 @@ io.on('connection', socket => {
 
         //Opal = local dans docker
         if(serviceData.service == "opal"){
+            const toolkitAnalysisDir = path.join(localWorkflowWorkingPath, `toolkit_${socket.id}`);
+            fs.mkdirSync(toolkitAnalysisDir, { recursive: true });
 
             // Fonction pour construire la commande de lancement Opal
-    // buildOpalLaunchCommand (code original)
+        // buildOpalLaunchCommand (code original)
         function buildOpalLaunchCommand(serviceData, uploadedFiles, params) {
             const { url, action, arguments: argmts } = serviceData;
             const inputs = argmts.inputs;
@@ -541,6 +655,8 @@ io.on('connection', socket => {
                 args: ['/opt/OpalPythonClient/opal-py-2.4.1/GenericServiceClient.py', ...args]
             };
         }
+
+
 
             // nettoie les paramètres pour éviter les injections de commandes
             Object.keys(params || {}).forEach(key => {
@@ -581,11 +697,11 @@ io.on('connection', socket => {
                 const uuid = match || null;
                 console.log('UUID:', uuid);
 
-                const logPath = path.join(toolkitWorkingPath, uuid, 'stdout.txt');
+                const logPath = path.join(localWorkflowWorkingPath, uuid, 'stdout.txt');
                 console.log(logPath);
                 
-                //revoie toolkitAnalysisDir au client pour générer une url d'accès aux resultats
-                socket.emit('toolkitPath', toolkitAnalysisDir);
+                // Send the result identifier to the client.
+                socket.emit('toolkitPath', path.basename(toolkitAnalysisDir));
 
                 let lastLogLength = 0; // Variable pour suivre la taille précédente du log
 
@@ -719,38 +835,6 @@ io.on('connection', socket => {
         }                                                    
     });
 
-    //fonction commune pour tout les sites
-    //quand le visiteur se déconnecte
-    socket.on ( "disconnect" , function (){
-
-        function rimraf(dir_path) {
-            const TEN_DAYS_MS = 10 * 24 * 60 * 60 * 1000;
-            const now = Date.now();
-
-            if (fs.existsSync(dir_path)) {
-                fs.readdirSync(dir_path).forEach(function(entry) {
-                    const entry_path = path.join(dir_path, entry);
-                    const stats = fs.lstatSync(entry_path);
-                    const mtime = stats.mtime.getTime();
-
-                    if ((now - mtime) > TEN_DAYS_MS) {
-                        if (stats.isDirectory()) {
-                            rimraf(entry_path);
-                        } else {
-                            fs.unlinkSync(entry_path);
-                        }
-                    }
-                });
-                // Supprime le dossier si lui-même est vieux de plus de 10 jours et vide
-                const dirStats = fs.lstatSync(dir_path);
-                if ((now - dirStats.mtime.getTime()) > TEN_DAYS_MS && fs.readdirSync(dir_path).length === 0) {
-                    fs.rmdirSync(dir_path);
-                    console.log("cleaning " + dir_path);
-                }
-            }
-        }
-        rimraf(toolkitWorkingPath);//enlève aussi les fichiers temporaires du toolkit
-    });
 });
 const port = 3031;
 server.listen(port, '0.0.0.0', () => {

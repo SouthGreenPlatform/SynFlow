@@ -11,7 +11,7 @@ services:
       - ./data/output:/data/output 
       - ./data/uploads:/data/uploads
     environment:
-      - SNAKEMAKE_CORES=4
+      SNAKEMAKE_CORES: ${SNAKEMAKE_CORES:-4}
     restart: unless-stopped
     networks:
       - synflow_network

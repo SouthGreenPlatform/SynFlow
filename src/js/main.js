@@ -191,31 +191,22 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function checkToolkitParam() {
-    //check si l'url contient un toolkitID exemple :
-    // https://synflow.southgreen.fr/?id=toolkit_jD1prpcgQajoO2umAAAV
-    // https://dev-visusnp.southgreen.fr/synflow/?id=toolkit_aryvzv9jHAIWUBSVAAZ4
     const urlParams = new URLSearchParams(globalThis.location.search);
     const toolkitID = urlParams.get('id');
     if (toolkitID) {
         console.log('Toolkit ID trouvé dans l\'URL :', toolkitID);
 
-        const currentHost = globalThis.location.hostname;
-        let url;
-        if (currentHost === 'localhost') {
-            // En local → serveur sur port 8080
-            url = `http://localhost:8080/data/comparisons/${toolkitID}`;
-        } else {
-            // En prod → garde l’URL d’origine
-            url = `https://synflow.southgreen.fr/tmp/toolkit_run/${toolkitID}`;
-        }
-
+        const url = new URL(
+            `/data/comparisons/${encodeURIComponent(toolkitID)}/`,
+            globalThis.location.origin,
+        ).toString();
         console.log('URL des fichiers FTP :', url);
 
         // Sélectionne et affiche l'onglet 'ftp'
         const menuColumn = document.querySelector('[data-option="ftp"]');
         console.log('menuColumn :', menuColumn);
-        
-        showForm("ftp")
+
+        showForm("ftp");
         if (menuColumn) menuColumn.click();
 
         // Met à jour le champ de saisie FTP
@@ -223,10 +214,10 @@ function checkToolkitParam() {
         console.log('ftpInput :', ftpInput);
         ftpInput.value = url;
 
-        //clique sur fetch files
+        // clique sur fetch files
         const fetchButton = document.getElementById('fetch-ftp-button');
         if (fetchButton) fetchButton.click();
-    }       
+    }
 }
 
 async function checkStudyParam() {

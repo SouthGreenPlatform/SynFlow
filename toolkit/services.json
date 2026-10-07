@@ -35,10 +35,7 @@
 		},
 		"synflow": {
 			"label": "Synflow",
-			"service": "opal",
-			"command": "python2 /opt/OpalPythonClient/opal-py-2.4.1/GenericServiceClient.py",
-			"url": "http://io-biomaj.meso.umontpellier.fr:8080/opal2/services/synflow",
-			"action": "launchJob",
+			"service": "local",
 			"arguments": {
 				"inputs": [
 					{
@@ -48,10 +45,6 @@
 						"type": "file[]",
 						"flag": "-i",
 						"accept": ".fasta,.fsa,.fa,.fna,.faa",
-						"default": [
-							"/NAS/muse/web/HUBs/coffea/opal/C21.fasta",
-							"/NAS/muse/web/HUBs/coffea/opal/DH.fasta"
-						],
 						"required": true
 					},
 					{
@@ -70,13 +63,6 @@
 						"flag": "-m",
 						"optionsSource": "SyriWorkflows",
 						"required": true
-					},
-					{
-						"name": "email",
-						"label": "Email",
-						"tooltip": "Email address to receive notification when the job is finished",
-						"type": "text",
-						"required": false
 					}
 				]
 			}

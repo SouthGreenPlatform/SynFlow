@@ -3,8 +3,10 @@ FROM condaforge/mambaforge:24.9.2-0
 # Configure timezone and avoid interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=Europe/Paris \
-    PATH=/opt/conda/bin:$PATH
+    PATH=/opt/conda/bin:$PATH \
+    SNAKEMAKE_CORES=4
 
+ARG SYNFLOW_WORKFLOW_REF=092b4baeffd183254a1b2f8cd5e65cff15604957
 # Install system dependencies + Node.js LTS (20.x) via NodeSource apt repo
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -30,13 +32,18 @@ WORKDIR /app
 # Copy local SynFlow app (uses .dockerignore to exclude node_modules, .git, data)
 COPY . /var/www/html/synflow
 
-# Install Node.js deps + clone workflow + create conda env + symlink comparisons
+# Install Node.js deps + clone and patch the pinned workflow + create conda env + symlink comparisons
 RUN cd /var/www/html/synflow \
     && npm install --omit=dev \
     && npm cache clean --force \
     && git clone --depth 1 --branch docker --single-branch https://gitlab.cirad.fr/agap/cluster/snakemake/synflow.git /app/workflow \
     && cd /app/workflow \
-    && mamba env create -n synflow -f envs/synflow.yml --yes \
+    && git checkout --detach "$SYNFLOW_WORKFLOW_REF" \
+    && git apply --check /var/www/html/synflow/docker/workflow-create-conf.patch \
+    && git apply /var/www/html/synflow/docker/workflow-create-conf.patch \
+    && printf '%s\n' "$SYNFLOW_WORKFLOW_REF" > /app/workflow/.synflow-workflow-ref \
+    && rm -rf /app/workflow/.git \
+    && MAMBA_SSL_VERIFY=false CONDA_SSL_VERIFY=false mamba env create -n synflow -f envs/synflow.yml --yes \
     && mamba clean -a -y \
     && mkdir -p /data/comparisons/sample /data/input /data/output /data/uploads \
     && mkdir -p /var/www/html/synflow/data \
@@ -48,7 +55,7 @@ COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Create non-root user for running services + verify installations
 RUN groupadd -r synflow && useradd -r -g synflow -m -d /home/synflow synflow \
-    && chown -R synflow:synflow /data /var/www/html/synflow \
+    && chown -R synflow:synflow /app/workflow /data /var/www/html/synflow \
     && chown -R synflow:synflow /var/log/nginx /var/lib/nginx /run \
     && echo 'source /opt/conda/etc/profile.d/conda.sh' >> /home/synflow/.bashrc \
     && echo 'conda activate synflow' >> /home/synflow/.bashrc \
@@ -61,10 +68,10 @@ RUN groupadd -r synflow && useradd -r -g synflow -m -d /home/synflow synflow \
 
 # Health check : vérifie que nginx et node répondent
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:80/ || exit 1
+    CMD curl -f http://localhost:80/ && curl -f 'http://localhost:80/socket.io/?EIO=4&transport=polling' || exit 1
 
 # Expose ports
-EXPOSE 80 3031
+EXPOSE 80
 
 # Define volumes
 VOLUME ["/data/comparisons", "/data/input", "/data/output", "/data/uploads"]

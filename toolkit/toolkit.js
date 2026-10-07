@@ -129,14 +129,7 @@ export function loadSocketIOScript() {
 	});
 }
 
-//si url = http://localhost:8080, on utilise localhost:3031
-//sinon on utilise https://wsp1453.southgreen.fr
-
-const isLocalhost = globalThis.location.hostname === "localhost";
-//J'ai enlevé le :1453 à l'ouverture du server
-const socketURL = isLocalhost
-	? "http://localhost:3031"
-	: "https://wsp1453.southgreen.fr";
+const backendURL = globalThis.location.origin;
 
 /**
  * Fonction pour initialiser la connexion Socket.IO après le chargement du script si elle n'était pas déjà établie
@@ -150,7 +143,7 @@ export function initSocketConnection() {
 
 	console.log("Initialisation de la connexion Socket.IO...");
 	// Créer la connexion Socket.IO
-	socket = io(socketURL, { transports: ["websocket"] });
+	socket = io(backendURL, { transports: ["websocket"] });
 
 	// Envoyer les infos du client au serveur
 	socket.emit("clientInfo", { url: globalThis.location.href });
@@ -187,86 +180,28 @@ export function initSocketConnection() {
 
 	socket.on("outputResult", (data) => {
 		resetJobSubmission();
-		// Ajouter le message à la console
 		console.log(`${data}`);
-		const toolkitID = data.split("/")[7];
-		const fileName = data.split("/")[8];
-		const path = `https://gemo.southgreen.fr/tmp/toolkit_run/${toolkitID}/${fileName}`;
-		// Créer et déclencher un événement personnalisé
-		const event = new CustomEvent("ToolkitResultEvent", { detail: path });
+		const event = new CustomEvent("ToolkitResultEvent", { detail: data });
 		document.dispatchEvent(event);
 	});
 
 	socket.on("outputResultOpal", (data) => {
 		resetJobSubmission();
-		// Ajouter le message à la console
 		console.log(`${data}`);
-		//transforme le path en URL
-		//exemple : path = /opt/projects/gemo.southgreen.fr/prod/tmp/toolkit_run/toolkit_mPyhtgJXDWApk9wvAAAL/ref_querry.out
-		//exemple url = https://gemo.southgreen.fr/tmp/toolkit_run/toolkit_mPyhtgJXDWApk9wvAAAL/ref_querry.out
-		const toolkitID = data.split("/")[7];
-		const fileName = data.split("/")[8];
-		const path = `https://gemo.southgreen.fr/tmp/toolkit_run/${toolkitID}/${fileName}`;
-		// Créer et déclencher un événement personnalisé
-		const event = new CustomEvent("ToolkitResultEvent", { detail: path });
+		const toolkitID = String(data).split("/").filter(Boolean).pop();
+		if (!toolkitID) return;
+		const event = new CustomEvent("ToolkitResultEvent", { detail: toolkitID });
 		document.dispatchEvent(event);
 	});
 
-	//ecoute l'event 'toolkitID'
-	document.addEventListener("toolkitID", (event) => {
-		const toolkitID = event.detail;
-		console.log("Toolkit ID reçu:", toolkitID);
-		socket.emit("getToolkitFiles", toolkitID);
-		socket.emit("toolkitFTP", toolkitID);
-	});
-
-	//recupère les fichier de toolkitID
-	socket.on("toolkitFilesResults", (data) => {
-		let outputFilesPath = data.map((file) => {
-			const toolkitID = file.split("/")[7];
-			const fileName = file.split("/")[8];
-			return `https://synflow.southgreen.fr/tmp/toolkit_run/${toolkitID}/${fileName}`;
-		});
-
-		// Un seul event avec tous les fichiers
-		const event = new CustomEvent("toolkitFilesFromID", {
-			detail: outputFilesPath,
-		});
-		document.dispatchEvent(event);
-	});
-
-	//envoie l'url du ftp contenant les fichiers output
-	socket.on("toolkitFTP", (toolkitID) => {
-		// Détermine si on est en local ou en prod
-		const currentHost = globalThis.location.hostname;
-		let outputFilesPath;
-
-		if (currentHost === "localhost" || currentHost === "127.0.0.1") {
-			// En local → serveur sur port 8080
-			outputFilesPath = `http://localhost:8080/data/comparisons/${toolkitID}`;
-		} else {
-			// En prod → garde l’URL d’origine
-			outputFilesPath = `https://synflow.southgreen.fr/tmp/toolkit_run/${toolkitID}`;
-		}
-
-		console.log("Output files path:", outputFilesPath);
-
-		// Émet un seul event avec tous les fichiers
-		const event = new CustomEvent("toolkitFilesFromID", {
-			detail: outputFilesPath,
-		});
-		document.dispatchEvent(event);
-	});
 }
 
 const config = {
 	development: {
 		servicesPath: "/synflow/toolkit/services.json",
-		baseUrl: "https://dev-synflow.southgreen.fr",
 	},
 	production: {
 		servicesPath: "/toolkit/services.json",
-		baseUrl: "https://synflow.southgreen.fr",
 	},
 };
 
@@ -857,7 +792,7 @@ function submitForm() {
 	);
 
 	// Envoyer les fichiers et paramètres via fetch
-	fetch(socketURL + "/upload", {
+	fetch(`${backendURL}/upload`, {
 		method: "POST",
 		body: formData,
 	})

@@ -17,7 +17,7 @@ mkdir -p data/{comparisons,input,output,uploads}
 ###  Run the Application
 
 ```bash
-docker run -d --name synflow  -p 8080:80   -p 3031:3031   -v $(pwd)/data/comparisons:/data/comparisons  -v $(pwd)/data/input:/data/input -v $(pwd)/data/output:/data/output  -v $(pwd)/data/uploads:/data/uploads  -e SNAKEMAKE_CORES=4  ghcr.io/southgreenplatform/synflow:latest
+docker run -d --name synflow -p 8080:80 -v $(pwd)/data/comparisons:/data/comparisons -v $(pwd)/data/input:/data/input -v $(pwd)/data/output:/data/output -v $(pwd)/data/uploads:/data/uploads -e SNAKEMAKE_CORES=4 ghcr.io/southgreenplatform/synflow:latest
 ```
 
 Then open your browser and navigate to:
@@ -25,7 +25,8 @@ Then open your browser and navigate to:
 ```
 http://localhost:8080
 ```
----
+
+Nginx is the only published façade. It serves the interface and relays uploads, downloads, and Socket.IO traffic to the internal Node.js service; port `3031` is not published. Set `SNAKEMAKE_CORES` to choose the number of local Snakemake cores.
 
 ## Example Data Included
 
