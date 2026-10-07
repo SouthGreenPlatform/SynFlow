@@ -167,8 +167,6 @@ export function initSocketConnection() {
 
 	// Gérer les erreurs de connexion
 	socket.on("connect_error", (error) => {
-		// Afficher l'erreur de connexion
-		showNotification('Unable to connect to the analysis server. Please refresh the page.', 'error');
 		console.error("Erreur de connexion à Socket.IO :", error);
 	});
 
@@ -689,7 +687,7 @@ export function generateForm(selectedService) {
 		const submitButton = document.createElement("button");
 		submitButton.id = "submitBtn";
 		submitButton.textContent = "Submit";
-		submitButton.onclick = (event) => {
+		submitButton.onclick = async (event) => {
 			if (submitButton.disabled) {
 				event.preventDefault();
 				return;
@@ -719,11 +717,19 @@ export function generateForm(selectedService) {
 				return;
 			}
 
+			if (!socket?.connected) {
+				showNotification(
+					"The analysis service is currently unavailable. Try again later.",
+					"warning",
+				);
+				return;
+			}
+
 			addToConsole("Sending files...");
 			setSubmitButtonLoading(true);
 			showNotification("Your analysis has been submitted and is starting.", "info");
 			document.dispatchEvent(new CustomEvent("JobSubmittedEvent"));
-			submitForm();
+			await submitForm();
 			console.log("Bouton cliqué !");
 		};
 		formContainer.appendChild(submitButton);
@@ -754,75 +760,111 @@ function addToConsole(message) {
 /**
  * Fonction pour soumettre le formulaire avec les fichiers via FormData
  *
- * @returns {void} N'a pas de valeur de retour
+ * @returns {Promise<void>}
  */
-function submitForm() {
+async function submitForm() {
 	const serviceSelect = document.getElementById("serviceSelect");
 	let selectedService;
 
-	if (serviceSelect) {
-		selectedService = serviceSelect.value;
-		console.log(`Service sélectionné : ${selectedService}`);
-	} else {
-		selectedService = serviceName;
-		console.log(`Service sélectionné : ${selectedService}`);
-	}
+	try {
+		if (serviceSelect) {
+			selectedService = serviceSelect.value;
+			console.log(`Service sélectionné : ${selectedService}`);
+		} else {
+			selectedService = serviceName;
+			console.log(`Service sélectionné : ${selectedService}`);
+		}
 
-	const serviceData = servicesData[selectedService];
-	const formContainer = document.getElementById("formContainer");
+		const serviceData = servicesData[selectedService];
+		const formContainer = document.getElementById("formContainer");
 
-	const formData = new FormData();
+		const formData = new FormData();
 
-	Array.from(formContainer.querySelectorAll("input, select")).forEach(
-		(input) => {
-			if (input.type === "file" && input.files.length > 0) {
-				if (input.multiple) {
-					//Boucle sur chaque fichier pour les champs multi-fichier
-					Array.from(input.files).forEach((file) => {
-						formData.append(input.name, file);
-					});
+		Array.from(formContainer.querySelectorAll("input, select")).forEach(
+			(input) => {
+				if (input.type === "file" && input.files.length > 0) {
+					if (input.multiple) {
+						//Boucle sur chaque fichier pour les champs multi-fichier
+						Array.from(input.files).forEach((file) => {
+							formData.append(input.name, file);
+						});
+					} else {
+						// Champ fichier simple : on ajoute le fichier unique
+						formData.append(input.name, input.files[0]);
+					}
 				} else {
-					// Champ fichier simple : on ajoute le fichier unique
-					formData.append(input.name, input.files[0]);
+					formData.append(input.name, input.value);
 				}
-			} else {
-				formData.append(input.name, input.value);
-			}
-		},
-	);
+			},
+		);
 
-	// Envoyer les fichiers et paramètres via fetch
-	fetch(`${backendURL}/upload`, {
-		method: "POST",
-		body: formData,
-	})
-		.then((response) => {
-			if (!response.ok) {
-				return response.json().then((data) => {
-					const errorMsg = data.message || "Upload failed";
-					showNotification(`Upload failed: ${errorMsg}`, 'error');
-					resetJobSubmission();
-					addToConsole(`UPLOAD: ${errorMsg}`);
-					console.error("Cannot upload:", data);
-					throw new Error(errorMsg);
-				});
-			}
-			return response.json();
-		})
-		.then((data) => {
-			addToConsole("Files uploaded successfully:");
-			addToConsole(JSON.stringify(data, null, 2));
-			showNotification("Files uploaded successfully. Analysis is starting...", 'success');
-			try {
-				socket.emit("runService", selectedService, serviceData, data);
-			} catch (error) {
-				showNotification("Error running service: " + error.message, 'error');
-				addToConsole("Error running service: " + error.message);
-			}
-		})
-		.catch((error) => {
-			showNotification(`Connection error: ${error.message}`, 'error');
+		let response;
+		try {
+			response = await fetch(`${backendURL}/upload`, {
+				method: "POST",
+				body: formData,
+			});
+		} catch (error) {
+			const diagnostic = "Unable to upload files. Check your connection and try again.";
+			showNotification(diagnostic, "error");
+			addToConsole(diagnostic);
+			console.error("Cannot upload:", error);
 			resetJobSubmission();
-			addToConsole(`Connection error: ${error.message}`);
-		});
+			return;
+		}
+
+		let payload = null;
+		try {
+			payload = await response.json();
+		} catch {
+			payload = null;
+		}
+
+		if (!response.ok) {
+			const detail =
+				payload?.message || payload?.error || `HTTP ${response.status}`;
+			const diagnostic = `Upload failed: ${detail}`;
+			showNotification(diagnostic, "error");
+			addToConsole(diagnostic);
+			console.error("Cannot upload:", { status: response.status, payload });
+			resetJobSubmission();
+			return;
+		}
+
+		if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+			const diagnostic = "Upload failed: Invalid server response";
+			showNotification(diagnostic, "error");
+			addToConsole(diagnostic);
+			console.error(diagnostic, payload);
+			resetJobSubmission();
+			return;
+		}
+
+		addToConsole("Files uploaded successfully:");
+		addToConsole(JSON.stringify(payload, null, 2));
+
+		if (!socket?.connected) {
+			const diagnostic =
+				"Files uploaded successfully, but the analysis job was not started because the analysis service is unavailable.";
+			showNotification(
+				"The analysis service is currently unavailable. Try again later.",
+				"warning",
+			);
+			addToConsole(diagnostic);
+			resetJobSubmission();
+			return;
+		}
+
+		showNotification("Files uploaded successfully. Analysis is starting...", "success");
+		try {
+			socket.emit("runService", selectedService, serviceData, payload);
+		} catch (error) {
+			showNotification("Error running service: " + error.message, "error");
+			addToConsole("Error running service: " + error.message);
+		}
+	} catch (error) {
+		console.error("Unexpected upload submission error:", error);
+		addToConsole(`UPLOAD: ${error.message || error}`);
+		resetJobSubmission();
+	}
 }

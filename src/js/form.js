@@ -395,15 +395,24 @@ async function createExistingFilesForm(activeStudy = null) {
 	selectedGenomes = [];
 
 	//charge la liste des fichiers disponibles
-	function loadFiles(folder) {
+	async function loadFiles(folder) {
 		fileListDiv.innerHTML = "";
+		fileListDiv.style.color = "";
 		selectedGenomes = [];
 		updateChainDiv();
-		fetchRemoteAllFileList(folder).then((files) => {
+		updateFileMatrix([]);
+
+		try {
+			const files = await fetchRemoteAllFileList(folder);
 			const genomes = extractAllGenomes(files);
 			populateGenomeList(genomes, fileListDiv);
 			updateFileMatrix(files);
-		});
+		} catch (error) {
+			console.warn("Remote dataset unavailable:", folder, error);
+			fileListDiv.textContent =
+				"Remote dataset unavailable. Try again later or use another input option.";
+			fileListDiv.style.color = "#856404";
+		}
 	}
 
 	// Initialisation avec le premier dossier

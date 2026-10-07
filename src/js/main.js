@@ -148,13 +148,15 @@ document.head.appendChild(toastStyle);
 
 // Gestion globale des erreurs
 window.addEventListener('error', (event) => {
-    showNotification('An unexpected error occurred. Please refresh the page.', 'error');
-    logActivity('Unexpected error: ' + event.message);
+    const detail = event.error || event.message || event.target?.src || event.target?.href || 'Unknown window error';
+    console.error('Unexpected window error:', detail);
+    logActivity('Unexpected window error: ' + detail);
 });
 
 window.addEventListener('unhandledrejection', (event) => {
-    showNotification('An unexpected error occurred. Please refresh the page.', 'error');
-    logActivity('Unhandled promise rejection: ' + event.reason);
+    const detail = event.reason || 'Unknown promise rejection';
+    console.error('Unhandled promise rejection:', detail);
+    logActivity('Unhandled promise rejection: ' + detail);
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
