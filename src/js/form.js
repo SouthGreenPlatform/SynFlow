@@ -914,6 +914,51 @@ export function createFTPSection() {
 	title.textContent = "Import files from FTP";
 	title.style.marginBottom = "10px";
 	formContainer.appendChild(title);
+	const toolkitIDFromURL = new URLSearchParams(globalThis.location.search).get("id");
+	const isToolkitResultPage =
+		typeof toolkitIDFromURL === "string" &&
+		/^toolkit_[A-Za-z0-9_-]+$/.test(toolkitIDFromURL);
+
+	if (isToolkitResultPage) {
+		const toolkitResultURL = new URL(globalThis.location.href);
+		toolkitResultURL.search = "";
+		toolkitResultURL.searchParams.set("id", toolkitIDFromURL);
+		toolkitResultURL.hash = "";
+
+		const retentionNotice = document.createElement("div");
+		retentionNotice.id = "toolkit-retention-notice";
+		retentionNotice.style.cssText =
+			"display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px 12px;background:#eaf3ff;border:1px solid #9ec5fe;border-radius:5px;color:#084298;";
+
+		const retentionText = document.createElement("span");
+		retentionText.textContent =
+			"Toolkit results are available through this link for 10 days.";
+		retentionNotice.appendChild(retentionText);
+
+		const copyResultButton = document.createElement("button");
+		copyResultButton.type = "button";
+		copyResultButton.id = "copy-toolkit-result-url";
+		copyResultButton.textContent = "Copy result URL";
+		copyResultButton.style.cssText =
+			"padding:4px 10px;border:1px solid #084298;border-radius:4px;background:#fff;color:#084298;cursor:pointer;white-space:nowrap;";
+		copyResultButton.addEventListener("click", async () => {
+			logActivity("Copying toolkit result URL to clipboard");
+			try {
+				await navigator.clipboard.writeText(toolkitResultURL.toString());
+				copyResultButton.textContent = "Copied!";
+				setTimeout(() => {
+					copyResultButton.textContent = "Copy result URL";
+				}, 1500);
+			} catch {
+				copyResultButton.textContent = "Copy failed";
+				setTimeout(() => {
+					copyResultButton.textContent = "Copy result URL";
+				}, 1500);
+			}
+		});
+		retentionNotice.appendChild(copyResultButton);
+		formContainer.appendChild(retentionNotice);
+	}
 
 	// Champ d'URL FTP
 	const ftpInput = document.createElement("input");
