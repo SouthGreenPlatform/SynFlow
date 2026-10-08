@@ -826,7 +826,7 @@ io.on('connection', socket => {
                                 if (filesMoved === foundFiles.length) {
                                     console.log(`Tous les fichiers (${filesMoved}) ont été déplacés dans ${targetDir}`);
                                     socket.emit('consoleMessage', `All output files moved to ${targetDir}`);
-                                    socket.emit('outputResultOpal', targetDir);
+                                    socket.emit('outputResultOpal', path.basename(toolkitAnalysisDir));
                                 }
                             });
                         });

@@ -1608,7 +1608,7 @@ export function createToolkitContainer() {
 
 	document.addEventListener("ToolkitPathEvent", (event) => {
 		const toolkitID = String(event.detail);
-		if (!/^[A-Za-z0-9_-]+$/.test(toolkitID)) {
+		if (!/^toolkit_[A-Za-z0-9_-]+$/.test(toolkitID)) {
 			updateJobStatus("error", "Job failed: Invalid toolkit ID", null);
 			return;
 		}
@@ -1634,7 +1634,7 @@ export function createToolkitContainer() {
 	//reception des resultats de toolkit
 	document.addEventListener("ToolkitResultEvent", (event) => {
 		const toolkitID = String(event.detail);
-		if (!/^[A-Za-z0-9_-]+$/.test(toolkitID)) {
+		if (!/^toolkit_[A-Za-z0-9_-]+$/.test(toolkitID)) {
 			updateJobStatus("error", "Job failed: Invalid toolkit ID", null);
 			return;
 		}

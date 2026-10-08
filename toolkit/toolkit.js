@@ -6,6 +6,16 @@ export { socket };
 let servicesData = {}; // Contiendra les services et databases
 let databasesData = {}; // Stocke les databases séparément
 let serviceName = ""; // Nom du service sélectionné
+const toolkitIDPattern = /^toolkit_[A-Za-z0-9_-]+$/;
+let activeToolkitID = null;
+
+function extractToolkitID(value) {
+	const rawValue = String(value ?? "").trim();
+	if (toolkitIDPattern.test(rawValue)) return rawValue;
+
+	const pathSegments = rawValue.split(/[\\/]/).filter(Boolean).reverse();
+	return pathSegments.find((segment) => toolkitIDPattern.test(segment)) || null;
+}
 
 function setJobConsoleLoading(isLoading, message = "Analysis is starting...") {
 	const wrapper = document.getElementById("console-wrapper");
@@ -218,24 +228,31 @@ export function initSocketConnection() {
 	});
 
 	socket.on("toolkitPath", (data) => {
-		// Créer et déclencher un événement personnalisé
-		const event = new CustomEvent("ToolkitPathEvent", { detail: data });
+		const toolkitID = extractToolkitID(data);
+		if (toolkitID) activeToolkitID = toolkitID;
+		const event = new CustomEvent("ToolkitPathEvent", {
+			detail: toolkitID || data,
+		});
 		document.dispatchEvent(event);
 	});
 
 	socket.on("outputResult", (data) => {
 		resetJobSubmission();
 		console.log(`${data}`);
-		const event = new CustomEvent("ToolkitResultEvent", { detail: data });
+		const toolkitID = extractToolkitID(data) || activeToolkitID;
+		const event = new CustomEvent("ToolkitResultEvent", {
+			detail: toolkitID || data,
+		});
 		document.dispatchEvent(event);
 	});
 
 	socket.on("outputResultOpal", (data) => {
 		resetJobSubmission();
 		console.log(`${data}`);
-		const toolkitID = String(data).split("/").filter(Boolean).pop();
-		if (!toolkitID) return;
-		const event = new CustomEvent("ToolkitResultEvent", { detail: toolkitID });
+		const toolkitID = extractToolkitID(data) || activeToolkitID;
+		const event = new CustomEvent("ToolkitResultEvent", {
+			detail: toolkitID || data,
+		});
 		document.dispatchEvent(event);
 	});
 
@@ -916,6 +933,7 @@ async function submitForm() {
 
 		showNotification("Files uploaded successfully. Analysis is starting...", "success");
 		try {
+			activeToolkitID = null;
 			socket.emit("runService", selectedService, serviceData, payload);
 		} catch (error) {
 			showNotification("Error running service: " + error.message, "error");
