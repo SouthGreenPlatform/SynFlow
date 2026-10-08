@@ -129,7 +129,47 @@ export function loadSocketIOScript() {
 	});
 }
 
-const backendURL = globalThis.location.origin;
+function isLocalDockerHost() {
+	return ["localhost", "127.0.0.1"].includes(globalThis.location.hostname);
+}
+
+export function getBackendURL() {
+	return isLocalDockerHost()
+		? globalThis.location.origin
+		: "https://wsp1453.southgreen.fr";
+}
+
+export function getToolkitResultFolderURL(toolkitID) {
+	const encodedToolkitID = encodeURIComponent(toolkitID);
+	return isLocalDockerHost()
+		? new URL(
+				`/data/comparisons/${encodedToolkitID}/`,
+				globalThis.location.origin,
+			).toString()
+		: `https://synflow.southgreen.fr/tmp/toolkit_run/${encodedToolkitID}/`;
+}
+
+export function getToolkitIDFromResultURL(folder) {
+	let folderURL;
+	try {
+		folderURL = new URL(folder);
+	} catch {
+		return null;
+	}
+
+	const expectedOrigin = isLocalDockerHost()
+		? globalThis.location.origin
+		: "https://synflow.southgreen.fr";
+	const expectedPath = isLocalDockerHost()
+		? /^\/data\/comparisons\/([A-Za-z0-9_-]+)\/?$/
+		: /^\/tmp\/toolkit_run\/([A-Za-z0-9_-]+)\/?$/;
+	if (folderURL.origin !== expectedOrigin) return null;
+
+	const match = folderURL.pathname.match(expectedPath);
+	return match ? match[1] : null;
+}
+
+const backendURL = getBackendURL();
 
 /**
  * Fonction pour initialiser la connexion Socket.IO après le chargement du script si elle n'était pas déjà établie
@@ -137,13 +177,20 @@ const backendURL = globalThis.location.origin;
  */
 export function initSocketConnection() {
 	if (socket) {
-		console.log("Connexion Socket.IO déjà établie.");
+		console.log(
+			socket.connected
+				? "Connexion Socket.IO déjà établie."
+				: "Connexion Socket.IO en cours.",
+		);
 		return;
 	}
 
 	console.log("Initialisation de la connexion Socket.IO...");
 	// Créer la connexion Socket.IO
 	socket = io(backendURL, { transports: ["websocket"] });
+	socket.on("connect", () => {
+		logActivity("Connected.");
+	});
 
 	// Envoyer les infos du client au serveur
 	socket.emit("clientInfo", { url: globalThis.location.href });
@@ -357,6 +404,18 @@ export function loadServices() {
 			.then((data) => {
 				servicesData = data.services;
 				databasesData = data.databases;
+				if (isLocalDockerHost() && servicesData.synflow) {
+					servicesData.synflow = {
+						...servicesData.synflow,
+						service: "local",
+						arguments: {
+							...servicesData.synflow.arguments,
+							inputs: servicesData.synflow.arguments.inputs.filter(
+								(field) => field.name !== "email",
+							),
+						},
+					};
+				}
 				console.log("Services chargés depuis:", servicesPath);
 				resolve();
 			})

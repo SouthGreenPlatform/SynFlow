@@ -1075,13 +1075,10 @@ export function createFTPSection() {
 			return;
 		}
 
-		const toolkitMatch = folderURL.origin === globalThis.location.origin
-			? folderURL.pathname.match(/^\/data\/comparisons\/([A-Za-z0-9_-]+)\/?$/)
-			: null;
-		const toolkitID = toolkitMatch ? toolkitMatch[1] : null;
+		const toolkitID = toolkit.getToolkitIDFromResultURL(folder);
 		const isToolkitResult = !!toolkitID;
 		const openedFromToolkitResult = new URLSearchParams(globalThis.location.search).has("id");
-		if (openedFromToolkitResult && (!isToolkitResult || folderURL.origin !== globalThis.location.origin)) {
+		if (openedFromToolkitResult && !isToolkitResult) {
 			fileListDiv.innerHTML =
 				'<span style="color:red;">Result folders must use this page origin and a valid toolkit ID.</span>';
 			return;
@@ -1090,7 +1087,7 @@ export function createFTPSection() {
 		if (isToolkitResult) {
 			downloadButton.href = new URL(
 				`/download-toolkit/${encodeURIComponent(toolkitID)}`,
-				globalThis.location.origin,
+				toolkit.getBackendURL(),
 			).toString();
 			downloadButton.style.display = "none";
 			downloadButton.style.backgroundColor = "#555";
@@ -1707,7 +1704,7 @@ export function createToolkitContainer() {
 		loadOutputButton.dataset.jobDraw = "true";
 		downloadButton.href = new URL(
 			"/download-toolkit/" + encodeURIComponent(toolkitID),
-			globalThis.location.origin,
+			toolkit.getBackendURL(),
 		).toString();
 		downloadButton.setAttribute("download", `${toolkitID}_output.zip`);
 		loadOutputButton.href = synflowURL;

@@ -182,11 +182,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     //connection au serveur node pour les logs
     toolkit.loadSocketIOScript().then(() => {
         toolkit.initSocketConnection();
-        // Attendre un peu pour que la connexion s'établisse
-        setTimeout(() => {
-            // Envoyer les infos du client au serveur
-            logActivity('Connected.');
-        }, 100);  // Petit délai pour éviter l'erreur
     }).catch(error => {
         console.error('Erreur lors du chargement du script Socket.IO :', error);
     });
@@ -198,10 +193,7 @@ function checkToolkitParam() {
     if (toolkitID) {
         console.log('Toolkit ID trouvé dans l\'URL :', toolkitID);
 
-        const url = new URL(
-            `/data/comparisons/${encodeURIComponent(toolkitID)}/`,
-            globalThis.location.origin,
-        ).toString();
+        const url = toolkit.getToolkitResultFolderURL(toolkitID);
         console.log('URL des fichiers FTP :', url);
 
         // Sélectionne et affiche l'onglet 'ftp'
