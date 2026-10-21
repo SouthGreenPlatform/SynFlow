@@ -14,6 +14,7 @@ A Snakemake workflow to detect synteny blocks and identify chromosomal rearrange
 ## Features
 - Use precomputed datasets or run your own analysis  
 - Chain multiple genome comparisons for comprehensive analysis  
+- Open direct visualization links for an ordered existing-dataset chain
 - Drag and drop chromosomes to reorder them  
 - Detailed control panel for customizing visualizations  
 - Download the visualization as an SVG file 
@@ -38,6 +39,8 @@ This will create a visualization chain: **A-thaliana → C-rubella → B-rapa �
   - **Run analysis**: run workflow using **fasta + gff3 files (optional)**  
   - **Browse FTP**: import files directly from an FTP server by providing the URL
   - **Upload file**: use the "Browse" button to upload your own files
+
+Direct visualization links accept `study` and an ordered comma-separated `accessions` list, for example `/?study=Banana&accessions=e-ventricosum,e-glaucum`. See [Direct visualization links](docs/input.md#direct-visualization-links) for the producer contract. `study` alone remains an interactive filter, and Toolkit result links using `id` remain supported.
 
 #### Click the "Draw" button to generate the visualization.
 Use the zoom and pan features to explore the visualization. 

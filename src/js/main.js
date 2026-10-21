@@ -3,6 +3,7 @@ import { createControlPanel } from './legend.js';
 import { createGraphSection } from './draw.js';
 import { setupAnalytics } from './analytics.js';
 import { createInfoPanel } from './info.js';
+import { parseUrlState } from './url-state.mjs';
 import * as toolkit from '../../toolkit/toolkit.js';
 import { socket } from '../../toolkit/toolkit.js';
 
@@ -160,87 +161,129 @@ window.addEventListener('unhandledrejection', (event) => {
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
-
     const mainContainer = document.getElementById('main-container');
-    const study = await checkStudyParam(); // Vérifie les paramètres de l'étude dans l'URL
+    const urlState = parseUrlState(globalThis.location.search);
+    const toolkitId = urlState.toolkitId;
+    const visualizationRequested =
+        urlState.study !== null ||
+        urlState.accessions !== null ||
+        urlState.error !== null;
+    const visualizationLinkRequested =
+        urlState.accessions !== null || urlState.error !== null;
 
-    createForm(study).then(form => {                 
-        mainContainer.appendChild(form);
-        mainContainer.appendChild(createControlPanel());
-        mainContainer.appendChild(createGraphSection());
-        mainContainer.appendChild(createInfoPanel());
+    let canonicalStudy = null;
+    if (!toolkitId) {
+        canonicalStudy = await checkStudyParam(urlState.study, visualizationLinkRequested);
+    }
 
-        //waiting for the form to be created before checking the URL
-        setTimeout(() => {
-            checkToolkitParam(); // Vérifie les paramètres du toolkit dans l'URL
-        }, 500);
-        //  
-    });
+    if (toolkitId && visualizationRequested) {
+        showNotification(
+            'The "id" URL parameter takes precedence; "study" and "accessions" were ignored.',
+            'warning',
+        );
+    } else if (!toolkitId && urlState.error) {
+        showNotification(urlState.error.message, 'error');
+    }
 
-    setupAnalytics();
+    const navigationState = {
+        toolkitId,
+        study: toolkitId ? null : canonicalStudy,
+        accessions: toolkitId || !canonicalStudy ? null : urlState.accessions,
+    };
 
-    //connection au serveur node pour les logs
-    toolkit.loadSocketIOScript().then(() => {
-        toolkit.initSocketConnection();
-    }).catch(error => {
-        console.error('Erreur lors du chargement du script Socket.IO :', error);
-    });
+    const form = await createForm(navigationState);
+    mainContainer.appendChild(form);
+    mainContainer.appendChild(createControlPanel());
+    mainContainer.appendChild(createGraphSection());
+    mainContainer.appendChild(createInfoPanel());
+
+    if (toolkitId) {
+        await showForm('ftp', navigationState);
+        checkToolkitParam(toolkitId);
+    } else {
+        await showForm('existing', navigationState);
+    }
+
+    initializeSocketIfAvailable();
 });
 
-function checkToolkitParam() {
-    const urlParams = new URLSearchParams(globalThis.location.search);
-    const toolkitID = urlParams.get('id');
-    if (toolkitID) {
-        console.log('Toolkit ID trouvé dans l\'URL :', toolkitID);
+async function initializeSocketIfAvailable() {
+    try {
+        if (['localhost', '127.0.0.1'].includes(globalThis.location.hostname)) {
+            const response = await fetch('/socket.io/?EIO=4&transport=polling', {
+                cache: 'no-store',
+            });
+            if (!response.ok) return;
+        }
 
-        const url = toolkit.getToolkitResultFolderURL(toolkitID);
-        console.log('URL des fichiers FTP :', url);
-
-        // Sélectionne et affiche l'onglet 'ftp'
-        const menuColumn = document.querySelector('[data-option="ftp"]');
-        console.log('menuColumn :', menuColumn);
-
-        showForm("ftp");
-        if (menuColumn) menuColumn.click();
-
-        // Met à jour le champ de saisie FTP
-        const ftpInput = document.getElementById('ftp-input');
-        console.log('ftpInput :', ftpInput);
-        ftpInput.value = url;
-
-        // clique sur fetch files
-        const fetchButton = document.getElementById('fetch-ftp-button');
-        if (fetchButton) fetchButton.click();
+        await toolkit.loadSocketIOScript();
+        toolkit.initSocketConnection();
+    } catch (error) {
+        console.error('Erreur lors du chargement du script Socket.IO :', error);
     }
 }
 
-async function checkStudyParam() {
-    //check si l'url contient un studyID exemple :
-    // https://synflow.southgreen.fr/?study=study_12345
-    const urlParams = new URLSearchParams(globalThis.location.search);
-    const study = urlParams.get('study');
-    if (study) {
-        console.log('Study ID trouvé dans l\'URL :', study);
-        
-        // Vérifier que le study existe dans config.json
-        try {
-            const response = await fetch('public/data/config.json');
-            if (!response.ok) throw new Error('Failed to fetch config');
-            const dirs = await response.json();
-            
-            const studyExists = dirs.some(({organism}) => 
-                organism.toLowerCase() === study.toLowerCase()
-            );
-            
-            if (!studyExists) {
-                showNotification(`Study "${study}" not found in available studies. Reverting to normal mode.`, 'warning');
-                logActivity(`Invalid study parameter: ${study}`);
-                return null; // Retourner null pour mode normal
-            }
-        } catch (error) {
-            console.error('Error validating study parameter:', error);
-            return null; // En cas d'erreur, mode normal
-        }
+function checkToolkitParam(toolkitId) {
+    if (!toolkitId) return;
+
+    console.log('Toolkit ID trouvé dans l\'URL :', toolkitId);
+
+    const url = toolkit.getToolkitResultFolderURL(toolkitId);
+    console.log('URL des fichiers FTP :', url);
+
+    const menuColumn = document.querySelector('[data-option="ftp"]');
+    if (menuColumn) {
+        document.querySelectorAll('[data-option]').forEach((item) => {
+            item.style.backgroundColor = 'transparent';
+            item.style.color = '#000';
+        });
+        menuColumn.style.backgroundColor = 'black';
+        menuColumn.style.color = 'white';
     }
-    return study;       
+
+    const ftpInput = document.getElementById('ftp-input');
+    if (ftpInput) ftpInput.value = url;
+
+    const fetchButton = document.getElementById('fetch-ftp-button');
+    if (fetchButton) fetchButton.click();
+}
+
+async function checkStudyParam(study, visualizationLinkRequested = false) {
+    if (!study) return null;
+
+    console.log('Study ID trouvé dans l\'URL :', study);
+
+    try {
+        const response = await fetch('public/data/config.json');
+        if (!response.ok) throw new Error('Failed to fetch config');
+        const dirs = await response.json();
+        if (!Array.isArray(dirs)) throw new Error('Invalid config catalog');
+
+        const studyEntry = dirs.find(({ organism }) =>
+            typeof organism === 'string' &&
+            organism.toLowerCase() === study.toLowerCase()
+        );
+
+        if (!studyEntry) {
+            showNotification(
+                visualizationLinkRequested
+                    ? `Study "${study}" is not available. The visualization link was not opened.`
+                    : `Study "${study}" not found in available studies. Reverting to normal mode.`,
+                'warning',
+            );
+            logActivity(`Invalid study parameter: ${study}`);
+            return null;
+        }
+
+        return studyEntry.organism;
+    } catch (error) {
+        console.error('Error validating study parameter:', error);
+        showNotification(
+            visualizationLinkRequested
+                ? 'Available studies could not be loaded. The visualization link was not opened.'
+                : 'Available studies could not be loaded. Reverting to normal mode.',
+            'warning',
+        );
+        return null;
+    }
 }

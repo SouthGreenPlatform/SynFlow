@@ -22,6 +22,32 @@ Go to the **“Existing files”** tab.
 
 Click **Draw** to visualize the structural variants.
 
+### Direct visualization links
+
+External sites can open a complete existing-dataset visualization with one URL:
+
+`https://synflow.southgreen.fr/?study=Banana&accessions=e-ventricosum,e-glaucum`
+
+- `study` is the study/organism name from the existing-dataset catalog. Study lookup is case-insensitive.
+- `accessions` is one comma-separated list of technical accession identifiers from that study.
+- The list MUST contain at least two identifiers; their CSV order is the visualization chain order.
+- Accession matching is case-sensitive.
+- Identifiers may contain only `[A-Za-z0-9._-]`. Commas are separators and therefore MUST NOT be part of an identifier.
+
+When the URL is valid and every accession exists in the selected study, SynFlow loads the comparison files and starts the visualization automatically. The request is atomic: if any accession or required comparison file is unavailable, SynFlow draws nothing and leaves the existing-files form available for manual selection.
+
+Build links with `URL` so the CSV value is encoded correctly:
+
+```js
+const url = new URL("https://synflow.southgreen.fr/");
+url.searchParams.set("study", "Banana");
+url.searchParams.set("accessions", accessions.join(","));
+window.location.href = url;
+```
+
+`study` without `accessions` remains an interactive filter for the existing-dataset list. Toolkit result links using `id` remain supported and take precedence over `study` and `accessions`.
+
+
 ---
 
 ## Run analysis

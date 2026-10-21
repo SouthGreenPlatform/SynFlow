@@ -5,9 +5,10 @@ import {
 	extractAllGenomes,
 	spinner,
 	startRenderTimer,
+	stopRenderTimer,
 } from "./process.js";
 import { updateFileMatrix } from "./matrix.js";
-import { logActivity } from "./main.js";
+import { logActivity, showNotification } from "./main.js";
 //mode de chargement des fichiers
 export let fileUploadMode = ""; //  'remote' ou 'local'
 export let fileOrderMode = ""; //'allavsall' ou 'chain'
@@ -18,10 +19,12 @@ export let bedFiles = [];
 // Sélection ordonnée
 export let selectedGenomes = [];
 export function setSelectedGenomes(genomes) {
-	selectedGenomes = genomes;
+	selectedGenomes = Array.from(genomes);
 }
 
-export async function createForm(study) {
+export async function createForm(navigationState = {}) {
+	const study = navigationState.study || null;
+
 	//if study param exists, do not display "Run analysis" and "Browse FTP" and  "Upload files" options.
 	//only Exixting Files will be available to display the results of the study.
 	//No study selector
@@ -128,7 +131,7 @@ export async function createForm(study) {
 			menuItem.style.color = "white";
 
 			// Afficher le formulaire correspondant
-			await showForm(item.id, study);
+			await showForm(item.id, navigationState);
 		});
 
 		menuColumn.appendChild(menuItem);
@@ -154,10 +157,9 @@ export async function createForm(study) {
 	// Ajouter le bouton et le contenu au formulaire
 	form.appendChild(headerBar);
 	form.appendChild(formContent);
-	formContent.appendChild(gridContainer); // Ne garder que cette ligne
+	formContent.appendChild(gridContainer);
 
-	// Afficher le formulaire "existing" par défaut
-	// Ajouter la classe active à l'item sélectionné (seulement si menu visible)
+	// Ajouter la classe active à l'item existing quand le menu est visible.
 	if (!study) {
 		const selectedItem = menuColumn.querySelector(
 			`div[data-option="existing"]`,
@@ -166,17 +168,11 @@ export async function createForm(study) {
 		selectedItem.style.color = "white";
 	}
 
-	// Affiche le formulaire existing après que le formulaire soit ajouté au DOM
-	setTimeout(async () => {
-		console.log("Showing existing form");
-		await showForm("existing", study);
-	}, 0);
-
 	return form;
 }
 
 // Fonction pour afficher le bon formulaire
-export async function showForm(option, studyParam = null) {
+export async function showForm(option, navigationState = {}) {
 	const contentColumn = document.getElementById("dynamic-content");
 	if (!contentColumn) {
 		console.warn("contentColumn not found in DOM yet");
@@ -184,9 +180,12 @@ export async function showForm(option, studyParam = null) {
 	}
 	contentColumn.innerHTML = "";
 	switch (option) {
-		case "existing":
-			contentColumn.appendChild(await createExistingFilesForm(studyParam));
+		case "existing": {
+			const existingController = createExistingFilesForm(navigationState);
+			contentColumn.appendChild(existingController.element);
+			await existingController.initialize();
 			break;
+		}
 		case "upload":
 			contentColumn.appendChild(createUploadSection());
 			break;
@@ -194,7 +193,7 @@ export async function showForm(option, studyParam = null) {
 			contentColumn.appendChild(createToolkitContainer());
 			break;
 		case "ftp":
-			contentColumn.appendChild(createFTPSection());
+			contentColumn.appendChild(createFTPSection(navigationState.toolkitId || null));
 			break;
 	}
 }
@@ -211,15 +210,11 @@ export function hideForm() {
 
 // Fonction pour récupérer les répertoires Synflow depuis un fichier JSON
 async function fetchSynflowDirectories() {
-	try {
-		const response = await fetch("public/data/config.json");
-		if (!response.ok) throw new Error("Erreur lors du chargement du JSON");
-		const dirs = await response.json();
-		return dirs;
-	} catch (error) {
-		console.error("Error fetching Synflow directories:", error);
-		return [];
-	}
+	const response = await fetch("public/data/config.json");
+	if (!response.ok) throw new Error("Erreur lors du chargement du JSON");
+	const dirs = await response.json();
+	if (!Array.isArray(dirs)) throw new Error("Invalid Synflow catalog");
+	return dirs;
 }
 
 // Fonction pour récupérer la liste des fichiers .out depuis un dossier distant
@@ -319,10 +314,26 @@ export function updateChainDiv() {
 	}
 }
 
+function replaceExistingSelectedGenomes(genomes, fileListDiv) {
+	setSelectedGenomes(genomes);
+	if (fileListDiv) {
+		fileListDiv.querySelectorAll(".genome-item").forEach((item) => {
+			const isSelected = selectedGenomes.includes(item.dataset.fileName);
+			item.style.background = isSelected ? "grey" : "";
+			item.style.color = isSelected ? "#fff" : "";
+		});
+	}
+	updateChainDiv();
+}
+
 // Cree le formulaire pour sélectionner les fichiers existants
-async function createExistingFilesForm(activeStudy = null) {
-	//va chercher les répertoires Synflow depuis le fichier JSON
-	const remoteFolders = await fetchSynflowDirectories();
+function createExistingFilesForm(navigationState = {}) {
+	const activeStudy = navigationState.study || null;
+	const requestedAccessions = Array.isArray(navigationState.accessions)
+		? Array.from(navigationState.accessions)
+		: null;
+	// Mark the URL request as consumed before any asynchronous loading starts.
+	navigationState.accessions = null;
 
 	//Crée un conteneur pour le form + le help
 	const existingSection = document.createElement("div");
@@ -349,29 +360,6 @@ async function createExistingFilesForm(activeStudy = null) {
 	if (activeStudy) {
 		folderSelect.style.display = "none";
 	}
-
-	let selectedStudyUrl = null;
-
-	remoteFolders.forEach(({ organism, url }) => {
-		const option = document.createElement("option");
-		option.value = url;
-		// Mettre la première lettre en majuscule et le reste en minuscules
-		const formattedFolderName =
-			organism.charAt(0).toUpperCase() + organism.slice(1).toLowerCase();
-		option.textContent = formattedFolderName;
-		folderSelect.appendChild(option);
-
-		// Si activeStudy correspond à cet organism, sauvegarder l'URL
-		if (activeStudy && organism.toLowerCase() === activeStudy.toLowerCase()) {
-			selectedStudyUrl = url;
-		}
-	});
-
-	// Si activeStudy fourni, sélectionner l'URL correspondante
-	if (activeStudy && selectedStudyUrl) {
-		folderSelect.value = selectedStudyUrl;
-	}
-
 	existingFormContainer.appendChild(folderSelect);
 
 	// Liste cliquable des génomes
@@ -391,39 +379,45 @@ async function createExistingFilesForm(activeStudy = null) {
 	chainDiv.style.color = "#333";
 	existingFormContainer.appendChild(chainDiv);
 
-	// Sélection ordonnée
-	selectedGenomes = [];
+	function showExistingError(message, clearList = false) {
+		if (clearList) {
+			fileListDiv.textContent = message;
+			fileListDiv.style.color = "#721c24";
+		}
+		chainDiv.textContent = message;
+		showNotification(message, "error");
+	}
 
-	//charge la liste des fichiers disponibles
 	async function loadFiles(folder) {
 		fileListDiv.innerHTML = "";
 		fileListDiv.style.color = "";
-		selectedGenomes = [];
-		updateChainDiv();
+		replaceExistingSelectedGenomes([], fileListDiv);
 		updateFileMatrix([]);
+
+		if (!folder) {
+			const message = activeStudy
+				? `Study "${activeStudy}" is not available. The visualization link was not opened.`
+				: "Available studies could not be loaded. The visualization link was not opened.";
+			showExistingError(message, true);
+			return null;
+		}
 
 		try {
 			const files = await fetchRemoteAllFileList(folder);
 			const genomes = extractAllGenomes(files);
 			populateGenomeList(genomes, fileListDiv);
 			updateFileMatrix(files);
+			return { files, genomes };
 		} catch (error) {
 			console.warn("Remote dataset unavailable:", folder, error);
-			fileListDiv.textContent =
-				"Remote dataset unavailable. Try again later or use another input option.";
-			fileListDiv.style.color = "#856404";
+			const message = activeStudy
+				? `The comparison files for study "${activeStudy}" could not be loaded.`
+				: "The comparison files for the selected study could not be loaded.";
+			showExistingError(message, true);
+			return null;
 		}
 	}
 
-	// Initialisation avec le premier dossier
-	loadFiles(folderSelect.value);
-
-	// Changement de dossier = recharge la liste de fichiers
-	folderSelect.addEventListener("change", (e) => {
-		loadFiles(e.target.value);
-	});
-
-	//bouton clear pour deselectionner tout
 	const clearButton = document.createElement("button");
 	clearButton.setAttribute("type", "button");
 	clearButton.classList.add("btn-simple");
@@ -431,16 +425,10 @@ async function createExistingFilesForm(activeStudy = null) {
 	clearButton.style.marginTop = "10px";
 	clearButton.addEventListener("click", () => {
 		logActivity("Clearing selected genomes");
-		selectedGenomes = [];
-		updateChainDiv();
-		fileListDiv.querySelectorAll(".genome-item").forEach((item) => {
-			item.style.background = "";
-			item.style.color = "";
-		});
+		replaceExistingSelectedGenomes([], fileListDiv);
 	});
 	existingFormContainer.appendChild(clearButton);
 
-	// Bouton pour charger les fichiers sélectionnés
 	const loadButton = document.createElement("button");
 	loadButton.setAttribute("type", "button");
 	loadButton.classList.add("btn-magic");
@@ -449,64 +437,40 @@ async function createExistingFilesForm(activeStudy = null) {
 	loadButton.style.marginTop = "10px";
 	existingFormContainer.appendChild(loadButton);
 
-	loadButton.addEventListener("click", async () => {
+	const isSafeComparisonFileName = (fileName) =>
+		/^[A-Za-z0-9._-]+\.out$/.test(fileName);
+
+	async function drawExistingChain(genomes = selectedGenomes) {
+		const orderedGenomes = Array.from(genomes);
 		logActivity(
 			"Loading existing files for selected genomes: " +
-				selectedGenomes.join(", "),
+				orderedGenomes.join(", "),
 		);
 
-		// Lance le spinner (et démarre le chronomètre de rendu)
-		const target = document.getElementById("spinner");
-		spinner.setStep("Starting...", 10);
-		try {
-			console.info("startRenderTimer called (existing)", selectedGenomes);
-			startRenderTimer({
-				action: "draw-click",
-				mode: "existing",
-				selectedGenomes: selectedGenomes.length,
-			});
-		} catch (e) {
-			console.warn("startRenderTimer missing", e);
-		}
-		spinner.spin(target);
-
-		fileUploadMode = "remote"; // Change mode to remote for file upload
-
-		// Réinitialise les variables de dessin
-		const visualizationContainer = document.getElementById("viz");
-		visualizationContainer.innerHTML = ""; // Efface le contenu existant
-		d3.select("#info").html("");
-		d3.select("#viz").call(zoom);
-		// Ajoutez un groupe à l'intérieur de l'élément SVG pour contenir les éléments zoomables
-		d3.select("#viz").append("g").attr("id", "zoomGroup");
-
-		if (selectedGenomes.length < 2) {
-			chainDiv.innerHTML =
-				'<span style="color:red;">Please select at least 2 genomes to construct a chain.</span>';
-			return;
+		if (orderedGenomes.length < 2) {
+			chainDiv.textContent =
+				"Please select at least 2 genomes to construct a chain.";
+			return false;
 		}
 
-		// Récupère la liste des fichiers disponibles dans le dossier sélectionné
-		const folder = folderSelect.value;
-		//fetch et catch les erreurs de fetch pour éviter que l'application plante si le dossier est inaccessible
+		const folder = folderSelect.value.trim();
 		let allFiles;
 		try {
 			allFiles = await fetchRemoteOutFileList(folder);
-			console.log("Files fetched from remote folder:", allFiles);
 		} catch (error) {
 			console.error("Error fetching remote file list:", error);
-			chainDiv.innerHTML =
-				'<span style="color:red;">Error fetching file list from remote folder.</span>';
-			return;
+			const message = activeStudy
+				? `The comparison files for study "${activeStudy}" could not be loaded.`
+				: "The comparison files for the selected study could not be loaded.";
+			showExistingError(message);
+			return false;
 		}
-		// Nettoie les espaces autour des noms de fichiers
-		const allFilesTrimmed = new Set(allFiles.map((f) => f.trim()));
 
-		// Construit la liste des fichiers nécessaires pour la chaîne
+		const allFilesTrimmed = new Set(allFiles.map((file) => file.trim()));
 		const neededFiles = [];
-		let missingFiles = [];
-		for (let i = 0; i < selectedGenomes.length - 1; i++) {
-			const fileName = `${selectedGenomes[i]}_${selectedGenomes[i + 1]}.out`;
+		const missingFiles = [];
+		for (let i = 0; i < orderedGenomes.length - 1; i++) {
+			const fileName = `${orderedGenomes[i]}_${orderedGenomes[i + 1]}.out`;
 			if (allFilesTrimmed.has(fileName)) {
 				neededFiles.push(fileName);
 			} else {
@@ -514,65 +478,107 @@ async function createExistingFilesForm(activeStudy = null) {
 			}
 		}
 
-		// Affiche un message si des fichiers sont manquants
 		if (missingFiles.length > 0) {
-			chainDiv.innerHTML = `<span style="color:red;">Missing file(s) :<br>${missingFiles.join("<br>")}</span>`;
-			return;
+			const message = `Missing comparison file(s): ${missingFiles.join(", ")}.`;
+			showExistingError(message);
+			return false;
 		}
 
-		// check de sécurité pour éviter les chemins d'accès malveillants
-		const safeFiles = neededFiles.filter((file) => {
-			// Autorise alphanum + _ - . / et extensions connues
-			const safe = /^[a-zA-Z0-9_\-\.\/]+\.(out|bed|anchors|txt|json|gz)$/i.test(
-				file,
+		if (neededFiles.some((fileName) => !isSafeComparisonFileName(fileName))) {
+			showExistingError(
+				"The requested comparison contains an invalid file name.",
 			);
-			return safe;
-		});
-
-		if (safeFiles.length !== neededFiles.length) {
-			chainDiv.innerHTML = `<span style="color:orange;">Warning: ${neededFiles.length - safeFiles.length} unsafe files skipped</span>`;
+			return false;
 		}
 
-		// Télécharge les fichiers nécessaires et crée des objets File
-		spinner.setStep(
-			`Downloading ${neededFiles.length} comparison files...`,
-			12,
-		);
-		const files = await Promise.all(
-			neededFiles.map(async (file) => {
-				const filePath = `${folder}${file}`;
-				const response = await fetch(filePath);
-				const text = await response.text();
-				return new File([text], file, { type: "text/plain" });
-			}),
-		);
+		let renderStarted = false;
+		try {
+			const target = document.getElementById("spinner");
+			spinner.setStep(
+				`Downloading ${neededFiles.length} comparison files...`,
+				12,
+			);
+			startRenderTimer({
+				action: "draw-click",
+				mode: "existing",
+				selectedGenomes: orderedGenomes.length,
+			});
+			renderStarted = true;
+			spinner.spin(target);
+			fileUploadMode = "remote";
 
-		//cherche les fichiers anchors, bed et jbrowse associés
-		spinner.setStep("Searching optional files...", 15);
-		await searchAdditionalFiles(selectedGenomes, files, folder);
-		// Simule un input file multiple pour handleFileUpload
-		const dataTransfer = new DataTransfer();
-		files.forEach((file) => dataTransfer.items.add(file));
-		handleFileUpload(
-			dataTransfer.files,
-			bedFiles,
-			selectedGenomes,
-			neededFiles,
-		);
+			const folderWithSlash = folder.endsWith("/") ? folder : `${folder}/`;
+			const files = await Promise.all(
+				neededFiles.map(async (fileName) => {
+					try {
+						const response = await fetch(`${folderWithSlash}${fileName}`);
+						if (!response.ok) {
+							const error = new Error(`HTTP ${response.status}`);
+							error.fileName = fileName;
+							throw error;
+						}
+						const text = await response.text();
+						return new File([text], fileName, { type: "text/plain" });
+					} catch (error) {
+						error.fileName = fileName;
+						throw error;
+					}
+				}),
+			);
+
+			spinner.setStep("Searching optional files...", 15);
+			await searchAdditionalFiles(orderedGenomes, files, folder);
+
+			const dataTransfer = new DataTransfer();
+			files.forEach((file) => dataTransfer.items.add(file));
+
+			const visualizationContainer = document.getElementById("viz");
+			visualizationContainer.innerHTML = "";
+			d3.select("#info").html("");
+			d3.select("#viz").call(zoom);
+			d3.select("#viz").append("g").attr("id", "zoomGroup");
+			handleFileUpload(
+				dataTransfer.files,
+				bedFiles,
+				orderedGenomes,
+				neededFiles,
+			);
+			return true;
+		} catch (error) {
+			if (renderStarted) {
+				stopRenderTimer({ failed: true });
+				spinner.stop();
+			}
+			const message = error.fileName
+				? `A required comparison file could not be downloaded: ${error.fileName}.`
+				: activeStudy
+					? `The comparison files for study "${activeStudy}" could not be loaded.`
+					: "The comparison files for the selected study could not be loaded.";
+			console.error("Error preparing existing visualization:", error);
+			showExistingError(message);
+			return false;
+		}
+	}
+
+	loadButton.addEventListener("click", () => {
+		drawExistingChain();
+	});
+
+	folderSelect.addEventListener("change", (event) => {
+		loadFiles(event.target.value);
 	});
 
 	// Container pour l'aide (partie droite) - masqué en mode study
 	if (!activeStudy) {
 		const existingHelpContainer = document.createElement("div");
-		existingHelpContainer.style.flex = "0 0 45%"; // Largeur fixe de 400px
+		existingHelpContainer.style.flex = "0 0 45%";
 		existingHelpContainer.style.padding = "15px";
 		existingHelpContainer.style.backgroundColor = "#f8f9fa";
 		existingHelpContainer.style.borderRadius = "5px";
 		existingHelpContainer.style.border = "1px solid #dee2e6";
-		existingHelpContainer.style.maxHeight = "600px"; // Hauteur maximale
-		existingHelpContainer.style.overflowY = "auto"; // Scroll si le contenu dépasse
+		existingHelpContainer.style.maxHeight = "600px";
+		existingHelpContainer.style.overflowY = "auto";
 
-		// Contenu de l'aide
 		existingHelpContainer.innerHTML = `
             <h5>About the studies</h5>
             <div style="margin-top: 15px;">
@@ -583,13 +589,8 @@ async function createExistingFilesForm(activeStudy = null) {
                 </p>
                 <h6>How to select files</h6>
                 <ul style="padding-left: 20px;">
-                    <li>
-                        Select a study from the dropdown menu to view the available accessions.
-                        <br>
-                    </li>
-                    <li>
-                        Click on every accession you want to include in the chain. The order of selection matters.
-                    </li>
+                    <li>Select a study from the dropdown menu to view the available accessions.</li>
+                    <li>Click on every accession you want to include in the chain. The order of selection matters.</li>
                 </ul>
             </div>
         `;
@@ -600,7 +601,76 @@ async function createExistingFilesForm(activeStudy = null) {
 		existingSection.appendChild(existingFormContainer);
 	}
 
-	return existingSection;
+	return {
+		element: existingSection,
+		async initialize() {
+			const requested = requestedAccessions ? Array.from(requestedAccessions) : null;
+			let remoteFolders;
+			try {
+				remoteFolders = await fetchSynflowDirectories();
+			} catch (error) {
+				console.error("Error fetching Synflow catalog:", error);
+				showExistingError(
+					"Available studies could not be loaded. The visualization link was not opened.",
+					true,
+				);
+				return;
+			}
+
+			const validFolders = remoteFolders.filter(
+				({ organism, url }) =>
+					typeof organism === "string" && typeof url === "string" && url.trim(),
+			);
+			if (validFolders.length === 0) {
+				showExistingError(
+					"Available studies could not be loaded. The visualization link was not opened.",
+					true,
+				);
+				return;
+			}
+
+			let selectedStudyUrl = null;
+			validFolders.forEach(({ organism, url }) => {
+				const option = document.createElement("option");
+				option.value = url;
+				option.textContent =
+					organism.charAt(0).toUpperCase() + organism.slice(1).toLowerCase();
+				folderSelect.appendChild(option);
+				if (
+					activeStudy &&
+					organism.toLowerCase() === activeStudy.toLowerCase()
+				) {
+					selectedStudyUrl = url;
+				}
+			});
+
+			if (activeStudy && !selectedStudyUrl) {
+				showExistingError(
+					`Study "${activeStudy}" is not available. The visualization link was not opened.`,
+					true,
+				);
+				return;
+			}
+
+			const initialFolder = selectedStudyUrl || validFolders[0].url;
+			folderSelect.value = initialFolder;
+			const loaded = await loadFiles(initialFolder);
+			if (!requested || !loaded) return;
+
+			const missing = requested.filter(
+				(accession) => !loaded.genomes.includes(accession),
+			);
+			if (missing.length > 0) {
+				replaceExistingSelectedGenomes([], fileListDiv);
+				const message = `The following accessions are not available in study "${activeStudy}": ${missing.join(", ")}.`;
+				showExistingError(message);
+				return;
+			}
+
+			replaceExistingSelectedGenomes(requested, fileListDiv);
+			await drawExistingChain(requested);
+		},
+	};
 }
 
 // Fonction helper pour créer la section upload (votre code existant)
@@ -899,7 +969,7 @@ function createUploadSection() {
 //  //                  //          //
 //
 
-export function createFTPSection() {
+export function createFTPSection(toolkitIDFromURL = null) {
 	// Section principale
 	const ftpSection = document.createElement("div");
 	ftpSection.setAttribute("id", "ftp-section");
@@ -914,14 +984,12 @@ export function createFTPSection() {
 	title.textContent = "Import files from FTP";
 	title.style.marginBottom = "10px";
 	formContainer.appendChild(title);
-	const toolkitIDFromURL = new URLSearchParams(globalThis.location.search).get("id");
 	const isToolkitResultPage =
 		typeof toolkitIDFromURL === "string" &&
 		/^toolkit_[A-Za-z0-9_-]+$/.test(toolkitIDFromURL);
 
 	if (isToolkitResultPage) {
 		const toolkitResultURL = new URL(globalThis.location.href);
-		toolkitResultURL.search = "";
 		toolkitResultURL.searchParams.set("id", toolkitIDFromURL);
 		toolkitResultURL.hash = "";
 
@@ -1077,7 +1145,7 @@ export function createFTPSection() {
 
 		const toolkitID = toolkit.getToolkitIDFromResultURL(folder);
 		const isToolkitResult = !!toolkitID;
-		const openedFromToolkitResult = new URLSearchParams(globalThis.location.search).has("id");
+		const openedFromToolkitResult = Boolean(toolkitIDFromURL);
 		if (openedFromToolkitResult && !isToolkitResult) {
 			fileListDiv.innerHTML =
 				'<span style="color:red;">Result folders must use this page origin and a valid toolkit ID.</span>';
@@ -1178,9 +1246,8 @@ export function createFTPSection() {
 				updateChainDivFTP(chainDiv, ftpSelectedGenomes, comparisonSources);
 			}
 		} catch (error) {
-			const urlParams = new URLSearchParams(window.location.search);
-			if (urlParams.has("id")) {
-				console.log(urlParams.get("id"));
+			if (toolkitIDFromURL) {
+				console.log(toolkitIDFromURL);
 				fileListDiv.innerHTML =
 					'<span style="color:red;">No files found in this folder. If you just launched a Synflow analysis, please wait a few minutes for the files to be available.</span>';
 			} else {
@@ -1821,17 +1888,14 @@ function populateGenomeList(genomes, listDiv) {
 
 		genomeDiv.addEventListener("click", () => {
 			logActivity("Toggling genome selection: " + genome);
-			const idx = selectedGenomes.indexOf(genome);
+			const nextSelection = Array.from(selectedGenomes);
+			const idx = nextSelection.indexOf(genome);
 			if (idx === -1) {
-				selectedGenomes.push(genome);
-				genomeDiv.style.background = "grey";
-				genomeDiv.style.color = "#fff";
+				nextSelection.push(genome);
 			} else {
-				selectedGenomes.splice(idx, 1);
-				genomeDiv.style.background = "";
-				genomeDiv.style.color = "";
+				nextSelection.splice(idx, 1);
 			}
-			updateChainDiv();
+			replaceExistingSelectedGenomes(nextSelection, listDiv);
 		});
 
 		listDiv.appendChild(genomeDiv);
