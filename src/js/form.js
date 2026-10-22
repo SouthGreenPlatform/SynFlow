@@ -1509,6 +1509,13 @@ export function createToolkitContainer() {
         border: 1px solid #dee2e6;
         overflow-y: auto;
     `;
+	const isLocalDockerHost = toolkit.isLocalDockerHost();
+	const resultAvailabilityMarkup = isLocalDockerHost
+		? "<p>Results are produced inside the SynFlow container and remain available in its mounted comparisons volume.</p>"
+		: "<p>You can input your email to receive a notification when the analysis is complete. Results will be available for 10 days.</p>";
+	const computingResourcesMarkup = isLocalDockerHost
+		? "<b>Computing resources:</b> The Snakemake workflow runs locally inside the SynFlow Docker container and uses the number of CPU cores configured with <code>SNAKEMAKE_CORES</code>."
+		: '<b>Computing resources:</b> Analysis runs on the <a href="https://isdm.umontpellier.fr/infrastructures/" target="_blank" style="color: #6c757d; text-decoration: underline;"><b>ISDM MESO HPC cluster</b></a>. Execution time depends on current cluster load and job queue. During peak usage, your job may wait in queue before starting.';
 
 	// Contenu de l'aide
 	helpSection.innerHTML = `
@@ -1530,12 +1537,12 @@ export function createToolkitContainer() {
             </div>
 
             <br/><p>The <code>Method</code> parameter applies only to the SyRI pipeline (same chromosome count pairs).</p>
-            <p>Results are produced inside the SynFlow container and remain available in its mounted comparisons volume.</p>
+            ${resultAvailabilityMarkup}
 
             <div style="margin-top: 10px; padding: 12px; background-color: #f8f9fa; border-radius: 5px; border-left: 4px solid #6c757d;">
                 <p style="margin: 0; font-size: 0.9em; color: #495057;">
                     <i class="fas fa-server" style="color: #6c757d; margin-right: 6px;"></i>
-                    <b>Computing resources:</b> The local Snakemake workflow uses <code>SNAKEMAKE_CORES</code> configured for the container.
+                    ${computingResourcesMarkup}
                 </p>
             </div>
 

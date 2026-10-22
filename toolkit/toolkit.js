@@ -139,7 +139,7 @@ export function loadSocketIOScript() {
 	});
 }
 
-function isLocalDockerHost() {
+export function isLocalDockerHost() {
 	return ["localhost", "127.0.0.1"].includes(globalThis.location.hostname);
 }
 
